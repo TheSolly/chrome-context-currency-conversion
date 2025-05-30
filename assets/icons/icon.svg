@@ -1,0 +1,23 @@
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="64" cy="64" r="60" fill="#667eea" stroke="#764ba2" stroke-width="4"/>
+  
+  <!-- Currency Symbol Container -->
+  <g transform="translate(64, 64)">
+    <!-- Dollar Sign -->
+    <text x="-12" y="-10" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="white">$</text>
+    
+    <!-- Euro Sign -->
+    <text x="8" y="-10" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="white">€</text>
+    
+    <!-- Arrow indicating conversion -->
+    <path d="M -20 8 L 20 8 M 15 3 L 20 8 L 15 13" stroke="white" stroke-width="2" fill="none"/>
+    
+    <!-- Additional Currency Symbols -->
+    <text x="-12" y="25" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="white">¥</text>
+    <text x="8" y="25" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="white">£</text>
+  </g>
+  
+  <!-- Highlight effect -->
+  <circle cx="64" cy="64" r="60" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+</svg>

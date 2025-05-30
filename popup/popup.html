@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Currency Converter Settings</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="header">
+        <div class="logo">
+          <span class="logo-icon">💱</span>
+          <h1>Currency Converter</h1>
+        </div>
+      </header>
+
+      <main class="main">
+        <section class="settings-section">
+          <h2>Currency Settings</h2>
+
+          <div class="setting-group">
+            <label for="baseCurrency">Base Currency</label>
+            <select id="baseCurrency" class="currency-select">
+              <option value="USD">USD - US Dollar</option>
+              <option value="EUR">EUR - Euro</option>
+              <option value="GBP">GBP - British Pound</option>
+              <option value="JPY">JPY - Japanese Yen</option>
+              <option value="CAD">CAD - Canadian Dollar</option>
+              <option value="AUD">AUD - Australian Dollar</option>
+              <option value="CHF">CHF - Swiss Franc</option>
+              <option value="CNY">CNY - Chinese Yuan</option>
+              <option value="INR">INR - Indian Rupee</option>
+              <option value="BRL">BRL - Brazilian Real</option>
+            </select>
+          </div>
+
+          <div class="setting-group">
+            <label for="secondaryCurrency">Secondary Currency</label>
+            <select id="secondaryCurrency" class="currency-select">
+              <option value="EUR">EUR - Euro</option>
+              <option value="USD">USD - US Dollar</option>
+              <option value="GBP">GBP - British Pound</option>
+              <option value="JPY">JPY - Japanese Yen</option>
+              <option value="CAD">CAD - Canadian Dollar</option>
+              <option value="AUD">AUD - Australian Dollar</option>
+              <option value="CHF">CHF - Swiss Franc</option>
+              <option value="CNY">CNY - Chinese Yuan</option>
+              <option value="INR">INR - Indian Rupee</option>
+              <option value="BRL">BRL - Brazilian Real</option>
+            </select>
+          </div>
+
+          <button id="saveSettings" class="save-button">Save Settings</button>
+        </section>
+
+        <section class="info-section">
+          <h3>How to Use</h3>
+          <ol class="instructions">
+            <li>Set your preferred base and secondary currencies above</li>
+            <li>
+              Highlight any currency amount on a webpage (e.g., $100, 50 EUR)
+            </li>
+            <li>Right-click and select "Convert Currency"</li>
+            <li>See the converted amount instantly!</li>
+          </ol>
+        </section>
+
+        <section class="status-section">
+          <div id="statusMessage" class="status-message"></div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <div class="version">v1.0.0</div>
+        <div class="links">
+          <a href="#" id="rateUs">Rate Us</a>
+          <span>•</span>
+          <a href="#" id="support">Support</a>
+        </div>
+      </footer>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
