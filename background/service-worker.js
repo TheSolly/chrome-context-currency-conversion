@@ -2,7 +2,7 @@
 // Handles dynamic context menu creation and currency conversion logic with improved UX
 
 // Phase 3, Task 3.3: Import Settings Manager
-import { settingsManager } from '../utils/settings-manager.js';
+import { settingsManager } from '/utils/settings-manager.js';
 
 // Global state management
 let currentCurrencyInfo = null;

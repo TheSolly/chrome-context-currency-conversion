@@ -9,14 +9,16 @@
   "host_permissions": ["https://*/*", "http://*/*"],
 
   "background": {
-    "service_worker": "background/service-worker.js"
+    "service_worker": "background/service-worker.js",
+    "type": "module"
   },
 
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
       "js": ["content/content-script.js"],
-      "run_at": "document_end"
+      "run_at": "document_end",
+      "type": "module"
     }
   ],
 
@@ -40,7 +42,7 @@
 
   "web_accessible_resources": [
     {
-      "resources": ["assets/*"],
+      "resources": ["assets/*", "utils/*"],
       "matches": ["<all_urls>"]
     }
   ]

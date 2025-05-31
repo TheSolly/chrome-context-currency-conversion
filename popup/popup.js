@@ -14,10 +14,10 @@ import {
   CurrencyPreferences,
   validateCurrencySelection,
   CURRENCY_REGIONS
-} from '../utils/currency-data.js';
+} from '/utils/currency-data.js';
 
 // Phase 3, Task 3.3: Enhanced Settings Management
-import { settingsManager } from '../utils/settings-manager.js';
+import { settingsManager } from '/utils/settings-manager.js';
 
 // State management
 let currentSettings = { ...DEFAULT_SETTINGS };
