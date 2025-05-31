@@ -15,6 +15,8 @@ export default [
         console: 'readonly',
         setTimeout: 'readonly',
         clearTimeout: 'readonly',
+        performance: 'readonly',
+        requestAnimationFrame: 'readonly',
         process: 'readonly',
         require: 'readonly',
         __dirname: 'readonly'
