@@ -34,18 +34,30 @@ async function loadSettings() {
   try {
     const settings = await chrome.storage.sync.get([
       'baseCurrency',
-      'secondaryCurrency'
+      'secondaryCurrency',
+      'additionalCurrencies',
+      'showConfidence'
     ]);
 
     // Set default values if not found
     const baseCurrency = settings.baseCurrency || 'USD';
     const secondaryCurrency = settings.secondaryCurrency || 'EUR';
+    const additionalCurrencies = settings.additionalCurrencies || [
+      'GBP',
+      'JPY'
+    ];
+    const showConfidence = settings.showConfidence !== false; // Default to true
 
     // Update UI
     document.getElementById('baseCurrency').value = baseCurrency;
     document.getElementById('secondaryCurrency').value = secondaryCurrency;
 
-    console.log('Settings loaded:', { baseCurrency, secondaryCurrency });
+    console.log('Settings loaded:', {
+      baseCurrency,
+      secondaryCurrency,
+      additionalCurrencies,
+      showConfidence
+    });
   } catch (error) {
     console.error('Failed to load settings:', error);
     showStatusMessage('Failed to load settings', 'error');
@@ -67,13 +79,45 @@ async function saveSettings() {
       return;
     }
 
-    // Save to Chrome storage
+    // Calculate additional currencies for context menu (popular currencies excluding selected ones)
+    const popularCurrencies = [
+      'USD',
+      'EUR',
+      'GBP',
+      'JPY',
+      'CAD',
+      'AUD',
+      'CHF',
+      'CNY'
+    ];
+    const additionalCurrencies = popularCurrencies
+      .filter(
+        currency => currency !== baseCurrency && currency !== secondaryCurrency
+      )
+      .slice(0, 3); // Take first 3 for context menu
+
+    // Save to Chrome storage with enhanced settings
     await chrome.storage.sync.set({
       baseCurrency: baseCurrency,
-      secondaryCurrency: secondaryCurrency
+      secondaryCurrency: secondaryCurrency,
+      additionalCurrencies: additionalCurrencies,
+      showConfidence: true // Default to showing confidence indicators
     });
 
-    console.log('Settings saved:', { baseCurrency, secondaryCurrency });
+    // Notify background script about settings change
+    try {
+      await chrome.runtime.sendMessage({
+        action: 'reloadSettings'
+      });
+    } catch (error) {
+      console.warn('Failed to notify background script:', error);
+    }
+
+    console.log('Enhanced settings saved:', {
+      baseCurrency,
+      secondaryCurrency,
+      additionalCurrencies
+    });
 
     // Visual feedback
     const saveButton = document.getElementById('saveSettings');

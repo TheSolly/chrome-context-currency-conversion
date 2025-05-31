@@ -440,7 +440,7 @@ function preprocessText(text) {
       .replace(/\uFEFF/g, '')
       // Normalize quotes
       .replace(/[\u2018\u2019]/g, "'")
-      .replace(/[\u201C\u201D]/g, '"')
+      .replace(/[\u201C\u201D]/g, "'")
       .trim()
   );
 }

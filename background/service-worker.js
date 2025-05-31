@@ -1,9 +1,23 @@
-// Enhanced background service worker for Task 2.2
-// Handles context menu creation and currency conversion logic with improved error handling
+// Enhanced background service worker for Task 2.3
+// Handles dynamic context menu creation and currency conversion logic with improved UX
 
 // Global state management
 let currentCurrencyInfo = null;
+let currentSettings = null;
+let contextMenusCreated = false;
 const errorLog = [];
+
+// Popular currency pairs for quick conversion
+const POPULAR_CURRENCIES = [
+  'USD',
+  'EUR',
+  'GBP',
+  'JPY',
+  'CAD',
+  'AUD',
+  'CHF',
+  'CNY'
+];
 
 // Error logging function
 function logError(error, context, additionalData = null) {
@@ -26,91 +40,140 @@ function logError(error, context, additionalData = null) {
 }
 
 // Initialize context menu when extension is installed or enabled
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener(async () => {
   console.log('Currency Converter Extension installed');
-
-  // Create context menu item with enhanced configuration
-  chrome.contextMenus.create({
-    id: 'convertCurrency',
-    title: 'Convert Currency',
-    contexts: ['selection'],
-    visible: false, // Initially hidden, will be shown when currency is detected
-    documentUrlPatterns: ['http://*/*', 'https://*/*'] // Only show on web pages
-  });
+  await initializeContextMenus();
 });
 
-// Listen for context menu clicks with enhanced error handling
-chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (info.menuItemId === 'convertCurrency') {
-    handleCurrencyConversion(info, tab).catch(error => {
-      console.error('Error handling currency conversion:', error);
-      logError(error, 'contextMenuClick', { info, tabId: tab?.id });
+// Initialize context menus with enhanced dynamic structure
+async function initializeContextMenus() {
+  try {
+    // Remove any existing menus first
+    await chrome.contextMenus.removeAll();
+
+    // Load user settings
+    currentSettings = await loadUserSettings();
+
+    // Create parent menu item (initially hidden)
+    chrome.contextMenus.create({
+      id: 'currencyConverter',
+      title: 'Convert Currency',
+      contexts: ['selection'],
+      visible: false,
+      documentUrlPatterns: ['http://*/*', 'https://*/*']
+    });
+
+    contextMenusCreated = true;
+    console.log('Context menus initialized successfully');
+  } catch (error) {
+    logError(error, 'initializeContextMenus');
+  }
+}
+
+// Load user settings with fallbacks
+async function loadUserSettings() {
+  try {
+    const settings = await chrome.storage.sync.get([
+      'baseCurrency',
+      'secondaryCurrency',
+      'additionalCurrencies',
+      'showConfidence'
+    ]);
+
+    return {
+      baseCurrency: settings.baseCurrency || 'USD',
+      secondaryCurrency: settings.secondaryCurrency || 'EUR',
+      additionalCurrencies: settings.additionalCurrencies || ['GBP', 'JPY'],
+      showConfidence: settings.showConfidence !== false // Default to true
+    };
+  } catch (error) {
+    logError(error, 'loadUserSettings');
+    return {
+      baseCurrency: 'USD',
+      secondaryCurrency: 'EUR',
+      additionalCurrencies: ['GBP', 'JPY'],
+      showConfidence: true
+    };
+  }
+}
+
+// Enhanced context menu click handler with dynamic conversion options
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  try {
+    if (info.menuItemId.startsWith('convert_')) {
+      const targetCurrency = info.menuItemId.replace('convert_', '');
+      await handleCurrencyConversion(info, tab, targetCurrency);
+    } else if (info.menuItemId === 'openSettings') {
+      // Open extension settings
+      await chrome.tabs.create({
+        url: chrome.runtime.getURL('popup/popup.html')
+      });
+    } else if (info.menuItemId === 'currencyConverter') {
+      // Handle main menu click (fallback)
+      await handleCurrencyConversion(info, tab);
+    }
+  } catch (error) {
+    logError(error, 'contextMenuClick', {
+      menuItemId: info.menuItemId,
+      tabId: tab?.id
     });
   }
 });
 
-// Enhanced currency conversion handler
-async function handleCurrencyConversion(info, tab) {
+// Enhanced currency conversion handler with target currency support
+async function handleCurrencyConversion(info, tab, targetCurrency = null) {
   const selectedText = info.selectionText;
-  console.log('Converting currency for:', selectedText);
+  console.log('Converting currency for:', selectedText, 'to:', targetCurrency);
 
   try {
-    // Get user's currency preferences with fallbacks
-    const settings = await chrome.storage.sync
-      .get(['baseCurrency', 'secondaryCurrency'])
-      .catch(() => ({})); // Fallback to empty object if storage fails
+    // Reload settings to get latest preferences
+    currentSettings = await loadUserSettings();
 
-    const baseCurrency = settings.baseCurrency || 'USD';
-    const secondaryCurrency = settings.secondaryCurrency || 'EUR';
+    const finalTargetCurrency =
+      targetCurrency || currentSettings.secondaryCurrency;
 
     // Use current currency info if available
     const conversionData = {
       originalText: selectedText,
-      baseCurrency,
-      secondaryCurrency,
+      sourceCurrency: currentCurrencyInfo?.currency,
+      targetCurrency: finalTargetCurrency,
+      amount: currentCurrencyInfo?.amount,
+      confidence: currentCurrencyInfo?.confidence,
       currencyInfo: currentCurrencyInfo,
       timestamp: new Date().toISOString()
     };
 
-    console.log(
-      'Converting from',
-      baseCurrency,
-      'to',
-      secondaryCurrency,
-      'with data:',
-      conversionData
-    );
+    console.log('Converting with enhanced data:', conversionData);
 
     // Send enhanced message to content script
     if (tab?.id) {
-      chrome.tabs
-        .sendMessage(tab.id, {
-          action: 'showConversionResult',
-          ...conversionData
-        })
-        .catch(error => {
-          console.warn('Failed to send message to tab:', error);
-        });
+      await chrome.tabs.sendMessage(tab.id, {
+        action: 'showConversionResult',
+        ...conversionData
+      });
     }
   } catch (error) {
     console.error('Currency conversion failed:', error);
     logError(error, 'handleCurrencyConversion', {
       selectedText,
+      targetCurrency,
       tabId: tab?.id
     });
   }
 }
 
-// Enhanced message listener with better error handling
+// Enhanced message listener with async context menu updates
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   try {
     if (request.action === 'updateContextMenu') {
-      updateContextMenu(request.hasCurrency, request.currencyInfo);
-
-      // Store current currency info for context menu actions
-      currentCurrencyInfo = request.currencyInfo || null;
-
-      sendResponse({ success: true });
+      // Handle async context menu update
+      updateContextMenu(request.hasCurrency, request.currencyInfo)
+        .then(() => sendResponse({ success: true }))
+        .catch(error => {
+          logError(error, 'updateContextMenu', request);
+          sendResponse({ success: false, error: error.message });
+        });
+      return true; // Will respond asynchronously
     }
 
     if (request.action === 'convertCurrency') {
@@ -128,41 +191,174 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       logError(request.error, request.error.context, request.error);
       sendResponse({ success: true });
     }
+
+    if (request.action === 'getErrorLog') {
+      sendResponse({ errorLog });
+    }
+
+    if (request.action === 'getStats') {
+      sendResponse(getExtensionStats());
+    }
+
+    if (request.action === 'reloadSettings') {
+      // Reload settings when user updates preferences
+      loadUserSettings()
+        .then(settings => {
+          currentSettings = settings;
+          sendResponse({ success: true, settings });
+        })
+        .catch(error => {
+          logError(error, 'reloadSettings');
+          sendResponse({ success: false, error: error.message });
+        });
+      return true; // Will respond asynchronously
+    }
   } catch (error) {
     console.error('Error in message listener:', error);
     sendResponse({ success: false, error: error.message });
   }
 });
 
-// Enhanced context menu update with better title formatting
-function updateContextMenu(hasCurrency, currencyInfo) {
+// Enhanced context menu update with dynamic conversion options
+async function updateContextMenu(hasCurrency, currencyInfo) {
   try {
-    let title = 'Convert Currency';
-
-    if (hasCurrency && currencyInfo) {
-      // Format amount nicely for display
-      const amount = currencyInfo.amount;
-      const formattedAmount =
-        amount % 1 === 0 ? amount.toString() : amount.toFixed(2);
-
-      title = `Convert ${formattedAmount} ${currencyInfo.currency}`;
-
-      // Add confidence indicator for low confidence detections
-      if (currencyInfo.confidence < 0.7) {
-        title += ' (?)';
-      }
+    if (!contextMenusCreated) {
+      await initializeContextMenus();
     }
 
-    chrome.contextMenus
-      .update('convertCurrency', {
-        visible: hasCurrency,
-        title: title
-      })
-      .catch(error => {
-        console.warn('Failed to update context menu:', error);
+    if (!hasCurrency || !currencyInfo) {
+      // Hide all menus when no currency detected
+      await chrome.contextMenus.update('currencyConverter', {
+        visible: false
       });
+      return;
+    }
+
+    // Store current currency info
+    currentCurrencyInfo = currencyInfo;
+
+    // Reload settings to get latest preferences
+    currentSettings = await loadUserSettings();
+
+    // Remove existing conversion submenu items
+    await removeConversionMenuItems();
+
+    // Format the detected amount and currency for display
+    const amount = currencyInfo.amount;
+    const formattedAmount =
+      amount % 1 === 0 ? amount.toString() : amount.toFixed(2);
+    const sourceCurrency = currencyInfo.currency;
+
+    // Build base title with confidence indicator
+    let baseTitle = `Convert ${formattedAmount} ${sourceCurrency}`;
+    if (currentSettings.showConfidence && currencyInfo.confidence < 0.8) {
+      const confidencePercent = Math.round(currencyInfo.confidence * 100);
+      baseTitle += ` (${confidencePercent}%)`;
+    }
+
+    // Update main menu item
+    await chrome.contextMenus.update('currencyConverter', {
+      visible: true,
+      title: baseTitle
+    });
+
+    // Create conversion options for different target currencies
+    await createConversionOptions(sourceCurrency, formattedAmount);
   } catch (error) {
     console.error('Error updating context menu:', error);
+    logError(error, 'updateContextMenu', { hasCurrency, currencyInfo });
+  }
+}
+
+// Create dynamic conversion menu items based on user preferences
+async function createConversionOptions(sourceCurrency, formattedAmount) {
+  try {
+    const targetCurrencies = new Set();
+
+    // Add user's preferred currencies
+    if (currentSettings.secondaryCurrency !== sourceCurrency) {
+      targetCurrencies.add(currentSettings.secondaryCurrency);
+    }
+    if (currentSettings.baseCurrency !== sourceCurrency) {
+      targetCurrencies.add(currentSettings.baseCurrency);
+    }
+
+    // Add additional configured currencies
+    currentSettings.additionalCurrencies.forEach(currency => {
+      if (currency !== sourceCurrency) {
+        targetCurrencies.add(currency);
+      }
+    });
+
+    // Add popular currencies if we have less than 4 options
+    if (targetCurrencies.size < 4) {
+      POPULAR_CURRENCIES.forEach(currency => {
+        if (currency !== sourceCurrency && targetCurrencies.size < 4) {
+          targetCurrencies.add(currency);
+        }
+      });
+    }
+
+    // Create menu items for each target currency
+    let index = 0;
+    for (const targetCurrency of targetCurrencies) {
+      if (index >= 5) {
+        break; // Limit to 5 options to avoid menu clutter
+      }
+
+      await chrome.contextMenus.create({
+        id: `convert_${targetCurrency}`,
+        parentId: 'currencyConverter',
+        title: `→ ${targetCurrency}`,
+        contexts: ['selection']
+      });
+
+      index++;
+    }
+
+    // Add separator and additional options
+    if (targetCurrencies.size > 0) {
+      await chrome.contextMenus.create({
+        id: 'separator1',
+        parentId: 'currencyConverter',
+        type: 'separator',
+        contexts: ['selection']
+      });
+
+      await chrome.contextMenus.create({
+        id: 'openSettings',
+        parentId: 'currencyConverter',
+        title: '⚙️ Settings',
+        contexts: ['selection']
+      });
+    }
+  } catch (error) {
+    logError(error, 'createConversionOptions', {
+      sourceCurrency,
+      formattedAmount
+    });
+  }
+}
+
+// Remove existing conversion menu items
+async function removeConversionMenuItems() {
+  try {
+    // Get all existing menu items and remove conversion-related ones
+    const menuIds = [
+      ...POPULAR_CURRENCIES.map(currency => `convert_${currency}`),
+      'separator1',
+      'openSettings'
+    ];
+
+    for (const menuId of menuIds) {
+      try {
+        await chrome.contextMenus.remove(menuId);
+      } catch {
+        // Menu item might not exist, which is fine
+      }
+    }
+  } catch {
+    // Ignore errors when removing non-existent menu items
   }
 }
 
@@ -191,26 +387,15 @@ async function performCurrencyConversion(currencyData) {
   }
 }
 
-// Get error log for debugging (accessible via console)
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === 'getErrorLog') {
-    sendResponse({ errorLog });
-  }
-});
-
-// Utility function to get extension statistics
+// Enhanced utility function to get extension statistics
 function getExtensionStats() {
   return {
     errorsLogged: errorLog.length,
     lastError: errorLog[errorLog.length - 1] || null,
     currentCurrencyInfo,
+    currentSettings,
+    contextMenusCreated,
+    popularCurrencies: POPULAR_CURRENCIES,
     timestamp: new Date().toISOString()
   };
 }
-
-// Make stats available globally for debugging
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === 'getStats') {
-    sendResponse(getExtensionStats());
-  }
-});
