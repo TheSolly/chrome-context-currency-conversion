@@ -6,81 +6,242 @@
     <title>Currency Converter Settings</title>
     <link rel="stylesheet" href="popup.css" />
   </head>
-  <body>
-    <div class="container">
-      <header class="header">
-        <div class="logo">
-          <span class="logo-icon">💱</span>
-          <h1>Currency Converter</h1>
+  <body class="bg-gray-50">
+    <div class="w-96 min-h-[500px] bg-white">
+      <!-- Header -->
+      <header
+        class="bg-gradient-to-r from-primary-500 to-secondary-500 text-white p-4"
+      >
+        <div class="flex items-center justify-center gap-3">
+          <span class="text-2xl">💱</span>
+          <h1 class="text-lg font-semibold">Currency Converter</h1>
         </div>
       </header>
 
-      <main class="main">
-        <section class="settings-section">
-          <h2>Currency Settings</h2>
+      <!-- Main Content -->
+      <main class="p-4 space-y-4">
+        <!-- Quick Stats -->
+        <div class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-3">
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-gray-600">Conversions Today</span>
+            <span id="conversionCount" class="font-semibold text-primary-600"
+              >0</span
+            >
+          </div>
+        </div>
 
-          <div class="setting-group">
-            <label for="baseCurrency">Base Currency</label>
-            <select id="baseCurrency" class="currency-select">
-              <option value="USD">USD - US Dollar</option>
-              <option value="EUR">EUR - Euro</option>
-              <option value="GBP">GBP - British Pound</option>
-              <option value="JPY">JPY - Japanese Yen</option>
-              <option value="CAD">CAD - Canadian Dollar</option>
-              <option value="AUD">AUD - Australian Dollar</option>
-              <option value="CHF">CHF - Swiss Franc</option>
-              <option value="CNY">CNY - Chinese Yuan</option>
-              <option value="INR">INR - Indian Rupee</option>
-              <option value="BRL">BRL - Brazilian Real</option>
-            </select>
+        <!-- Currency Configuration -->
+        <section class="setting-card">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-lg">🎯</span>
+            <h2 class="text-base font-semibold text-gray-900">
+              Primary Currencies
+            </h2>
           </div>
 
-          <div class="setting-group">
-            <label for="secondaryCurrency">Secondary Currency</label>
-            <select id="secondaryCurrency" class="currency-select">
-              <option value="EUR">EUR - Euro</option>
-              <option value="USD">USD - US Dollar</option>
-              <option value="GBP">GBP - British Pound</option>
-              <option value="JPY">JPY - Japanese Yen</option>
-              <option value="CAD">CAD - Canadian Dollar</option>
-              <option value="AUD">AUD - Australian Dollar</option>
-              <option value="CHF">CHF - Swiss Franc</option>
-              <option value="CNY">CNY - Chinese Yuan</option>
-              <option value="INR">INR - Indian Rupee</option>
-              <option value="BRL">BRL - Brazilian Real</option>
-            </select>
+          <div class="space-y-3">
+            <div class="setting-group">
+              <label
+                for="baseCurrency"
+                class="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Base Currency
+              </label>
+              <select id="baseCurrency" class="currency-select">
+                <!-- Populated by JavaScript -->
+              </select>
+            </div>
+
+            <div class="setting-group">
+              <label
+                for="secondaryCurrency"
+                class="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Secondary Currency
+              </label>
+              <select id="secondaryCurrency" class="currency-select">
+                <!-- Populated by JavaScript -->
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <!-- Additional Currencies -->
+        <section class="setting-card">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <span class="text-lg">📋</span>
+              <h2 class="text-base font-semibold text-gray-900">
+                Quick Convert
+              </h2>
+            </div>
+            <span class="feature-badge">Free: 3 max</span>
           </div>
 
-          <button id="saveSettings" class="save-button">Save Settings</button>
+          <div id="additionalCurrencies" class="space-y-2">
+            <!-- Populated by JavaScript -->
+          </div>
+
+          <button
+            id="addCurrency"
+            class="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+          >
+            + Add Currency
+          </button>
         </section>
 
-        <section class="info-section">
-          <h3>How to Use</h3>
-          <ol class="instructions">
-            <li>Set your preferred base and secondary currencies above</li>
-            <li>
-              Highlight any currency amount on a webpage (e.g., $100, 50 EUR)
-            </li>
-            <li>Right-click and select "Convert Currency"</li>
-            <li>See the converted amount instantly!</li>
-          </ol>
+        <!-- Settings -->
+        <section class="setting-card">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-lg">⚙️</span>
+            <h2 class="text-base font-semibold text-gray-900">Preferences</h2>
+          </div>
+
+          <div class="space-y-3">
+            <!-- Show Confidence -->
+            <div class="flex items-center justify-between">
+              <label for="showConfidence" class="text-sm text-gray-700">
+                Show detection confidence
+              </label>
+              <button
+                id="showConfidence"
+                class="toggle-switch"
+                role="switch"
+                aria-checked="true"
+              >
+                <span class="toggle-thumb"></span>
+              </button>
+            </div>
+
+            <!-- Auto Convert -->
+            <div class="flex items-center justify-between">
+              <div>
+                <label for="autoConvert" class="text-sm text-gray-700"
+                  >Auto-convert on selection</label
+                >
+                <span class="feature-badge ml-1">Premium</span>
+              </div>
+              <button
+                id="autoConvert"
+                class="toggle-switch"
+                role="switch"
+                aria-checked="false"
+                disabled
+              >
+                <span class="toggle-thumb"></span>
+              </button>
+            </div>
+
+            <!-- Notifications -->
+            <div class="flex items-center justify-between">
+              <div>
+                <label for="showNotifications" class="text-sm text-gray-700"
+                  >Rate change notifications</label
+                >
+                <span class="feature-badge ml-1">Premium</span>
+              </div>
+              <button
+                id="showNotifications"
+                class="toggle-switch"
+                role="switch"
+                aria-checked="false"
+                disabled
+              >
+                <span class="toggle-thumb"></span>
+              </button>
+            </div>
+
+            <!-- Precision -->
+            <div class="space-y-1">
+              <label for="precision" class="block text-sm text-gray-700">
+                Decimal places
+              </label>
+              <select id="precision" class="currency-select">
+                <option value="0">0 (123)</option>
+                <option value="1">1 (123.4)</option>
+                <option value="2" selected>2 (123.45)</option>
+                <option value="3">3 (123.456)</option>
+                <option value="4">4 (123.4567)</option>
+              </select>
+            </div>
+          </div>
         </section>
 
-        <section class="status-section">
-          <div id="statusMessage" class="status-message"></div>
+        <!-- Action Buttons -->
+        <div class="flex gap-2">
+          <button
+            id="saveSettings"
+            class="flex-1 bg-primary-500 text-white py-2 px-4 rounded-lg font-medium hover:bg-primary-600 transition-colors"
+          >
+            Save Settings
+          </button>
+          <button
+            id="resetSettings"
+            class="px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"
+          >
+            Reset
+          </button>
+        </div>
+
+        <!-- Premium Upgrade -->
+        <section
+          class="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-3"
+        >
+          <div class="flex items-start gap-3">
+            <span class="text-lg">⭐</span>
+            <div class="flex-1">
+              <h3 class="text-sm font-semibold text-gray-900 mb-1">
+                Upgrade to Premium
+              </h3>
+              <p class="text-xs text-gray-600 mb-2">
+                Unlock unlimited currencies, real-time rates, and more!
+              </p>
+              <button
+                id="upgradePremium"
+                class="text-xs bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full font-medium hover:bg-yellow-500 transition-colors"
+              >
+                Learn More
+              </button>
+            </div>
+          </div>
         </section>
       </main>
 
-      <footer class="footer">
-        <div class="version">v1.0.0</div>
-        <div class="links">
-          <a href="#" id="rateUs">Rate Us</a>
-          <span>•</span>
-          <a href="#" id="support">Support</a>
+      <!-- Footer -->
+      <footer class="border-t border-gray-200 p-3 bg-gray-50">
+        <div class="flex items-center justify-between text-xs text-gray-500">
+          <span id="version">v1.0.0</span>
+          <div class="flex items-center gap-2">
+            <button
+              id="rateUs"
+              class="hover:text-primary-600 transition-colors"
+            >
+              Rate Us
+            </button>
+            <span>•</span>
+            <button
+              id="support"
+              class="hover:text-primary-600 transition-colors"
+            >
+              Support
+            </button>
+            <span>•</span>
+            <button id="help" class="hover:text-primary-600 transition-colors">
+              Help
+            </button>
+          </div>
         </div>
       </footer>
+
+      <!-- Status Message -->
+      <div
+        id="statusMessage"
+        class="hidden fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 transition-all duration-300"
+      >
+        Settings saved successfully!
+      </div>
     </div>
 
-    <script src="popup.js"></script>
+    <script type="module" src="popup.js"></script>
   </body>
 </html>

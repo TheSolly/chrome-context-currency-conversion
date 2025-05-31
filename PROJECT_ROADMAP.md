@@ -81,13 +81,13 @@ A Chrome extension that provides real-time currency conversion through context m
 
 ## Phase 3: Settings & Configuration
 
-### Task 3.1: Settings UI Design
+### Task 3.1: Settings UI Design ✅
 
-- [ ] Create popup HTML interface
-- [ ] Design currency selector dropdowns
-- [ ] Add base/secondary currency configuration
-- [ ] Create toggle switches for features
-- [ ] Style with modern CSS (consider using Tailwind CSS)
+- [x] Create popup HTML interface
+- [x] Design currency selector dropdowns
+- [x] Add base/secondary currency configuration
+- [x] Create toggle switches for features
+- [x] Style with modern CSS (using Tailwind CSS)
 
 ### Task 3.2: Currency Data Management
 

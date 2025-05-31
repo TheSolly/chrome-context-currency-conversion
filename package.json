@@ -5,6 +5,8 @@
   "license": "MIT",
   "scripts": {
     "generate-icons": "node assets/icons/generate-icons.js",
+    "build-css": "tailwindcss -i ./popup/styles.css -o ./popup/popup.css --watch",
+    "build-css:prod": "tailwindcss -i ./popup/styles.css -o ./popup/popup.css --minify",
     "test-extension": "echo '🧪 Open Chrome, go to chrome://extensions/, enable Developer mode, and load unpacked extension'",
     "lint": "eslint . --ext .js",
     "lint:fix": "eslint . --ext .js --fix",
@@ -12,17 +14,20 @@
     "format:check": "prettier --check '**/*.{js,json,html,css,md}'",
     "check": "yarn lint && yarn format:check",
     "fix": "yarn lint:fix && yarn format",
-    "prepare-dev": "yarn generate-icons && yarn check",
+    "prepare-dev": "yarn generate-icons && yarn build-css:prod && yarn check",
     "dev": "yarn prepare-dev && echo '🚀 Development environment ready! Load extension in Chrome.'",
-    "build": "yarn check && echo '📦 Extension ready for distribution'"
+    "build": "yarn check && yarn build-css:prod && echo '📦 Extension ready for distribution'"
   },
   "devDependencies": {
     "@eslint/js": "^9.28.0",
+    "autoprefixer": "^10.4.21",
     "eslint": "^9.28.0",
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-prettier": "^5.4.1",
+    "postcss": "^8.5.4",
     "prettier": "^3.5.3",
-    "sharp": "^0.34.2"
+    "sharp": "^0.34.2",
+    "tailwindcss": "^4.1.8"
   },
   "engines": {
     "node": ">=18.0.0"
