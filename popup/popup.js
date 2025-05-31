@@ -16,6 +16,9 @@ import {
   CURRENCY_REGIONS
 } from '../utils/currency-data.js';
 
+// Phase 3, Task 3.3: Enhanced Settings Management
+import { settingsManager } from '../utils/settings-manager.js';
+
 // State management
 let currentSettings = { ...DEFAULT_SETTINGS };
 let userPlan = 'FREE'; // TODO: Implement plan detection
@@ -28,8 +31,11 @@ async function initializePopup() {
   console.log('🎨 Enhanced Currency Converter popup loaded');
 
   try {
-    // Load saved settings and user data
-    await loadSettings();
+    // Phase 3, Task 3.3: Initialize Settings Manager
+    await settingsManager.initialize();
+    currentSettings = await settingsManager.getSettings();
+
+    // Load user statistics
     await loadUserStats();
 
     // Enhanced Task 3.2 - Load currency preferences
@@ -86,6 +92,20 @@ function setupEventListeners() {
   document
     .getElementById('addCurrency')
     .addEventListener('click', showAddCurrencyDialog);
+
+  // Phase 3, Task 3.3: Enhanced Settings Management
+  document
+    .getElementById('exportSettings')
+    .addEventListener('click', exportSettings);
+  document
+    .getElementById('importSettings')
+    .addEventListener('click', importSettings);
+  document
+    .getElementById('settingsStats')
+    .addEventListener('click', toggleSettingsStats);
+  document
+    .getElementById('importFileInput')
+    .addEventListener('change', handleImportFile);
 
   // Premium and footer links
   document
@@ -236,21 +256,7 @@ function updateFeatureAccess() {
   });
 }
 
-async function loadSettings() {
-  try {
-    const settings = await chrome.storage.sync.get(
-      Object.keys(DEFAULT_SETTINGS)
-    );
-
-    // Merge with defaults
-    currentSettings = { ...DEFAULT_SETTINGS, ...settings };
-
-    console.log('📊 Settings loaded:', currentSettings);
-  } catch (error) {
-    console.error('❌ Failed to load settings:', error);
-    currentSettings = { ...DEFAULT_SETTINGS };
-  }
-}
+// Removed - replaced with settingsManager.initialize() in initializePopup()
 
 async function loadUserStats() {
   try {
@@ -294,16 +300,22 @@ async function handleCurrencyChange(event) {
 }
 
 async function handleSettingChange() {
-  // Auto-save settings with debouncing
+  // Phase 3, Task 3.3: Auto-save with SettingsManager debouncing
   clearTimeout(window.saveTimeout);
   window.saveTimeout = setTimeout(async () => {
-    await saveSettingsToStorage();
+    try {
+      await settingsManager.saveSettings(currentSettings);
+      console.log('⚙️ Settings auto-saved');
+    } catch (error) {
+      console.error('❌ Auto-save failed:', error);
+    }
   }, 500);
 }
 
 async function saveSettings() {
   try {
-    await saveSettingsToStorage();
+    // Phase 3, Task 3.3: Use SettingsManager for saving
+    await settingsManager.saveSettings(currentSettings);
     showStatus('Settings saved successfully!', 'success');
   } catch (error) {
     console.error('❌ Failed to save settings:', error);
@@ -311,46 +323,34 @@ async function saveSettings() {
   }
 }
 
-async function saveSettingsToStorage() {
-  try {
-    // Enhanced Task 3.2 - Validate settings before saving
-    if (!validateAndUpdateSettings()) {
-      throw new Error('Invalid currency settings');
-    }
-
-    await chrome.storage.sync.set(currentSettings);
-
-    // Notify background script of settings change
-    chrome.runtime.sendMessage({
-      type: 'SETTINGS_CHANGED',
-      settings: currentSettings
-    });
-
-    console.log('💾 Settings saved:', currentSettings);
-  } catch (error) {
-    throw new Error(`Failed to save settings: ${error.message}`);
-  }
-}
+// Removed - replaced with settingsManager.saveSettings() calls
 
 async function resetSettings() {
   if (confirm('Are you sure you want to reset all settings to defaults?')) {
-    currentSettings = { ...DEFAULT_SETTINGS };
+    try {
+      // Phase 3, Task 3.3: Use SettingsManager for reset
+      await settingsManager.resetToDefaults();
+      currentSettings = await settingsManager.getSettings();
 
-    // Update UI
-    populateCurrencySelectors();
-    populateAdditionalCurrencies();
+      // Update UI
+      populateCurrencySelectors();
+      populateAdditionalCurrencies();
 
-    // Update toggles
-    Object.keys(DEFAULT_SETTINGS).forEach(key => {
-      const element = document.getElementById(key);
-      if (element && element.classList.contains('toggle-switch')) {
-        updateToggleState(element, DEFAULT_SETTINGS[key]);
-      } else if (element && element.tagName === 'SELECT') {
-        element.value = DEFAULT_SETTINGS[key];
-      }
-    });
+      // Update toggles
+      Object.keys(currentSettings).forEach(key => {
+        const element = document.getElementById(key);
+        if (element && element.classList.contains('toggle-switch')) {
+          updateToggleState(element, currentSettings[key]);
+        } else if (element && element.tagName === 'SELECT') {
+          element.value = currentSettings[key];
+        }
+      });
 
-    await saveSettings();
+      showStatus('Settings reset to defaults!', 'success');
+    } catch (error) {
+      console.error('❌ Failed to reset settings:', error);
+      showStatus('Failed to reset settings', 'error');
+    }
   }
 }
 
@@ -644,6 +644,106 @@ async function removeFromFavorites(currencyCode) {
   } catch (error) {
     console.error('❌ Failed to remove from favorites:', error);
     showStatus('Failed to remove from favorites', 'error');
+  }
+}
+
+// Phase 3, Task 3.3: Enhanced Settings Management Functions
+
+async function exportSettings() {
+  try {
+    const exportData = await settingsManager.exportSettings();
+
+    // Create download using data URL
+    const dataUrl =
+      'data:application/json;charset=utf-8,' + encodeURIComponent(exportData);
+    const filename = `currency-converter-settings-${new Date().toISOString().split('T')[0]}.json`;
+
+    // Create temporary download link
+    const downloadLink = document.createElement('a');
+    downloadLink.href = dataUrl;
+    downloadLink.download = filename;
+    downloadLink.style.display = 'none';
+
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+
+    showStatus('Settings exported successfully!', 'success');
+  } catch (error) {
+    console.error('❌ Failed to export settings:', error);
+    showStatus('Failed to export settings', 'error');
+  }
+}
+
+function importSettings() {
+  document.getElementById('importFileInput').click();
+}
+
+async function handleImportFile(event) {
+  const file = event.target.files[0];
+  if (!file) {
+    return;
+  }
+
+  try {
+    const text = await file.text();
+    const success = await settingsManager.importSettings(text);
+
+    if (success) {
+      currentSettings = await settingsManager.getSettings();
+
+      // Update UI with imported settings
+      populateCurrencySelectors();
+      populateAdditionalCurrencies();
+
+      // Update toggles and selects
+      Object.keys(currentSettings).forEach(key => {
+        const element = document.getElementById(key);
+        if (element && element.classList.contains('toggle-switch')) {
+          updateToggleState(element, currentSettings[key]);
+        } else if (element && element.tagName === 'SELECT') {
+          element.value = currentSettings[key];
+        }
+      });
+
+      showStatus('Settings imported successfully!', 'success');
+    } else {
+      showStatus('Invalid settings file format', 'error');
+    }
+  } catch (error) {
+    console.error('❌ Failed to import settings:', error);
+    showStatus('Failed to import settings', 'error');
+  }
+
+  // Reset file input
+  event.target.value = '';
+}
+
+async function toggleSettingsStats() {
+  const panel = document.getElementById('settingsStatsPanel');
+  const isHidden = panel.classList.contains('hidden');
+
+  if (isHidden) {
+    try {
+      const stats = await settingsManager.getStatistics();
+      if (stats) {
+        document.getElementById('settingsVersion').textContent = stats.version;
+        document.getElementById('installDate').textContent = stats.installDate
+          ? new Date(stats.installDate).toLocaleDateString()
+          : 'Unknown';
+        document.getElementById('lastSync').textContent = stats.lastSync
+          ? new Date(stats.lastSync).toLocaleString()
+          : 'Never';
+        document.getElementById('storageUsed').textContent =
+          `${stats.storageUsed} bytes`;
+      }
+      panel.classList.remove('hidden');
+    } catch (error) {
+      console.error('❌ Failed to load settings stats:', error);
+      showStatus('Failed to load statistics', 'error');
+    }
+  } else {
+    panel.classList.add('hidden');
   }
 }
 

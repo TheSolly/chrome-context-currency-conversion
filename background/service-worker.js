@@ -1,6 +1,9 @@
 // Enhanced background service worker for Task 2.3
 // Handles dynamic context menu creation and currency conversion logic with improved UX
 
+// Phase 3, Task 3.3: Import Settings Manager
+import { settingsManager } from '../utils/settings-manager.js';
+
 // Global state management
 let currentCurrencyInfo = null;
 let currentSettings = null;
@@ -42,6 +45,16 @@ function logError(error, context, additionalData = null) {
 // Initialize context menu when extension is installed or enabled
 chrome.runtime.onInstalled.addListener(async () => {
   console.log('Currency Converter Extension installed');
+
+  // Phase 3, Task 3.3: Initialize Settings Manager
+  try {
+    await settingsManager.initialize();
+    currentSettings = await settingsManager.getSettings();
+    console.log('⚙️ Settings Manager initialized in background');
+  } catch (error) {
+    logError(error, 'settingsManagerInit');
+  }
+
   await initializeContextMenus();
 });
 
@@ -196,6 +209,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     if (request.action === 'getErrorLog') {
       sendResponse({ errorLog });
+    }
+
+    // Phase 3, Task 3.3: Handle settings changes
+    if (request.type === 'SETTINGS_CHANGED') {
+      handleSettingsChange(request.settings)
+        .then(() => sendResponse({ success: true }))
+        .catch(error => {
+          logError(error, 'handleSettingsChange', request.settings);
+          sendResponse({ success: false, error: error.message });
+        });
+      return true; // Will respond asynchronously
     }
 
     if (request.action === 'getStats') {
@@ -400,4 +424,48 @@ function getExtensionStats() {
     popularCurrencies: POPULAR_CURRENCIES,
     timestamp: new Date().toISOString()
   };
+}
+
+// Phase 3, Task 3.3: Handle settings changes from popup
+async function handleSettingsChange(newSettings) {
+  try {
+    // Update current settings cache
+    currentSettings = newSettings;
+
+    // Update context menus based on new settings if needed
+    if (newSettings.baseCurrency || newSettings.secondaryCurrency) {
+      await updateContextMenuCurrencies();
+    }
+
+    // Log settings change
+    console.log('⚙️ Settings updated in background:', {
+      baseCurrency: newSettings.baseCurrency,
+      secondaryCurrency: newSettings.secondaryCurrency,
+      additionalCurrencies: newSettings.additionalCurrencies?.length || 0
+    });
+
+    return true;
+  } catch (error) {
+    logError(error, 'handleSettingsChange', newSettings);
+    throw error;
+  }
+}
+
+// Update context menu currencies based on current settings
+async function updateContextMenuCurrencies() {
+  if (!currentSettings) {
+    return;
+  }
+
+  try {
+    // Remove all existing dynamic currency menus
+    await chrome.contextMenus.removeAll();
+
+    // Recreate context menus with updated settings
+    await initializeContextMenus();
+
+    console.log('🔄 Context menus updated with new settings');
+  } catch (error) {
+    logError(error, 'updateContextMenuCurrencies');
+  }
 }

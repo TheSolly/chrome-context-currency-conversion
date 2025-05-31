@@ -98,6 +98,17 @@ A Chrome extension that provides real-time currency conversion through context m
    - **Smart Number Parsing**: European (1.234,56) vs US (1,234.56) formats
    - **Performance Optimization**: Debounced selection processing, memory management
    - **Accessibility Features**: Keyboard navigation, ARIA labels, screen reader support
+
+   **🆕 Phase 3, Task 3.3 - Enhanced Settings Persistence**:
+
+   - **Chrome Storage API Integration**: Dual storage strategy (sync + local) for optimal performance
+   - **Cross-Device Synchronization**: Settings sync across all Chrome-signed devices
+   - **First Install Detection**: Automatic setup and default configuration on first run
+   - **Settings Export/Import**: JSON-based backup and restore functionality
+   - **Settings Migration System**: Version-based migration with automatic fallback
+   - **Settings Statistics**: Install date, sync status, storage usage tracking
+   - **Enhanced Validation**: Comprehensive settings validation with corruption recovery
+   - **Settings Manager Architecture**: 20+ methods for complete settings lifecycle management
    - **Error Handling**: Graceful degradation, comprehensive logging
    - **Debug Capabilities**: Performance metrics, detection statistics
    - **Visual Feedback**: Smooth animations, confidence indicators
@@ -140,8 +151,23 @@ A Chrome extension that provides real-time currency conversion through context m
    - Run `npm run lint` to check code quality
    - Run `npm run test` to run currency detection tests
    - Run `node test-currency-detection.js` for detailed test results
+   - Run `node test-context-menu.js` for context menu integration tests
+   - Run `node test-settings-persistence.js` for settings persistence tests
 
-4. **Test Settings**:
+4. **Test Enhanced Settings (Phase 3, Task 3.3)**:
+
+   - **Open Settings Popup**: Click the extension icon to open settings
+   - **Export Settings**: Click "📤 Export" to download settings JSON file
+   - **Import Settings**: Click "📥 Import" to restore settings from JSON file
+   - **View Statistics**: Click "📊 Stats" to see settings metadata
+   - **Cross-Device Sync**: Settings automatically sync when Chrome is signed in
+   - **Reset to Defaults**: Test comprehensive settings reset functionality
+   - **Settings Validation**: Invalid settings are automatically corrected
+   - **Error Recovery**: Settings corruption is detected and handled gracefully
+   - Run `npm run test` to run currency detection tests
+   - Run `node test-currency-detection.js` for detailed test results
+
+5. **Test Settings**:
    - Click the extension icon to open settings
    - Select base and secondary currencies from 30+ options
    - Save settings and test conversions

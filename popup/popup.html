@@ -183,6 +183,64 @@
           </button>
         </div>
 
+        <!-- Phase 3, Task 3.3: Settings Management -->
+        <div class="flex gap-2 text-sm">
+          <button
+            id="exportSettings"
+            class="flex-1 bg-blue-500 text-white py-2 px-3 rounded-lg font-medium hover:bg-blue-600 transition-colors"
+          >
+            📤 Export
+          </button>
+          <button
+            id="importSettings"
+            class="flex-1 bg-green-500 text-white py-2 px-3 rounded-lg font-medium hover:bg-green-600 transition-colors"
+          >
+            📥 Import
+          </button>
+          <button
+            id="settingsStats"
+            class="flex-1 bg-gray-500 text-white py-2 px-3 rounded-lg font-medium hover:bg-gray-600 transition-colors"
+          >
+            📊 Stats
+          </button>
+        </div>
+
+        <!-- Settings Statistics (Hidden by default) -->
+        <div
+          id="settingsStatsPanel"
+          class="hidden bg-gray-50 rounded-lg p-3 space-y-2"
+        >
+          <h3 class="font-semibold text-gray-800 text-sm">
+            Settings Information
+          </h3>
+          <div class="text-xs text-gray-600 space-y-1">
+            <div class="flex justify-between">
+              <span>Version:</span>
+              <span id="settingsVersion">-</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Install Date:</span>
+              <span id="installDate">-</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Last Sync:</span>
+              <span id="lastSync">-</span>
+            </div>
+            <div class="flex justify-between">
+              <span>Storage Used:</span>
+              <span id="storageUsed">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hidden file input for import -->
+        <input
+          type="file"
+          id="importFileInput"
+          accept=".json"
+          style="display: none"
+        />
+
         <!-- Premium Upgrade -->
         <section
           class="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-3"
