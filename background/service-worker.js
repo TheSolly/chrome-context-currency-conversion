@@ -135,6 +135,8 @@ async function handleCurrencyConversion(info, tab, targetCurrency = null) {
     // Use current currency info if available
     const conversionData = {
       originalText: selectedText,
+      baseCurrency: currentCurrencyInfo?.currency,
+      secondaryCurrency: finalTargetCurrency,
       sourceCurrency: currentCurrencyInfo?.currency,
       targetCurrency: finalTargetCurrency,
       amount: currentCurrencyInfo?.amount,
