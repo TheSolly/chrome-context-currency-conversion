@@ -31,4 +31,49 @@
   .feature-badge {
     @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800;
   }
+
+  /* New Task 3.2 components */
+  .stat-item {
+    @apply flex flex-col space-y-1;
+  }
+
+  .region-button {
+    @apply flex items-center gap-2 p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all cursor-pointer;
+  }
+
+  .region-button:hover {
+    @apply scale-105 shadow-sm;
+  }
+
+  .favorite-item {
+    @apply flex items-center justify-between p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors;
+  }
+
+  .favorite-remove {
+    @apply text-red-500 hover:text-red-700 cursor-pointer text-sm;
+  }
+
+  .region-tag {
+    @apply inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-full text-xs text-gray-600;
+  }
+
+  .recent-currency {
+    @apply inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs cursor-pointer hover:bg-blue-200 transition-colors;
+  }
+
+  .currency-search {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm;
+  }
+
+  .search-results {
+    @apply absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto;
+  }
+
+  .search-result-item {
+    @apply px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm border-b border-gray-100 last:border-b-0;
+  }
+
+  .search-result-item:hover {
+    @apply bg-blue-50;
+  }
 }

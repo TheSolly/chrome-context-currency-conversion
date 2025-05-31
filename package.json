@@ -2,6 +2,7 @@
   "name": "currency-converter-extension",
   "version": "1.0.0",
   "description": "Chrome extension for real-time currency conversion through context menu",
+  "type": "module",
   "license": "MIT",
   "scripts": {
     "generate-icons": "node assets/icons/generate-icons.js",

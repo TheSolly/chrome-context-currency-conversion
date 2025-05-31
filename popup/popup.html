@@ -205,6 +205,139 @@
             </div>
           </div>
         </section>
+
+        <!-- Currency Stats Dashboard -->
+        <section class="setting-card">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-lg">📊</span>
+            <h2 class="text-base font-semibold text-gray-900">
+              Currency Database
+            </h2>
+          </div>
+
+          <div id="currencyStats" class="grid grid-cols-2 gap-3 text-sm">
+            <div class="stat-item">
+              <span class="text-gray-600">Total Currencies</span>
+              <span id="totalCurrencies" class="font-semibold text-primary-600"
+                >--</span
+              >
+            </div>
+            <div class="stat-item">
+              <span class="text-gray-600">Popular</span>
+              <span id="popularCurrencies" class="font-semibold text-green-600"
+                >--</span
+              >
+            </div>
+            <div class="stat-item">
+              <span class="text-gray-600">Regions</span>
+              <span id="totalRegions" class="font-semibold text-blue-600"
+                >--</span
+              >
+            </div>
+            <div class="stat-item">
+              <span class="text-gray-600">Favorites</span>
+              <span id="favoriteCount" class="font-semibold text-purple-600"
+                >--</span
+              >
+            </div>
+          </div>
+
+          <!-- Regional Overview -->
+          <div class="mt-3 pt-3 border-t border-gray-200">
+            <div class="text-xs text-gray-500 mb-2">By Region:</div>
+            <div id="regionStats" class="flex flex-wrap gap-1">
+              <!-- Populated by JavaScript -->
+            </div>
+          </div>
+        </section>
+
+        <!-- Favorites Management -->
+        <section class="setting-card">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <span class="text-lg">⭐</span>
+              <h2 class="text-base font-semibold text-gray-900">
+                Favorite Currencies
+              </h2>
+            </div>
+            <span class="text-xs text-gray-500">Max 10</span>
+          </div>
+
+          <div id="favoritesList" class="space-y-2 min-h-[60px]">
+            <!-- Populated by JavaScript -->
+          </div>
+
+          <div class="mt-3 pt-3 border-t border-gray-200">
+            <div class="text-xs text-gray-500 mb-2">Recently Used:</div>
+            <div id="recentlyUsed" class="flex flex-wrap gap-1">
+              <!-- Populated by JavaScript -->
+            </div>
+          </div>
+        </section>
+
+        <!-- Regional Currency Filter -->
+        <section class="setting-card">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-lg">🌍</span>
+            <h2 class="text-base font-semibold text-gray-900">
+              Browse by Region
+            </h2>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <button
+              id="regionAmericas"
+              class="region-button"
+              data-region="americas"
+            >
+              <span class="text-lg">🌎</span>
+              <div class="text-left">
+                <div class="font-medium text-sm">Americas</div>
+                <div class="text-xs text-gray-500" id="americasCount">
+                  -- currencies
+                </div>
+              </div>
+            </button>
+
+            <button
+              id="regionEurope"
+              class="region-button"
+              data-region="europe"
+            >
+              <span class="text-lg">🇪🇺</span>
+              <div class="text-left">
+                <div class="font-medium text-sm">Europe</div>
+                <div class="text-xs text-gray-500" id="europeCount">
+                  -- currencies
+                </div>
+              </div>
+            </button>
+
+            <button id="regionAsia" class="region-button" data-region="asia">
+              <span class="text-lg">🌏</span>
+              <div class="text-left">
+                <div class="font-medium text-sm">Asia & Pacific</div>
+                <div class="text-xs text-gray-500" id="asiaCount">
+                  -- currencies
+                </div>
+              </div>
+            </button>
+
+            <button
+              id="regionAfrica"
+              class="region-button"
+              data-region="africa"
+            >
+              <span class="text-lg">🌍</span>
+              <div class="text-left">
+                <div class="font-medium text-sm">Africa & ME</div>
+                <div class="text-xs text-gray-500" id="africaCount">
+                  -- currencies
+                </div>
+              </div>
+            </button>
+          </div>
+        </section>
       </main>
 
       <!-- Footer -->
