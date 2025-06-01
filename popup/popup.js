@@ -9,7 +9,6 @@ import {
   formatCurrencyOption,
   DEFAULT_SETTINGS,
   FEATURES,
-  // Enhanced Task 3.2 functions
   getCurrencyStats,
   CurrencyPreferences,
   validateCurrencySelection,
@@ -340,6 +339,11 @@ function updateFeatureAccess() {
     addButton.disabled = true;
     addButton.textContent = `Maximum ${maxCurrencies} currencies`;
     addButton.classList.add('opacity-50', 'cursor-not-allowed');
+  } else {
+    // Re-enable the button when under the limit
+    addButton.disabled = false;
+    addButton.textContent = '+ Add Currency';
+    addButton.classList.remove('opacity-50', 'cursor-not-allowed');
   }
 
   // Update premium features
