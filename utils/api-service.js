@@ -29,7 +29,7 @@ export const API_PROVIDERS = {
     name: 'ExchangeRate-API',
     baseUrl: 'https://v6.exchangerate-api.com/v6',
     rateLimits: {
-      registered: { requests: 100000, period: 'month' },
+      registered: { requests: 1500, period: 'month' },
       features: [
         'Real-time rates',
         'Historical data',
