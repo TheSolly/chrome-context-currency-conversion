@@ -86,12 +86,15 @@ async function initializeContextMenus() {
 // Load user settings with fallbacks
 async function loadUserSettings() {
   try {
-    const settings = await chrome.storage.sync.get([
-      'baseCurrency',
-      'secondaryCurrency',
-      'additionalCurrencies',
-      'showConfidence'
-    ]);
+    // Force reload settings from storage first
+    await settingsManager.loadSettings();
+    const settings = settingsManager.getSettings();
+
+    console.log('📥 Background worker loaded settings:', {
+      baseCurrency: settings.baseCurrency,
+      secondaryCurrency: settings.secondaryCurrency,
+      additionalCurrencies: settings.additionalCurrencies
+    });
 
     return {
       baseCurrency: settings.baseCurrency || 'USD',
@@ -228,9 +231,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     if (request.action === 'reloadSettings') {
       // Reload settings when user updates preferences
+      console.log('🔄 Received reloadSettings request');
       loadUserSettings()
-        .then(settings => {
+        .then(async settings => {
+          console.log('✅ Settings loaded in background:', settings);
           currentSettings = settings;
+
+          // If we have current currency info, update the context menu to reflect new settings
+          if (currentCurrencyInfo) {
+            console.log('🔄 Updating context menu with new settings');
+            await updateContextMenu(true, currentCurrencyInfo);
+          } else {
+            console.log('ℹ️ No current currency info to update context menu');
+          }
+
           sendResponse({ success: true, settings });
         })
         .catch(error => {
@@ -299,14 +313,22 @@ async function updateContextMenu(hasCurrency, currencyInfo) {
 // Create dynamic conversion menu items based on user preferences
 async function createConversionOptions(sourceCurrency, formattedAmount) {
   try {
+    console.log(
+      `🎯 Creating conversion options for ${sourceCurrency}, current settings:`,
+      currentSettings
+    );
     const targetCurrencies = new Set();
 
     // Add user's preferred currencies
     if (currentSettings.secondaryCurrency !== sourceCurrency) {
       targetCurrencies.add(currentSettings.secondaryCurrency);
+      console.log(
+        `➕ Added secondary currency: ${currentSettings.secondaryCurrency}`
+      );
     }
     if (currentSettings.baseCurrency !== sourceCurrency) {
       targetCurrencies.add(currentSettings.baseCurrency);
+      console.log(`➕ Added base currency: ${currentSettings.baseCurrency}`);
     }
 
     // Add additional configured currencies

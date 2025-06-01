@@ -66,6 +66,19 @@ async function updateSettingWithTracking(key, value) {
         }
       }
 
+      // Notify background service worker about settings change
+      try {
+        await chrome.runtime.sendMessage({
+          action: 'reloadSettings'
+        });
+        console.log(
+          `📤 Notified background service worker about ${key} change`
+        );
+      } catch (error) {
+        console.warn('⚠️ Failed to notify background service worker:', error);
+        // Don't throw here as the setting was saved successfully
+      }
+
       console.log(`✅ Completed tracked operation: ${operationId}`);
     } catch (error) {
       console.error(`❌ Failed tracked operation: ${operationId}`, error);
@@ -383,6 +396,8 @@ async function loadUserStats() {
 async function handleCurrencyChange(event) {
   const { id, value } = event.target;
 
+  console.log(`🔄 Currency change detected: ${id} = ${value}`);
+
   // Prevent selecting the same currency for both base and secondary
   if (id === 'baseCurrency' && value === currentSettings.secondaryCurrency) {
     showStatus('Base and secondary currencies cannot be the same', 'error');
@@ -399,6 +414,9 @@ async function handleCurrencyChange(event) {
   // Update settings through SettingsManager with tracking
   await updateSettingWithTracking(id, value);
   currentSettings = await settingsManager.getSettings();
+  console.log(
+    `✅ Settings updated, new secondaryCurrency: ${currentSettings.secondaryCurrency}`
+  );
 }
 
 async function saveSettings() {
@@ -408,6 +426,18 @@ async function saveSettings() {
 
     // Phase 3, Task 3.3: Use SettingsManager for saving
     await settingsManager.saveSettings();
+
+    // Notify background service worker about settings change
+    try {
+      await chrome.runtime.sendMessage({
+        action: 'reloadSettings'
+      });
+      console.log('📤 Notified background service worker about settings save');
+    } catch (error) {
+      console.warn('⚠️ Failed to notify background service worker:', error);
+      // Don't throw here as the setting was saved successfully
+    }
+
     showStatus('Settings saved successfully!', 'success');
   } catch (error) {
     console.error('❌ Failed to save settings:', error);
