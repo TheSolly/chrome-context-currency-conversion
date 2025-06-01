@@ -4,13 +4,42 @@
 
 console.log('Currency Converter content script loaded');
 
+// Phase 5, Task 5.1: Initialize Visual Feedback System
+let visualFeedback = null;
+
+// Load visual feedback system dynamically
+(async () => {
+  try {
+    const { visualFeedback: vf } = await import(
+      chrome.runtime.getURL('utils/visual-feedback.js')
+    );
+    visualFeedback = vf;
+    console.log('Visual feedback system loaded successfully');
+  } catch (error) {
+    console.warn('Failed to load visual feedback system:', error);
+    // Create a fallback object with no-op methods
+    visualFeedback = {
+      showToast: () => {},
+      showLoading: () => null,
+      hideLoading: () => {},
+      showConversionResult: () => {},
+      showTooltipConversionResult: () => {},
+      showSuccessAnimation: () => {},
+      showErrorAnimation: () => {},
+      copyToClipboard: () => Promise.resolve(false),
+      initializeStyles: () => {},
+      removeExistingTooltip: () => {}
+    };
+  }
+})();
+
 // Currency patterns for detection - Enhanced for Task 2.1
 const CURRENCY_PATTERNS = {
   // Symbol patterns: $100, €50, £75, ¥1000, A$50, C$75, HK$100
   symbols:
     /([A-Z]{0,2}\$|€|£|¥|₹|₽|¢|₩|₦|₪|₨|₫|₱|₡|₲|₴|₵|₸|₺|₾|₿|kr|zł|Kč|Ft|₪|฿|RM|R\$|R|NZ\$|S\$|HK\$)\s*([\d]{1,3}(?:[,.\s]\d{3})*(?:[,.]\d{1,4})?)\b/gi,
 
-  // Suffix symbol patterns: 100$, 50€, 75£
+  // Suffix symbol patterns: 100$, 50€
   symbolsSuffix:
     /([\d]{1,3}(?:[,.\s]\d{3})*(?:[,.]\d{1,4})?)\s*(\$|€|£|¥|₹|₽|¢|₩|₦|₪|₨|₫|₱|₡|₲|₴|₵|₸|₺|₾|₿|kr|zł|Kč|Ft|₪|฿|RM|R\$|R)\b/gi,
 
@@ -679,127 +708,214 @@ function detectCurrency(text) {
 }
 
 // Listen for messages from background script
-chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
-  if (request.action === 'showConversionResult') {
-    showConversionResult(request);
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  try {
+    if (request.action === 'showLoadingFeedback') {
+      visualFeedback.showToast(
+        `Converting to ${request.targetCurrency}...`,
+        'info',
+        2000
+      );
+      sendResponse({ success: true });
+    }
+
+    if (request.action === 'showErrorFeedback') {
+      visualFeedback.showToast(
+        `Conversion failed: ${request.error}`,
+        'error',
+        4000
+      );
+      sendResponse({ success: true });
+    }
+
+    if (request.action === 'showConversionResult' && request.result) {
+      if (request.result.error) {
+        // Show error result
+        displayConversionTooltip(
+          request.originalText,
+          request.currencyInfo,
+          null,
+          request.result.errorMessage
+        );
+        visualFeedback.showToast(
+          `Conversion failed: ${request.result.errorMessage}`,
+          'error',
+          4000
+        );
+      } else {
+        // Show successful conversion result
+        displayConversionTooltip(
+          request.originalText,
+          request.currencyInfo,
+          request.result
+        );
+
+        // Show success toast with copy option
+        const toastMessage = `${request.result.convertedAmount} ${request.result.toCurrency} (Click to copy)`;
+        const toast = visualFeedback.showToast(toastMessage, 'success', 5000);
+
+        // Make toast clickable to copy result
+        if (toast) {
+          toast.style.cursor = 'pointer';
+          toast.addEventListener('click', () => {
+            visualFeedback.copyToClipboard(request.result.convertedAmount);
+            visualFeedback.hideToast(toast);
+          });
+        }
+      }
+      sendResponse({ success: true });
+    }
+  } catch (error) {
+    console.error('Error handling visual feedback message:', error);
+    sendResponse({ success: false, error: error.message });
   }
 });
 
-// Enhanced conversion result display with Task 4.3 formatting - Task 2.2 + 4.3
-function showConversionResult(data) {
-  // Remove any existing tooltip first
+console.log('✅ Currency converter content script with visual feedback loaded');
+
+// Helper function to remove existing tooltips
+function removeExistingTooltip() {
+  const existing = document.getElementById('currency-converter-tooltip');
+  if (existing && existing.parentNode) {
+    existing.parentNode.removeChild(existing);
+  }
+}
+
+// Phase 5, Task 5.1: Display conversion tooltip with visual feedback
+function displayConversionTooltip(
+  originalText,
+  currencyInfo,
+  result,
+  errorMessage = null
+) {
+  // Remove any existing tooltips
   removeExistingTooltip();
 
-  // Create enhanced tooltip-like element
+  // If we have the visual feedback system available, use its enhanced showTooltipConversionResult
+  if (visualFeedback && visualFeedback.showTooltipConversionResult) {
+    try {
+      visualFeedback.showTooltipConversionResult(
+        originalText,
+        currencyInfo,
+        result,
+        errorMessage
+      );
+      return;
+    } catch (error) {
+      console.warn(
+        'Failed to use visual feedback system, falling back to basic tooltip:',
+        error
+      );
+    }
+  }
+
+  // Fallback to basic tooltip implementation
+  createBasicTooltip(originalText, currencyInfo, result, errorMessage);
+}
+
+// Basic tooltip implementation as fallback
+function createBasicTooltip(
+  originalText,
+  currencyInfo,
+  result,
+  errorMessage = null
+) {
+  // Get the current mouse position or text selection
+  let x = window.innerWidth / 2;
+  let y = window.innerHeight / 2;
+
+  // Try to get selection position
+  const selection = window.getSelection();
+  if (selection.rangeCount > 0) {
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      x = rect.left + rect.width / 2;
+      y = rect.top - 10;
+    }
+  }
+
+  // Create tooltip element
   const tooltip = document.createElement('div');
   tooltip.id = 'currency-converter-tooltip';
-  tooltip.setAttribute('role', 'dialog');
-  tooltip.setAttribute('aria-live', 'polite');
-  tooltip.setAttribute('aria-label', 'Currency conversion result');
-
-  // Enhanced styling with better positioning and animations
   tooltip.style.cssText = `
     position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) scale(0.9);
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 16px 20px;
+    z-index: 10000;
+    background: white;
+    border: 1px solid #e5e7eb;
     border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-size: 14px;
-    font-weight: 400;
     line-height: 1.4;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-    z-index: 999999;
-    max-width: 350px;
-    min-width: 300px;
+    max-width: 320px;
+    min-width: 200px;
     opacity: 0;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255,255,255,0.2);
+    transform: scale(0.9);
+    transition: all 0.3s ease;
+    left: ${x}px;
+    top: ${y}px;
+    transform-origin: center bottom;
+    backdrop-filter: blur(8px);
   `;
 
-  // Check if we have actual conversion result or error
-  if (data.result && !data.result.error) {
-    const result = data.result;
-    const confidence = data.currencyInfo?.confidence
-      ? Math.round(data.currencyInfo.confidence * 100)
-      : 85;
-
-    // Show successful conversion with Task 4.3 formatting
+  if (errorMessage) {
+    // Error state
     tooltip.innerHTML = `
-      <div style="margin-bottom: 12px; font-weight: 600; font-size: 16px; text-align: center;">
-        💱 Currency Conversion
+      <div style="color: #ef4444; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 18px;">❌</span>
+        Conversion Failed
       </div>
-      <div style="margin-bottom: 12px; font-size: 15px; background: rgba(255,255,255,0.15); padding: 12px; border-radius: 8px; text-align: center;">
-        <div style="margin-bottom: 8px; font-size: 14px; opacity: 0.9;">
-          <strong>${data.originalText}</strong>
-        </div>
-        <div style="font-size: 18px; font-weight: 600; color: #fff;">
-          ${result.formattedAmount}
-        </div>
+      <div style="color: #6b7280; margin-bottom: 8px;">
+        <strong>Original:</strong> ${originalText}
       </div>
-      <div style="margin: 12px 0; font-size: 12px; opacity: 0.85; background: rgba(0,0,0,0.15); padding: 8px; border-radius: 6px;">
-        <div style="margin-bottom: 4px;">
-          <strong>Rate:</strong> ${result.formattedRate}
-        </div>
-        <div style="margin-bottom: 4px;">
-          <strong>Source:</strong> ${result.source}${result.cached ? ' (cached)' : ''}${result.offline ? ' (offline)' : ''}
-        </div>
-        <div>
-          <strong>Time:</strong> ${result.conversionTime}
-        </div>
+      <div style="color: #ef4444; font-size: 13px; background: #fef2f2; padding: 8px; border-radius: 6px; border-left: 3px solid #ef4444;">
+        ${errorMessage}
       </div>
-      <div style="margin-top: 12px; font-size: 11px; opacity: 0.7; text-align: center;">
-        Detection confidence: ${confidence}% • Click anywhere to close
+      <div style="margin-top: 8px; font-size: 11px; opacity: 0.6; text-align: center;">
+        Click anywhere to close
       </div>
     `;
-  } else if (data.result && data.result.error) {
-    // Show error result
-    const confidence = data.currencyInfo?.confidence
-      ? Math.round(data.currencyInfo.confidence * 100)
-      : 85;
+  } else if (result) {
+    // Enhanced success state with proper currency formatting
+    const fromCurrency = currencyInfo?.currency || 'USD';
 
     tooltip.innerHTML = `
-      <div style="margin-bottom: 12px; font-weight: 600; font-size: 16px; text-align: center;">
-        ⚠️ Conversion Error
+      <div style="color: #10b981; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 18px;">✅</span>
+        Currency Conversion
       </div>
-      <div style="margin-bottom: 12px; font-size: 15px; background: rgba(255,255,255,0.1); padding: 12px; border-radius: 8px;">
-        <div style="margin-bottom: 8px;">
-          <strong>${data.originalText}</strong>
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px; border-radius: 8px; margin-bottom: 8px;">
+        <div style="font-size: 18px; font-weight: bold; margin-bottom: 4px;">
+          ${result.convertedAmount}
         </div>
-        <div style="font-size: 13px; color: #ffcccb;">
-          ${data.result.errorMessage}
+        <div style="font-size: 12px; opacity: 0.9;">
+          ${currencyInfo?.amount || result.originalAmount} ${fromCurrency} → ${result.convertedAmount}
         </div>
       </div>
-      <div style="margin-top: 12px; font-size: 11px; opacity: 0.7; text-align: center;">
-        Detection confidence: ${confidence}% • Click anywhere to close
+      <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">
+        <div><strong>Rate:</strong> ${result.exchangeRate}</div>
+        <div><strong>Updated:</strong> ${result.timestamp || new Date().toLocaleString()}</div>
+      </div>
+      <div style="text-align: center; margin-top: 12px;">
+        <button id="copyConversionResult" style="background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500;">
+          📋 Copy Result
+        </button>
+      </div>
+      <div style="margin-top: 8px; font-size: 11px; opacity: 0.6; text-align: center;">
+        Click anywhere to close
       </div>
     `;
   } else {
-    // Show loading or fallback message
-    const confidence = data.currencyInfo?.confidence
-      ? Math.round(data.currencyInfo.confidence * 100)
-      : 85;
-
+    // Loading state (fallback)
     tooltip.innerHTML = `
-      <div style="margin-bottom: 12px; font-weight: 600; font-size: 16px;">
-        💱 Currency Conversion
+      <div style="display: flex; align-items: center; gap: 8px; color: #3b82f6;">
+        <div class="vf-loading-spinner"></div>
+        <span>Converting currency...</span>
       </div>
-      <div style="margin-bottom: 8px; font-size: 15px; background: rgba(255,255,255,0.1); padding: 8px; border-radius: 6px;">
-        <strong>${data.originalText}</strong>
-      </div>
-      <div style="margin: 12px 0; font-size: 13px; opacity: 0.9;">
-        Converting from <strong>${data.currencyInfo?.currency || data.baseCurrency}</strong> to <strong>${data.secondaryCurrency}</strong>
-      </div>
-      <div style="margin-top: 12px; font-size: 12px; opacity: 0.7; padding: 8px; background: rgba(0,0,0,0.1); border-radius: 6px;">
-        Detection confidence: ${confidence}%<br>
-        <em>🔄 Converting...</em>
-      </div>
-      <div style="margin-top: 8px; font-size: 11px; opacity: 0.6;">
-        Click anywhere to close
+      <div style="margin-top: 8px; font-size: 12px; color: #6b7280;">
+        <strong>Original:</strong> ${originalText}
       </div>
     `;
   }
@@ -809,14 +925,39 @@ function showConversionResult(data) {
   // Animate in
   requestAnimationFrame(() => {
     tooltip.style.opacity = '1';
-    tooltip.style.transform = 'translate(-50%, -50%) scale(1)';
+    tooltip.style.transform = 'scale(1)';
   });
 
-  // Enhanced removal logic with better timing
+  // Add copy functionality if success result
+  if (result && !errorMessage) {
+    const copyButton = tooltip.querySelector('#copyConversionResult');
+    if (copyButton) {
+      copyButton.addEventListener('click', e => {
+        e.stopPropagation();
+        if (visualFeedback && visualFeedback.copyToClipboard) {
+          visualFeedback.copyToClipboard(result.convertedAmount);
+        } else {
+          // Fallback copy to clipboard
+          if (window.navigator && window.navigator.clipboard) {
+            window.navigator.clipboard
+              .writeText(result.convertedAmount)
+              .catch(() => {});
+          }
+        }
+        copyButton.textContent = '✅ Copied!';
+        copyButton.style.background = '#10b981';
+        setTimeout(() => {
+          removeTooltip();
+        }, 1000);
+      });
+    }
+  }
+
+  // Enhanced removal logic
   const removeTooltip = () => {
     if (tooltip.parentNode) {
       tooltip.style.opacity = '0';
-      tooltip.style.transform = 'translate(-50%, -50%) scale(0.9)';
+      tooltip.style.transform = 'scale(0.9)';
       setTimeout(() => {
         if (tooltip.parentNode) {
           tooltip.parentNode.removeChild(tooltip);
@@ -834,8 +975,8 @@ function showConversionResult(data) {
     }
   };
 
-  // Auto-remove after 6 seconds (longer for conversion results)
-  setTimeout(removeTooltip, 6000);
+  // Auto-remove after 8 seconds (longer for conversion results)
+  setTimeout(removeTooltip, 8000);
 
   // Remove on click or key press
   setTimeout(() => {
@@ -844,10 +985,4 @@ function showConversionResult(data) {
   }, 100);
 }
 
-// Helper function to remove existing tooltips
-function removeExistingTooltip() {
-  const existing = document.getElementById('currency-converter-tooltip');
-  if (existing && existing.parentNode) {
-    existing.parentNode.removeChild(existing);
-  }
-}
+console.log('✅ Currency converter content script with visual feedback loaded');

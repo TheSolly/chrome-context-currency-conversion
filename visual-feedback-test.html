@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Visual Feedback Test Page - Currency Converter Extension</title>
+    <style>
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        line-height: 1.6;
+        margin: 0;
+        padding: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 12px;
+        padding: 30px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+      .header h1 {
+        color: #2d3748;
+        margin-bottom: 10px;
+      }
+      .badge {
+        display: inline-block;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .test-section {
+        margin-bottom: 30px;
+        padding: 20px;
+        border: 2px dashed #e5e7eb;
+        border-radius: 8px;
+        background: #f9fafb;
+      }
+      .test-section h3 {
+        margin-top: 0;
+        color: #374151;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .currency-examples {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+      }
+      .currency-item {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-align: center;
+      }
+      .currency-item:hover {
+        border-color: #3b82f6;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+        transform: translateY(-2px);
+      }
+      .currency-amount {
+        font-size: 20px;
+        font-weight: bold;
+        color: #1f2937;
+        margin-bottom: 5px;
+      }
+      .currency-description {
+        font-size: 12px;
+        color: #6b7280;
+      }
+      .instructions {
+        background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%);
+        border: 1px solid #f59e0b;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+      }
+      .instructions h4 {
+        margin-top: 0;
+        color: #92400e;
+      }
+      .instructions ul {
+        margin: 10px 0;
+        padding-left: 20px;
+      }
+      .instructions li {
+        margin-bottom: 5px;
+        color: #78350f;
+      }
+      .feature-list {
+        background: #f0f9ff;
+        border: 1px solid #0ea5e9;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 20px;
+      }
+      .feature-list h4 {
+        margin-top: 0;
+        color: #0c4a6e;
+      }
+      .feature-list ul {
+        margin: 10px 0;
+        padding-left: 20px;
+      }
+      .feature-list li {
+        margin-bottom: 5px;
+        color: #075985;
+      }
+      .highlight {
+        background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%);
+        padding: 2px 4px;
+        border-radius: 4px;
+        font-weight: 500;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🧪 Visual Feedback Test Page</h1>
+        <span class="badge">Phase 5, Task 5.1 Complete</span>
+        <p>Test the enhanced visual feedback system for currency conversion</p>
+      </div>
+
+      <div class="instructions">
+        <h4>📋 Testing Instructions</h4>
+        <ul>
+          <li>
+            <strong>Step 1:</strong> Load this extension in Chrome (Developer
+            mode)
+          </li>
+          <li>
+            <strong>Step 2:</strong> Select any currency amount below by
+            highlighting the text
+          </li>
+          <li>
+            <strong>Step 3:</strong> Right-click to see context menu options
+          </li>
+          <li>
+            <strong>Step 4:</strong> Click a conversion option to see visual
+            feedback
+          </li>
+          <li>
+            <strong>Step 5:</strong> Open the extension popup to test the
+            conversion tool
+          </li>
+        </ul>
+      </div>
+
+      <div class="test-section">
+        <h3>💰 US Dollar Examples</h3>
+        <div class="currency-examples">
+          <div class="currency-item">
+            <div class="currency-amount">$100</div>
+            <div class="currency-description">Symbol prefix format</div>
+          </div>
+          <div class="currency-item">
+            <div class="currency-amount">250$</div>
+            <div class="currency-description">Symbol suffix format</div>
+          </div>
+          <div class="currency-item">
+            <div class="currency-amount">1,500 USD</div>
+            <div class="currency-description">Currency code format</div>
+          </div>
+          <div class="currency-item">
+            <div class="currency-amount">USD 2,000</div>
+            <div class="currency-description">Code prefix format</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h3>🇪🇺 Euro Examples</h3>
+        <div class="currency-examples">
+          <div class="currency-item">
+            <div class="currency-amount">€500</div>
+            <div class="currency-description">Euro symbol prefix</div>
+          </div>
+          <div class="currency-item">
+            <div class="currency-amount">750€</div>
+            <div class="currency-description">Euro symbol suffix</div>
+          </div>
+          <div class="currency-item">
+            <div class="currency-amount">1,200 EUR</div>
+            <div class="currency-description">Euro code format</div>
+          </div>
+          <div class="currency-item">
+            <div class="currency-amount">EUR 3,500</div>
+            <div class="currency-description">Euro code prefix</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h3>🇬🇧 British Pound Examples</h3>
+        <div class="currency-examples">
+          <div class="currency-item">
+            <div class="currency-amount">£300</div>
+            <div class="currency-description">Pound symbol prefix</div>
+          </div>
+          <div class="currency-item">
+            <div class="currency-amount">450£</div>
+            <div class="currency-description">Pound symbol suffix</div>
+          </div>
+          <div class="currency-item">
+            <div class="currency-amount">800 GBP</div>
+            <div class="currency-description">Pound code format</div>
+          </div>
+          <div class="currency-item">
+            <div class="currency-amount">GBP 1,100</div>
+            <div class="currency-description">Pound code prefix</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h3>🌏 Asian Currency Examples</h3>
+        <div class="currency-examples">
+          <div class="currency-item">
+            <div class="currency-amount">¥10,000</div>
+            <div class="currency-description">Japanese Yen</div>
+          </div>
+          <div class="currency-item">
+            <div class="currency-amount">₹5,000</div>
+            <div class="currency-description">Indian Rupee</div>
+          </div>
+          <div class="currency-item">
+            <div class="currency-amount">₩50,000</div>
+            <div class="currency-description">South Korean Won</div>
+          </div>
+          <div class="currency-item">
+            <div class="currency-amount">¥500 CNY</div>
+            <div class="currency-description">Chinese Yuan</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h3>🔢 Complex Format Examples</h3>
+        <div class="currency-examples">
+          <div class="currency-item">
+            <div class="currency-amount">$1,234.56</div>
+            <div class="currency-description">Decimal precision</div>
+          </div>
+          <div class="currency-item">
+            <div class="currency-amount">€2,500.99</div>
+            <div class="currency-description">Euro with decimals</div>
+          </div>
+          <div class="currency-item">
+            <div class="currency-amount">12,345 JPY</div>
+            <div class="currency-description">Large amounts</div>
+          </div>
+          <div class="currency-item">
+            <div class="currency-amount">A$750.50</div>
+            <div class="currency-description">Australian Dollar</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature-list">
+        <h4>✨ Visual Feedback Features Implemented</h4>
+        <ul>
+          <li>
+            <strong>Loading Indicators:</strong> Animated spinners during API
+            calls
+          </li>
+          <li>
+            <strong>Toast Notifications:</strong> Success, error, warning, and
+            info messages
+          </li>
+          <li>
+            <strong>Conversion Results:</strong> Beautiful gradient displays
+            with copy functionality
+          </li>
+          <li>
+            <strong>Error Handling:</strong> Shake animations and error messages
+          </li>
+          <li>
+            <strong>Success Animations:</strong> Pulse effects for successful
+            operations
+          </li>
+          <li>
+            <strong>Copy to Clipboard:</strong> One-click copying with feedback
+          </li>
+          <li>
+            <strong>Progress Bars:</strong> Visual progress for long operations
+          </li>
+          <li>
+            <strong>Interactive Tooltips:</strong> Rich conversion result
+            displays
+          </li>
+        </ul>
+      </div>
+
+      <div class="instructions" style="margin-top: 30px">
+        <h4>🎯 What to Test</h4>
+        <ul>
+          <li>
+            Select any <span class="highlight">currency amount</span> above and
+            right-click
+          </li>
+          <li>
+            Try the <span class="highlight">conversion testing tool</span> in
+            the extension popup
+          </li>
+          <li>
+            Test <span class="highlight">copy functionality</span> by clicking
+            copy buttons
+          </li>
+          <li>
+            Observe <span class="highlight">loading states</span> during
+            conversions
+          </li>
+          <li>
+            Check <span class="highlight">error handling</span> with invalid
+            inputs
+          </li>
+          <li>
+            Test <span class="highlight">keyboard navigation</span> (ESC to
+            close tooltips)
+          </li>
+        </ul>
+      </div>
+    </div>
+  </body>
+</html>

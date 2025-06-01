@@ -16,6 +16,7 @@ let currentCurrencyInfo = null;
 let currentSettings = null;
 let contextMenusCreated = false;
 const errorLog = [];
+const createdMenuItems = new Set(); // Track created menu items to avoid duplicates
 
 // Popular currency pairs for quick conversion
 const POPULAR_CURRENCIES = [
@@ -169,6 +170,20 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   try {
     if (info.menuItemId.startsWith('convert_')) {
       const targetCurrency = info.menuItemId.replace('convert_', '');
+
+      // Phase 5, Task 5.1: Show immediate loading feedback
+      if (tab?.id) {
+        try {
+          await chrome.tabs.sendMessage(tab.id, {
+            action: 'showLoadingFeedback',
+            targetCurrency,
+            originalText: info.selectionText
+          });
+        } catch (error) {
+          console.warn('Failed to show loading feedback:', error);
+        }
+      }
+
       await handleCurrencyConversion(info, tab, targetCurrency);
     } else if (info.menuItemId === 'openSettings') {
       // Open extension settings
@@ -184,6 +199,18 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       menuItemId: info.menuItemId,
       tabId: tab?.id
     });
+
+    // Phase 5, Task 5.1: Show error feedback
+    if (tab?.id) {
+      try {
+        await chrome.tabs.sendMessage(tab.id, {
+          action: 'showErrorFeedback',
+          error: error.message || 'Conversion failed'
+        });
+      } catch (msgError) {
+        console.warn('Failed to show error feedback:', msgError);
+      }
+    }
   }
 });
 
@@ -466,31 +493,58 @@ async function createConversionOptions(sourceCurrency, formattedAmount) {
         break; // Limit to 5 options to avoid menu clutter
       }
 
-      await chrome.contextMenus.create({
-        id: `convert_${targetCurrency}`,
-        parentId: 'currencyConverter',
-        title: `→ ${targetCurrency}`,
-        contexts: ['selection']
-      });
+      const menuId = `convert_${targetCurrency}`;
+      try {
+        await chrome.contextMenus.create({
+          id: menuId,
+          parentId: 'currencyConverter',
+          title: `→ ${targetCurrency}`,
+          contexts: ['selection']
+        });
+        createdMenuItems.add(menuId); // Track the created menu item
+      } catch (error) {
+        if (error.message.includes('duplicate id')) {
+          console.warn(`Menu item ${menuId} already exists, skipping...`);
+        } else {
+          console.error(
+            `Failed to create menu item for ${targetCurrency}:`,
+            error
+          );
+        }
+      }
 
       index++;
     }
 
     // Add separator and additional options
     if (targetCurrencies.size > 0) {
-      await chrome.contextMenus.create({
-        id: 'separator1',
-        parentId: 'currencyConverter',
-        type: 'separator',
-        contexts: ['selection']
-      });
+      try {
+        await chrome.contextMenus.create({
+          id: 'separator1',
+          parentId: 'currencyConverter',
+          type: 'separator',
+          contexts: ['selection']
+        });
+        createdMenuItems.add('separator1'); // Track the separator
+      } catch (error) {
+        if (!error.message.includes('duplicate id')) {
+          console.error('Failed to create separator:', error);
+        }
+      }
 
-      await chrome.contextMenus.create({
-        id: 'openSettings',
-        parentId: 'currencyConverter',
-        title: '⚙️ Settings',
-        contexts: ['selection']
-      });
+      try {
+        await chrome.contextMenus.create({
+          id: 'openSettings',
+          parentId: 'currencyConverter',
+          title: '⚙️ Settings',
+          contexts: ['selection']
+        });
+        createdMenuItems.add('openSettings'); // Track the settings menu
+      } catch (error) {
+        if (!error.message.includes('duplicate id')) {
+          console.error('Failed to create settings menu:', error);
+        }
+      }
     }
   } catch (error) {
     logError(error, 'createConversionOptions', {
@@ -503,20 +557,17 @@ async function createConversionOptions(sourceCurrency, formattedAmount) {
 // Remove existing conversion menu items
 async function removeConversionMenuItems() {
   try {
-    // Get all existing menu items and remove conversion-related ones
-    const menuIds = [
-      ...POPULAR_CURRENCIES.map(currency => `convert_${currency}`),
-      'separator1',
-      'openSettings'
-    ];
-
-    for (const menuId of menuIds) {
+    // Remove all tracked menu items
+    for (const menuId of createdMenuItems) {
       try {
         await chrome.contextMenus.remove(menuId);
       } catch {
         // Menu item might not exist, which is fine
       }
     }
+
+    // Clear the tracking set
+    createdMenuItems.clear();
   } catch {
     // Ignore errors when removing non-existent menu items
   }
@@ -552,9 +603,9 @@ async function performCurrencyConversion(currencyData, targetCurrency = null) {
     // Format the conversion result with enhanced structure
     const result = {
       originalAmount: conversionResult.originalAmount,
-      originalCurrency: conversionResult.fromCurrency,
+      fromCurrency: conversionResult.fromCurrency,
       convertedAmount: conversionResult.convertedAmount,
-      convertedCurrency: conversionResult.toCurrency,
+      toCurrency: conversionResult.toCurrency,
       exchangeRate: conversionResult.rate,
       timestamp: conversionResult.timestamp,
       confidence: currencyData.confidence || 0.8,

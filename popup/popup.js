@@ -222,6 +222,9 @@ function setupEventListeners() {
   document.getElementById('rateUs').addEventListener('click', handleRateUs);
   document.getElementById('support').addEventListener('click', handleSupport);
   document.getElementById('help').addEventListener('click', handleHelp);
+
+  // Setup conversion testing currency selectors
+  setupConversionTestingCurrencies();
 }
 
 function populateCurrencySelectors() {
@@ -901,3 +904,52 @@ async function updateUIWithCurrentSettings() {
     }
   });
 }
+
+// Phase 5, Task 5.1: Conversion Testing Functions
+
+/**
+ * Setup currency selectors for conversion testing
+ */
+function setupConversionTestingCurrencies() {
+  const popularCurrencies = getPopularCurrencies();
+  const allCurrencies = getAllCurrencies();
+
+  // Populate test currency selectors
+  const fromSelect = document.getElementById('testFromCurrency');
+  const toSelect = document.getElementById('testToCurrency');
+
+  [fromSelect, toSelect].forEach(select => {
+    select.innerHTML = '';
+
+    // Add popular currencies first
+    const popularGroup = document.createElement('optgroup');
+    popularGroup.label = 'Popular Currencies';
+    popularCurrencies.forEach(currency => {
+      const option = document.createElement('option');
+      option.value = currency.code;
+      option.textContent = formatCurrencyOption(currency);
+      popularGroup.appendChild(option);
+    });
+    select.appendChild(popularGroup);
+
+    // Add all other currencies
+    const otherGroup = document.createElement('optgroup');
+    otherGroup.label = 'All Currencies';
+    allCurrencies
+      .filter(c => !c.popular)
+      .forEach(currency => {
+        const option = document.createElement('option');
+        option.value = currency.code;
+        option.textContent = formatCurrencyOption(currency);
+        otherGroup.appendChild(option);
+      });
+    select.appendChild(otherGroup);
+  });
+
+  // Set default values
+  fromSelect.value = currentSettings.baseCurrency || 'USD';
+  toSelect.value = currentSettings.secondaryCurrency || 'EUR';
+}
+
+// Initialize popup when DOM is loaded
+document.addEventListener('DOMContentLoaded', initializePopup);
