@@ -279,21 +279,21 @@ export class SettingsManager {
   validateSettingsData(settings) {
     const validated = { ...settings };
 
-    // Validate currency codes
-    const validCurrencies = [
-      'USD',
-      'EUR',
-      'GBP',
-      'JPY',
-      'CAD',
-      'AUD',
-      'CHF',
-      'CNY'
-    ]; // Basic validation
-    if (!validCurrencies.includes(validated.baseCurrency)) {
+    // Import validation function dynamically to avoid circular imports
+    const validateCurrency = code => {
+      // Basic currency code format validation
+      if (!code || typeof code !== 'string' || code.length !== 3) {
+        return false;
+      }
+      // Simple check for alphanumeric currency codes
+      return /^[A-Z]{3}$/.test(code);
+    };
+
+    // Validate currency codes with proper validation
+    if (!validateCurrency(validated.baseCurrency)) {
       validated.baseCurrency = this.DEFAULT_SETTINGS.baseCurrency;
     }
-    if (!validCurrencies.includes(validated.secondaryCurrency)) {
+    if (!validateCurrency(validated.secondaryCurrency)) {
       validated.secondaryCurrency = this.DEFAULT_SETTINGS.secondaryCurrency;
     }
 
