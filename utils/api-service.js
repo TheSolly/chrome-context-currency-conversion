@@ -4,6 +4,9 @@
  * Handles currency conversion with multiple API providers and fallback mechanisms
  */
 
+// Import local API keys at the top level
+import { LOCAL_API_KEYS } from './api-keys.local.js';
+
 /**
  * Fetch wrapper for Chrome extension environment
  * @param {string} url - URL to fetch
@@ -217,6 +220,37 @@ export class ApiKeyManager {
     }
 
     return stats;
+  }
+
+  /**
+   * Initialize API keys from local configuration
+   * Should be called during extension startup
+   */
+  async initializeLocalApiKeys() {
+    try {
+      console.log('🔑 Loading local API keys into storage...');
+
+      for (const [provider, apiKey] of Object.entries(LOCAL_API_KEYS)) {
+        if (apiKey && apiKey.trim()) {
+          // Check if key already exists to avoid overwriting
+          const existingKey = await this.getApiKey(provider);
+
+          if (!existingKey) {
+            await this.storeApiKey(provider, apiKey);
+            console.log(`✅ Loaded API key for ${provider}`);
+          } else {
+            console.log(`ℹ️ API key for ${provider} already exists`);
+          }
+        }
+      }
+
+      console.log('🎉 Local API keys initialization completed');
+      return true;
+    } catch (error) {
+      console.warn('⚠️ Could not load local API keys:', error.message);
+      // This is not a critical error - the extension can still work with manually configured keys
+      return false;
+    }
   }
 }
 

@@ -3,6 +3,13 @@
 
 // Phase 3, Task 3.3: Import Settings Manager
 import { settingsManager } from '/utils/settings-manager.js';
+// Import API services
+import { ApiKeyManager, ExchangeRateService } from '/utils/api-service.js';
+import {
+  formatConvertedAmount,
+  formatExchangeRate,
+  formatConversionTimestamp
+} from '/utils/conversion-utils.js';
 
 // Global state management
 let currentCurrencyInfo = null;
@@ -46,6 +53,15 @@ function logError(error, context, additionalData = null) {
 chrome.runtime.onInstalled.addListener(async () => {
   console.log('Currency Converter Extension installed');
 
+  // Initialize API keys first
+  try {
+    const apiKeyManager = new ApiKeyManager();
+    await apiKeyManager.initializeLocalApiKeys();
+    console.log('🔑 API keys initialized in background');
+  } catch (error) {
+    logError(error, 'apiKeyInit');
+  }
+
   // Phase 3, Task 3.3: Initialize Settings Manager
   try {
     await settingsManager.initialize();
@@ -58,9 +74,44 @@ chrome.runtime.onInstalled.addListener(async () => {
   await initializeContextMenus();
 });
 
+// Startup initialization
+async function initializeExtension() {
+  console.log('🚀 Currency Converter Extension starting up');
+
+  // Initialize API keys
+  try {
+    const apiKeyManager = new ApiKeyManager();
+    await apiKeyManager.initializeLocalApiKeys();
+    console.log('🔑 API keys initialized on startup');
+  } catch (error) {
+    logError(error, 'startupApiKeyInit');
+  }
+
+  // Initialize settings
+  try {
+    await settingsManager.initialize();
+    currentSettings = await settingsManager.getSettings();
+    console.log('⚙️ Settings loaded on startup');
+  } catch (error) {
+    logError(error, 'startupSettingsInit');
+  }
+
+  // Note: Context menus are initialized in chrome.runtime.onInstalled
+  // to avoid duplicate creation on service worker restarts
+}
+
+// Initialize on startup
+initializeExtension();
+
 // Initialize context menus with enhanced dynamic structure
 async function initializeContextMenus() {
   try {
+    // Only initialize if not already created
+    if (contextMenusCreated) {
+      console.log('Context menus already initialized, skipping...');
+      return;
+    }
+
     // Remove any existing menus first
     await chrome.contextMenus.removeAll();
 
@@ -148,8 +199,8 @@ async function handleCurrencyConversion(info, tab, targetCurrency = null) {
     const finalTargetCurrency =
       targetCurrency || currentSettings.secondaryCurrency;
 
-    // Use current currency info if available
-    const conversionData = {
+    // First show loading message to content script
+    const loadingData = {
       originalText: selectedText,
       baseCurrency: currentCurrencyInfo?.currency,
       secondaryCurrency: finalTargetCurrency,
@@ -161,14 +212,55 @@ async function handleCurrencyConversion(info, tab, targetCurrency = null) {
       timestamp: new Date().toISOString()
     };
 
-    console.log('Converting with enhanced data:', conversionData);
+    console.log('Showing loading state with data:', loadingData);
 
-    // Send enhanced message to content script
+    // Send loading message to content script
     if (tab?.id) {
+      console.log('📤 Sending loading message to content script...');
       await chrome.tabs.sendMessage(tab.id, {
         action: 'showConversionResult',
-        ...conversionData
+        ...loadingData
       });
+      console.log('✅ Loading message sent successfully');
+    }
+
+    // Now perform the actual currency conversion
+    if (currentCurrencyInfo?.currency && currentCurrencyInfo?.amount) {
+      const currencyData = {
+        currency: currentCurrencyInfo.currency,
+        amount: currentCurrencyInfo.amount,
+        confidence: currentCurrencyInfo.confidence || 0.8
+      };
+
+      console.log(
+        'Performing conversion with:',
+        currencyData,
+        'to:',
+        finalTargetCurrency
+      );
+
+      const conversionResult = await performCurrencyConversion(
+        currencyData,
+        finalTargetCurrency
+      );
+
+      console.log('✅ Conversion completed successfully:', conversionResult);
+
+      // Send the actual result to content script
+      if (tab?.id) {
+        console.log('📤 Sending conversion result to content script...');
+        await chrome.tabs.sendMessage(tab.id, {
+          action: 'showConversionResult',
+          ...loadingData,
+          result: conversionResult
+        });
+        console.log('✅ Conversion result sent successfully');
+      }
+    } else {
+      console.error(
+        'Missing currency info for conversion:',
+        currentCurrencyInfo
+      );
     }
   } catch (error) {
     console.error('Currency conversion failed:', error);
@@ -177,6 +269,26 @@ async function handleCurrencyConversion(info, tab, targetCurrency = null) {
       targetCurrency,
       tabId: tab?.id
     });
+
+    // Send error message to content script
+    if (tab?.id) {
+      try {
+        await chrome.tabs.sendMessage(tab.id, {
+          action: 'showConversionResult',
+          originalText: selectedText,
+          currencyInfo: currentCurrencyInfo,
+          result: {
+            error: true,
+            errorMessage: error.message || 'Conversion failed'
+          }
+        });
+      } catch (msgError) {
+        console.error(
+          'Failed to send error message to content script:',
+          msgError
+        );
+      }
+    }
   }
 }
 
@@ -411,29 +523,30 @@ async function removeConversionMenuItems() {
 }
 
 // Enhanced conversion logic and utility functions for Task 4.3: Conversion Logic
-async function performCurrencyConversion(currencyData) {
+async function performCurrencyConversion(currencyData, targetCurrency = null) {
   try {
-    console.log('🔄 Starting currency conversion:', currencyData);
+    console.log(
+      '🔄 Starting currency conversion:',
+      currencyData,
+      'to:',
+      targetCurrency
+    );
 
-    // Get user settings to determine target currency
+    // Get user settings to determine target currency if not provided
     const settings = await loadUserSettings();
-    const targetCurrency = settings.secondaryCurrency || 'EUR';
+    const finalTargetCurrency =
+      targetCurrency || settings.secondaryCurrency || 'EUR';
 
-    // Import and initialize the ExchangeRateService and utilities
-    const { ExchangeRateService } = await import('../utils/api-service.js');
-    const {
-      formatConvertedAmount,
-      formatExchangeRate,
-      formatConversionTimestamp
-    } = await import('../utils/conversion-utils.js');
+    console.log('Using target currency:', finalTargetCurrency);
 
+    // Initialize the ExchangeRateService (using static import)
     const exchangeService = new ExchangeRateService();
 
     // Perform the actual conversion
     const conversionResult = await exchangeService.convertCurrency(
       currencyData.amount,
       currencyData.currency,
-      targetCurrency
+      finalTargetCurrency
     );
 
     // Format the conversion result with enhanced structure

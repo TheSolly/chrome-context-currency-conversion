@@ -4,6 +4,7 @@
  */
 
 import { apiKeyManager } from './api-service.js';
+import { LOCAL_API_KEYS } from './api-keys.local.js';
 
 /**
  * Default configuration values
@@ -32,7 +33,6 @@ export async function initializeDefaultConfig() {
     if (!existingKey) {
       // Try to load API keys from local file (not committed to git)
       try {
-        const { LOCAL_API_KEYS } = await import('./api-keys.local.js');
         if (
           LOCAL_API_KEYS.EXCHANGERATE_API &&
           LOCAL_API_KEYS.EXCHANGERATE_API !== 'your-actual-api-key-here'
@@ -46,7 +46,7 @@ export async function initializeDefaultConfig() {
           );
           return true;
         }
-      } catch (error) {
+      } catch {
         console.log(
           'ℹ️ No local API keys file found - user will need to configure manually'
         );

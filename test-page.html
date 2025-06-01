@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Currency Converter Test Page</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        line-height: 1.6;
+      }
+      .currency-examples {
+        background: #f5f5f5;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 20px 0;
+      }
+      .currency-item {
+        margin: 10px 0;
+        padding: 10px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+      .instructions {
+        background: #e3f2fd;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 20px 0;
+      }
+      .highlight {
+        background: yellow;
+        padding: 2px 4px;
+        border-radius: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Currency Converter Extension Test Page</h1>
+
+    <div class="instructions">
+      <h3>🧪 How to Test the Extension</h3>
+      <ol>
+        <li>Make sure the Currency Converter extension is loaded in Chrome</li>
+        <li>Select any currency amount below (click and drag to highlight)</li>
+        <li>Right-click on the selected amount</li>
+        <li>Choose a conversion option from the context menu</li>
+        <li>
+          Verify that the conversion shows a result (not just "Converting...")
+        </li>
+      </ol>
+    </div>
+
+    <div class="currency-examples">
+      <h3>💰 Test Currency Amounts</h3>
+
+      <div class="currency-item">
+        <strong>USD Amounts:</strong><br />
+        The laptop costs <span class="highlight">$1,299.99</span> with free
+        shipping.<br />
+        Monthly subscription: <span class="highlight">$29.99 USD</span><br />
+        Investment: <span class="highlight">USD 15,000</span>
+      </div>
+
+      <div class="currency-item">
+        <strong>EUR Amounts:</strong><br />
+        Product price: <span class="highlight">€899.50</span><br />
+        Service fee: <span class="highlight">250 EUR</span><br />
+        Total: <span class="highlight">EUR 1,149.50</span>
+      </div>
+
+      <div class="currency-item">
+        <strong>GBP Amounts:</strong><br />
+        Book price: <span class="highlight">£45.99</span><br />
+        Consultation: <span class="highlight">GBP 350</span><br />
+        Budget: <span class="highlight">£2,500</span>
+      </div>
+
+      <div class="currency-item">
+        <strong>EGP Amounts (Egyptian Pound):</strong><br />
+        Hotel room: <span class="highlight">1,500 EGP</span><br />
+        Dinner: <span class="highlight">EGP 250</span><br />
+        Tour package: <span class="highlight">4,500 EGP</span>
+      </div>
+
+      <div class="currency-item">
+        <strong>Test Case from Issue:</strong><br />
+        Investment amount: <span class="highlight">$2,000 USD</span><br />
+        <em>Try converting this to EGP - this was the failing case!</em>
+      </div>
+
+      <div class="currency-item">
+        <strong>Other Currencies:</strong><br />
+        Japanese Yen: <span class="highlight">¥50,000</span><br />
+        Canadian Dollar: <span class="highlight">C$750</span><br />
+        Australian Dollar: <span class="highlight">A$1,200</span><br />
+        Swiss Franc: <span class="highlight">CHF 800</span><br />
+        Chinese Yuan: <span class="highlight">¥3,500</span>
+      </div>
+    </div>
+
+    <div class="instructions">
+      <h3>🐛 Testing the Bug Fix</h3>
+      <p>The specific issue was:</p>
+      <ul>
+        <li>✅ Context menu appeared correctly</li>
+        <li>✅ Conversion dialog showed "Converting..."</li>
+        <li>
+          ❌ Conversion never completed - stayed at "Converting..." forever
+        </li>
+      </ul>
+      <p>
+        <strong>After the fix:</strong> The conversion should complete and show
+        the actual converted amount with exchange rate information.
+      </p>
+    </div>
+
+    <div class="currency-examples">
+      <h3>🔧 Debugging Information</h3>
+      <p>
+        If conversions still don't work, check the browser console (F12) for
+        error messages. Common issues:
+      </p>
+      <ul>
+        <li>API key not configured (should be auto-loaded from local file)</li>
+        <li>Network connectivity issues</li>
+        <li>Rate limiting from API provider</li>
+        <li>Extension permissions not granted</li>
+      </ul>
+    </div>
+  </body>
+</html>
