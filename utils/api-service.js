@@ -2,10 +2,13 @@
 /**
  * Currency API Service
  * Handles currency conversion with multiple API providers and fallback mechanisms
+ * Phase 5, Task 5.2: Enhanced with conversion caching for performance optimization
  */
 
 // Import local API keys at the top level
 import { LOCAL_API_KEYS } from './api-keys.local.js';
+// Phase 5, Task 5.2: Import conversion cache
+import { conversionCache } from './conversion-cache.js';
 
 /**
  * Fetch wrapper for Chrome extension environment
@@ -567,7 +570,8 @@ export class ExchangeRateService {
   }
 
   /**
-   * Convert currency amount with full error handling and fallback
+   * Convert currency amount with full error handling, fallback, and enhanced caching
+   * Phase 5, Task 5.2: Enhanced with conversion cache for performance optimization
    * @param {number} amount - Amount to convert
    * @param {string} fromCurrency - Source currency code
    * @param {string} toCurrency - Target currency code
@@ -603,6 +607,30 @@ export class ExchangeRateService {
         };
       }
 
+      // Phase 5, Task 5.2: Check enhanced conversion cache first for exact conversion
+      const conversionKey = `${fromCurrency}:${toCurrency}:${amount}`;
+      const cachedConversion = conversionCache.get(conversionKey);
+
+      if (cachedConversion) {
+        console.log(
+          `🚀 Using enhanced cache for conversion ${amount} ${fromCurrency} → ${toCurrency} (hit rate: ${conversionCache.getStats().hitRate}%)`
+        );
+
+        return {
+          originalAmount: amount,
+          convertedAmount: cachedConversion.result,
+          rate: cachedConversion.result / amount,
+          fromCurrency,
+          toCurrency,
+          source: `${cachedConversion.source} (cached)`,
+          timestamp: cachedConversion.timestamp,
+          cached: true,
+          offline: false,
+          precision: this.getDecimalPlaces(cachedConversion.result),
+          cachePerformance: conversionCache.getStats()
+        };
+      }
+
       // Check rate limiting
       await this.checkRateLimit(fromCurrency, toCurrency);
 
@@ -612,7 +640,17 @@ export class ExchangeRateService {
       // Calculate conversion
       const convertedAmount = this.calculateConversion(amount, rateData.rate);
 
-      return {
+      // Phase 5, Task 5.2: Cache the specific conversion for future use
+      conversionCache.set(conversionKey, {
+        result: convertedAmount,
+        source: rateData.source,
+        timestamp: rateData.timestamp,
+        fromCurrency,
+        toCurrency,
+        amount
+      });
+
+      const result = {
         originalAmount: amount,
         convertedAmount,
         rate: rateData.rate,
@@ -624,6 +662,13 @@ export class ExchangeRateService {
         offline: rateData.offline || false,
         precision: this.getDecimalPlaces(convertedAmount)
       };
+
+      // Add cache performance metrics if available
+      if (rateData.cachePerformance) {
+        result.cachePerformance = rateData.cachePerformance;
+      }
+
+      return result;
     } catch (error) {
       console.error('💱 Currency conversion failed:', error);
 
@@ -654,7 +699,8 @@ export class ExchangeRateService {
   }
 
   /**
-   * Get exchange rate with retry mechanism
+   * Get exchange rate with retry mechanism and enhanced caching
+   * Phase 5, Task 5.2: Integrated with conversion cache for performance optimization
    * @param {string} fromCurrency - Source currency code
    * @param {string} toCurrency - Target currency code
    * @returns {Promise<Object>} Rate data with metadata
@@ -668,13 +714,37 @@ export class ExchangeRateService {
           `🔄 Attempt ${attempt}/${this.maxRetries} for ${fromCurrency} → ${toCurrency}`
         );
 
-        // Check cache first
-        const cachedRate = await this.getCachedRate(fromCurrency, toCurrency);
-        if (cachedRate) {
+        // Phase 5, Task 5.2: Check enhanced conversion cache first
+        const conversionKey = `${fromCurrency}:${toCurrency}:1`; // Rate for 1 unit
+        const cachedConversion = conversionCache.get(conversionKey);
+
+        if (cachedConversion) {
           console.log(
-            `📦 Using cached rate for ${fromCurrency} → ${toCurrency}`
+            `🚀 Using enhanced cache for ${fromCurrency} → ${toCurrency} (hit rate: ${conversionCache.getStats().hitRate}%)`
           );
-          return { ...cachedRate, cached: true };
+
+          // Convert cached conversion back to rate data format
+          return {
+            rate: cachedConversion.result,
+            source: `${cachedConversion.source} (cached)`,
+            timestamp: cachedConversion.timestamp,
+            fromCurrency,
+            toCurrency,
+            cached: true,
+            cachePerformance: conversionCache.getStats()
+          };
+        }
+
+        // Check legacy cache as fallback
+        const legacyCachedRate = await this.getCachedRate(
+          fromCurrency,
+          toCurrency
+        );
+        if (legacyCachedRate) {
+          console.log(
+            `📦 Using legacy cache for ${fromCurrency} → ${toCurrency}`
+          );
+          return { ...legacyCachedRate, cached: true };
         }
 
         // Fetch from API
@@ -683,7 +753,17 @@ export class ExchangeRateService {
           toCurrency
         );
 
-        // Cache the result
+        // Phase 5, Task 5.2: Store in enhanced cache
+        conversionCache.set(conversionKey, {
+          result: rateData.rate,
+          source: rateData.source,
+          timestamp: rateData.timestamp,
+          fromCurrency,
+          toCurrency,
+          amount: 1 // This represents the rate for 1 unit
+        });
+
+        // Also cache in legacy system for backwards compatibility
         await this.cacheRate(fromCurrency, toCurrency, rateData);
 
         // Record successful request
@@ -961,7 +1041,8 @@ export class ExchangeRateService {
   }
 
   /**
-   * Get service statistics and health info
+   * Get service statistics and health info with enhanced cache metrics
+   * Phase 5, Task 5.2: Enhanced with conversion cache statistics
    * @returns {Promise<Object>} Service statistics
    */
   async getServiceStats() {
@@ -982,7 +1063,12 @@ export class ExchangeRateService {
         }
       }
 
+      // Phase 5, Task 5.2: Get enhanced cache statistics
+      const enhancedCacheStats = conversionCache.getStats();
+      const cachePerformance = conversionCache.getPerformanceMetrics();
+
       return {
+        // Legacy cache stats
         cacheCount,
         offlineCacheCount,
         totalCacheSize,
@@ -991,7 +1077,15 @@ export class ExchangeRateService {
         requestHistorySize: this.requestHistory.size,
         maxRetries: this.maxRetries,
         retryDelay: this.retryDelay,
-        apiService: this.apiService.getServiceStats()
+        apiService: this.apiService.getServiceStats(),
+
+        // Enhanced cache stats
+        enhancedCache: {
+          stats: enhancedCacheStats,
+          performance: cachePerformance,
+          memoryUsage: conversionCache.getMemoryUsage(),
+          popularConversions: conversionCache.getPopularConversions(5)
+        }
       };
     } catch (error) {
       console.warn('⚠️ Failed to get service stats:', error);

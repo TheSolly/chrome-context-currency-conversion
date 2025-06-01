@@ -1,22 +1,64 @@
 /* eslint-disable quotes */
 // Content Script for Currency Converter Extension
 // Detects currency amounts in selected text and communicates with background script
+// Phase 5, Task 5.2: Enhanced with lazy loading for performance optimization
 
 console.log('Currency Converter content script loaded');
 
-// Phase 5, Task 5.1: Initialize Visual Feedback System
+// Phase 5, Task 5.1 & 5.2: Initialize Visual Feedback System with lazy loading
 let visualFeedback = null;
+let lazyLoadFeature = null;
+let initializeLazyLoading = null;
 
-// Load visual feedback system dynamically
+// Phase 5, Task 5.2: Load lazy loading system dynamically
 (async () => {
   try {
-    const { visualFeedback: vf } = await import(
+    const lazyLoaderModule = await import(
+      chrome.runtime.getURL('utils/lazy-loader.js')
+    );
+    lazyLoadFeature = lazyLoaderModule.lazyLoadFeature;
+    initializeLazyLoading = lazyLoaderModule.initializeLazyLoading;
+
+    // Initialize lazy loading system
+    await initializeLazyLoading();
+    console.log('Lazy loading system initialized successfully');
+  } catch (error) {
+    console.warn('Failed to load lazy loading system:', error);
+  }
+})();
+
+// Load visual feedback system dynamically with enhanced lazy loading
+(async () => {
+  try {
+    // Wait a bit for lazy loader to initialize
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    let visualFeedbackModule;
+    if (lazyLoadFeature) {
+      try {
+        // Use lazy loader if available
+        visualFeedbackModule = await lazyLoadFeature('VISUAL_FEEDBACK');
+        visualFeedback = visualFeedbackModule.visualFeedback;
+        console.log(
+          'Visual feedback system loaded successfully via lazy loader'
+        );
+        return; // Exit if successful
+      } catch (lazyError) {
+        console.warn(
+          'Failed to load via lazy loader, trying direct import:',
+          lazyError
+        );
+      }
+    }
+
+    // Fallback to direct import if lazy loading failed or isn't available
+    visualFeedbackModule = await import(
       chrome.runtime.getURL('utils/visual-feedback.js')
     );
-    visualFeedback = vf;
-    console.log('Visual feedback system loaded successfully');
+    visualFeedback = visualFeedbackModule.visualFeedback;
+    console.log('Visual feedback system loaded successfully via direct import');
   } catch (error) {
-    console.warn('Failed to load visual feedback system:', error);
+    console.warn('All attempts to load visual feedback system failed:', error);
     // Create a fallback object with no-op methods
     visualFeedback = {
       showToast: () => {},
@@ -147,14 +189,17 @@ const WORD_TO_CODE = {
   rand: 'ZAR'
 };
 
-// Enhanced selection tracking and performance optimization - Task 2.2
+// Enhanced selection tracking and performance optimization - Task 2.2 & Task 5.2
 let currentSelection = null;
 let lastDetectedCurrency = null;
 let selectionTimeout = null;
 let isProcessingSelection = false;
 
-// Performance optimization: debounce rapid selection changes
-const SELECTION_DEBOUNCE_MS = 150;
+// Phase 5, Task 5.2: Enhanced debouncing for rapid selections
+const SELECTION_DEBOUNCE_MS = 100; // Reduced for faster response
+const RAPID_SELECTION_THRESHOLD = 50; // ms between selections to be considered rapid
+let lastSelectionTime = 0;
+let rapidSelectionCount = 0;
 
 // Performance monitoring
 const performanceMetrics = {
@@ -277,22 +322,38 @@ document.addEventListener('selectionchange', handleSelectionChange);
 document.addEventListener('mouseup', handleMouseUp);
 document.addEventListener('keyup', handleKeyUp);
 
-// Enhanced selection change handler with debouncing and validation
+// Enhanced selection change handler with improved debouncing - Task 5.2
 function handleSelectionChange() {
   // Prevent multiple simultaneous processing
   if (isProcessingSelection) {
     return;
   }
 
+  const currentTime = performance.now();
+  const timeSinceLastSelection = currentTime - lastSelectionTime;
+
+  // Track rapid selections for adaptive debouncing
+  if (timeSinceLastSelection < RAPID_SELECTION_THRESHOLD) {
+    rapidSelectionCount++;
+  } else {
+    rapidSelectionCount = 0;
+  }
+
+  lastSelectionTime = currentTime;
+
   // Clear existing timeout for debouncing
   if (selectionTimeout) {
     clearTimeout(selectionTimeout);
   }
 
+  // Adaptive debouncing: longer delay for rapid selections
+  const debounceDelay =
+    rapidSelectionCount > 3 ? SELECTION_DEBOUNCE_MS * 2 : SELECTION_DEBOUNCE_MS;
+
   // Debounce rapid selection changes
   selectionTimeout = setTimeout(() => {
     processSelectionChange();
-  }, SELECTION_DEBOUNCE_MS);
+  }, debounceDelay);
 }
 
 function processSelectionChange() {
