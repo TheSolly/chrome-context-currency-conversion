@@ -135,10 +135,10 @@ async function runAllTests() {
 
   console.log('\n🏁 All tests completed. Check results above.');
   console.log(
-    "💡 If basic storage works but SettingsManager doesn't, the issue is in the SettingsManager logic."
+    '💡 If basic storage works but SettingsManager doesn\'t, the issue is in the SettingsManager logic.'
   );
   console.log(
-    "💡 If basic storage fails, there's a Chrome extension environment issue."
+    '💡 If basic storage fails, there\'s a Chrome extension environment issue.'
   );
 }
 

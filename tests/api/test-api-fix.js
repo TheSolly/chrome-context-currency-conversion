@@ -3,7 +3,7 @@
  */
 
 // Import the fixed API configuration manager
-import { API_PROVIDERS } from './utils/api-service.js';
+import { API_PROVIDERS } from '../../utils/api-service.js';
 
 console.log('Testing API configuration fix...');
 
@@ -21,13 +21,13 @@ Object.entries(API_PROVIDERS).forEach(([key, provider]) => {
         `  ✅ Rate limit: ${rateLimitInfo.requests}/${rateLimitInfo.period}`
       );
     } else {
-      console.log(`  ⚠️ No rate limit info available`);
+      console.log('  ⚠️ No rate limit info available');
     }
 
     console.log(`  ✅ Features: ${provider.rateLimits.features.join(', ')}`);
-    console.log(`  ✅ Provider structure is valid`);
+    console.log('  ✅ Provider structure is valid');
   } catch (error) {
-    console.error(`  ❌ Error accessing provider data:`, error.message);
+    console.error('  ❌ Error accessing provider data:', error.message);
   }
 });
 

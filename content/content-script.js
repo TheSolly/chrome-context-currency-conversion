@@ -1,3 +1,4 @@
+/* eslint-disable quotes */
 // Content Script for Currency Converter Extension
 // Detects currency amounts in selected text and communicates with background script
 
@@ -439,8 +440,8 @@ function preprocessText(text) {
       .replace(/\u200D/g, '')
       .replace(/\uFEFF/g, '')
       // Normalize quotes
-      .replace(/[\u2018\u2019]/g, '\'')
-      .replace(/[\u201C\u201D]/g, '\'')
+      .replace(/[\u2018\u2019]/g, "'")
+      .replace(/[\u201C\u201D]/g, "'")
       .trim()
   );
 }
@@ -684,7 +685,7 @@ chrome.runtime.onMessage.addListener((request, _sender, _sendResponse) => {
   }
 });
 
-// Enhanced conversion result display with better UX - Task 2.2
+// Enhanced conversion result display with Task 4.3 formatting - Task 2.2 + 4.3
 function showConversionResult(data) {
   // Remove any existing tooltip first
   removeExistingTooltip();
@@ -708,39 +709,100 @@ function showConversionResult(data) {
     border-radius: 12px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-size: 14px;
-    z-index: 2147483647;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.3), 0 5px 10px rgba(0,0,0,0.2);
+    font-weight: 400;
+    line-height: 1.4;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    z-index: 999999;
     max-width: 350px;
-    text-align: center;
+    min-width: 300px;
     opacity: 0;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
   `;
 
-  // Enhanced content with better formatting
-  const confidence = data.currencyInfo?.confidence
-    ? Math.round(data.currencyInfo.confidence * 100)
-    : 85;
+  // Check if we have actual conversion result or error
+  if (data.result && !data.result.error) {
+    const result = data.result;
+    const confidence = data.currencyInfo?.confidence
+      ? Math.round(data.currencyInfo.confidence * 100)
+      : 85;
 
-  tooltip.innerHTML = `
-    <div style="margin-bottom: 12px; font-weight: 600; font-size: 16px;">
-      💱 Currency Conversion
-    </div>
-    <div style="margin-bottom: 8px; font-size: 15px; background: rgba(255,255,255,0.1); padding: 8px; border-radius: 6px;">
-      <strong>${data.originalText}</strong>
-    </div>
-    <div style="margin: 12px 0; font-size: 13px; opacity: 0.9;">
-      Converting from <strong>${data.currencyInfo?.currency || data.baseCurrency}</strong> to <strong>${data.secondaryCurrency}</strong>
-    </div>
-    <div style="margin-top: 12px; font-size: 12px; opacity: 0.7; padding: 8px; background: rgba(0,0,0,0.1); border-radius: 6px;">
-      Detection confidence: ${confidence}%<br>
-      <em>Full conversion coming soon...</em>
-    </div>
-    <div style="margin-top: 8px; font-size: 11px; opacity: 0.6;">
-      Click anywhere to close
-    </div>
-  `;
+    // Show successful conversion with Task 4.3 formatting
+    tooltip.innerHTML = `
+      <div style="margin-bottom: 12px; font-weight: 600; font-size: 16px; text-align: center;">
+        💱 Currency Conversion
+      </div>
+      <div style="margin-bottom: 12px; font-size: 15px; background: rgba(255,255,255,0.15); padding: 12px; border-radius: 8px; text-align: center;">
+        <div style="margin-bottom: 8px; font-size: 14px; opacity: 0.9;">
+          <strong>${data.originalText}</strong>
+        </div>
+        <div style="font-size: 18px; font-weight: 600; color: #fff;">
+          ${result.formattedAmount}
+        </div>
+      </div>
+      <div style="margin: 12px 0; font-size: 12px; opacity: 0.85; background: rgba(0,0,0,0.15); padding: 8px; border-radius: 6px;">
+        <div style="margin-bottom: 4px;">
+          <strong>Rate:</strong> ${result.formattedRate}
+        </div>
+        <div style="margin-bottom: 4px;">
+          <strong>Source:</strong> ${result.source}${result.cached ? ' (cached)' : ''}${result.offline ? ' (offline)' : ''}
+        </div>
+        <div>
+          <strong>Time:</strong> ${result.conversionTime}
+        </div>
+      </div>
+      <div style="margin-top: 12px; font-size: 11px; opacity: 0.7; text-align: center;">
+        Detection confidence: ${confidence}% • Click anywhere to close
+      </div>
+    `;
+  } else if (data.result && data.result.error) {
+    // Show error result
+    const confidence = data.currencyInfo?.confidence
+      ? Math.round(data.currencyInfo.confidence * 100)
+      : 85;
+
+    tooltip.innerHTML = `
+      <div style="margin-bottom: 12px; font-weight: 600; font-size: 16px; text-align: center;">
+        ⚠️ Conversion Error
+      </div>
+      <div style="margin-bottom: 12px; font-size: 15px; background: rgba(255,255,255,0.1); padding: 12px; border-radius: 8px;">
+        <div style="margin-bottom: 8px;">
+          <strong>${data.originalText}</strong>
+        </div>
+        <div style="font-size: 13px; color: #ffcccb;">
+          ${data.result.errorMessage}
+        </div>
+      </div>
+      <div style="margin-top: 12px; font-size: 11px; opacity: 0.7; text-align: center;">
+        Detection confidence: ${confidence}% • Click anywhere to close
+      </div>
+    `;
+  } else {
+    // Show loading or fallback message
+    const confidence = data.currencyInfo?.confidence
+      ? Math.round(data.currencyInfo.confidence * 100)
+      : 85;
+
+    tooltip.innerHTML = `
+      <div style="margin-bottom: 12px; font-weight: 600; font-size: 16px;">
+        💱 Currency Conversion
+      </div>
+      <div style="margin-bottom: 8px; font-size: 15px; background: rgba(255,255,255,0.1); padding: 8px; border-radius: 6px;">
+        <strong>${data.originalText}</strong>
+      </div>
+      <div style="margin: 12px 0; font-size: 13px; opacity: 0.9;">
+        Converting from <strong>${data.currencyInfo?.currency || data.baseCurrency}</strong> to <strong>${data.secondaryCurrency}</strong>
+      </div>
+      <div style="margin-top: 12px; font-size: 12px; opacity: 0.7; padding: 8px; background: rgba(0,0,0,0.1); border-radius: 6px;">
+        Detection confidence: ${confidence}%<br>
+        <em>🔄 Converting...</em>
+      </div>
+      <div style="margin-top: 8px; font-size: 11px; opacity: 0.6;">
+        Click anywhere to close
+      </div>
+    `;
+  }
 
   document.body.appendChild(tooltip);
 
@@ -772,8 +834,8 @@ function showConversionResult(data) {
     }
   };
 
-  // Auto-remove after 4 seconds
-  setTimeout(removeTooltip, 4000);
+  // Auto-remove after 6 seconds (longer for conversion results)
+  setTimeout(removeTooltip, 6000);
 
   // Remove on click or key press
   setTimeout(() => {

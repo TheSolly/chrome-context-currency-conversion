@@ -410,28 +410,72 @@ async function removeConversionMenuItems() {
   }
 }
 
-// Enhanced conversion logic and utility functions for Task 2.2
+// Enhanced conversion logic and utility functions for Task 4.3: Conversion Logic
 async function performCurrencyConversion(currencyData) {
   try {
-    // TODO: Implement actual API call and conversion logic
-    // For now, return mock data with enhanced structure
+    console.log('🔄 Starting currency conversion:', currencyData);
 
+    // Get user settings to determine target currency
+    const settings = await loadUserSettings();
+    const targetCurrency = settings.secondaryCurrency || 'EUR';
+
+    // Import and initialize the ExchangeRateService and utilities
+    const { ExchangeRateService } = await import('../utils/api-service.js');
+    const {
+      formatConvertedAmount,
+      formatExchangeRate,
+      formatConversionTimestamp
+    } = await import('../utils/conversion-utils.js');
+
+    const exchangeService = new ExchangeRateService();
+
+    // Perform the actual conversion
+    const conversionResult = await exchangeService.convertCurrency(
+      currencyData.amount,
+      currencyData.currency,
+      targetCurrency
+    );
+
+    // Format the conversion result with enhanced structure
     const result = {
-      originalAmount: currencyData.amount,
-      originalCurrency: currencyData.currency,
-      convertedAmount: (currencyData.amount * 1.1).toFixed(2), // Placeholder calculation
-      convertedCurrency: 'EUR',
-      exchangeRate: 1.1,
-      timestamp: new Date().toISOString(),
+      originalAmount: conversionResult.originalAmount,
+      originalCurrency: conversionResult.fromCurrency,
+      convertedAmount: conversionResult.convertedAmount,
+      convertedCurrency: conversionResult.toCurrency,
+      exchangeRate: conversionResult.rate,
+      timestamp: conversionResult.timestamp,
       confidence: currencyData.confidence || 0.8,
-      source: 'placeholder' // Will be 'api' when real API is implemented
+      source: conversionResult.source,
+      cached: conversionResult.cached || false,
+      offline: conversionResult.offline || false,
+      precision: conversionResult.precision || 2,
+      formattedAmount: formatConvertedAmount(
+        conversionResult.convertedAmount,
+        conversionResult.toCurrency
+      ),
+      formattedRate: formatExchangeRate(
+        conversionResult.rate,
+        conversionResult.fromCurrency,
+        conversionResult.toCurrency
+      ),
+      conversionTime: formatConversionTimestamp(conversionResult.timestamp)
     };
 
-    console.log('Mock conversion performed:', result);
+    console.log('✅ Currency conversion completed:', result);
     return result;
-  } catch (error) {
-    logError(error, 'performCurrencyConversion', currencyData);
-    throw error;
+  } catch (conversionError) {
+    console.error('❌ Currency conversion failed:', conversionError);
+    logError(conversionError, 'performCurrencyConversion', currencyData);
+
+    // Return a user-friendly error result
+    return {
+      originalAmount: currencyData.amount,
+      originalCurrency: currencyData.currency,
+      error: true,
+      errorMessage: conversionError.message,
+      timestamp: new Date().toISOString(),
+      confidence: currencyData.confidence || 0.8
+    };
   }
 }
 

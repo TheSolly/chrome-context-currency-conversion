@@ -515,3 +515,487 @@ export class CurrencyApiService {
 // Export singleton instance
 export const currencyApiService = new CurrencyApiService();
 export const apiKeyManager = new ApiKeyManager();
+
+/**
+ * Enhanced Currency Exchange Rate Service
+ * Task 4.2: Exchange Rate Service with caching, offline fallback, error handling, and retry logic
+ */
+export class ExchangeRateService {
+  constructor() {
+    this.apiService = new CurrencyApiService();
+    this.cachePrefix = 'exchange_rate_cache_';
+    this.cacheExpiry = 15 * 60 * 1000; // 15 minutes
+    this.offlineCacheExpiry = 24 * 60 * 60 * 1000; // 24 hours for offline fallback
+    this.maxRetries = 3;
+    this.retryDelay = 1000; // 1 second
+    this.rateLimitDelay = 60000; // 1 minute for rate limit backoff
+    this.requestHistory = new Map(); // Track request frequency
+  }
+
+  /**
+   * Convert currency amount with full error handling and fallback
+   * @param {number} amount - Amount to convert
+   * @param {string} fromCurrency - Source currency code
+   * @param {string} toCurrency - Target currency code
+   * @returns {Promise<Object>} Conversion result with metadata
+   */
+  async convertCurrency(amount, fromCurrency, toCurrency) {
+    try {
+      // Validate inputs
+      if (!amount || isNaN(amount) || amount <= 0) {
+        throw new Error('Invalid amount provided');
+      }
+
+      if (!fromCurrency || !toCurrency) {
+        throw new Error('Currency codes are required');
+      }
+
+      // Normalize currency codes
+      fromCurrency = fromCurrency.toUpperCase();
+      toCurrency = toCurrency.toUpperCase();
+
+      // Same currency check
+      if (fromCurrency === toCurrency) {
+        return {
+          originalAmount: amount,
+          convertedAmount: amount,
+          rate: 1,
+          fromCurrency,
+          toCurrency,
+          source: 'same-currency',
+          timestamp: new Date().toISOString(),
+          cached: false,
+          offline: false
+        };
+      }
+
+      // Check rate limiting
+      await this.checkRateLimit(fromCurrency, toCurrency);
+
+      // Try to get rate with retries
+      const rateData = await this.getRateWithRetry(fromCurrency, toCurrency);
+
+      // Calculate conversion
+      const convertedAmount = this.calculateConversion(amount, rateData.rate);
+
+      return {
+        originalAmount: amount,
+        convertedAmount,
+        rate: rateData.rate,
+        fromCurrency,
+        toCurrency,
+        source: rateData.source,
+        timestamp: rateData.timestamp,
+        cached: rateData.cached || false,
+        offline: rateData.offline || false,
+        precision: this.getDecimalPlaces(convertedAmount)
+      };
+    } catch (error) {
+      console.error('💱 Currency conversion failed:', error);
+
+      // Don't try offline fallback for validation errors
+      if (
+        error.message.includes('Invalid amount') ||
+        error.message.includes('Currency codes')
+      ) {
+        throw error;
+      }
+
+      // Try offline fallback
+      try {
+        const offlineResult = await this.getOfflineFallback(
+          amount,
+          fromCurrency,
+          toCurrency
+        );
+        if (offlineResult) {
+          return offlineResult;
+        }
+      } catch (offlineError) {
+        console.warn('📴 Offline fallback also failed:', offlineError);
+      }
+
+      throw new Error(`Currency conversion failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get exchange rate with retry mechanism
+   * @param {string} fromCurrency - Source currency code
+   * @param {string} toCurrency - Target currency code
+   * @returns {Promise<Object>} Rate data with metadata
+   */
+  async getRateWithRetry(fromCurrency, toCurrency) {
+    let lastError;
+
+    for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
+      try {
+        console.log(
+          `🔄 Attempt ${attempt}/${this.maxRetries} for ${fromCurrency} → ${toCurrency}`
+        );
+
+        // Check cache first
+        const cachedRate = await this.getCachedRate(fromCurrency, toCurrency);
+        if (cachedRate) {
+          console.log(
+            `📦 Using cached rate for ${fromCurrency} → ${toCurrency}`
+          );
+          return { ...cachedRate, cached: true };
+        }
+
+        // Fetch from API
+        const rateData = await this.apiService.getExchangeRate(
+          fromCurrency,
+          toCurrency
+        );
+
+        // Cache the result
+        await this.cacheRate(fromCurrency, toCurrency, rateData);
+
+        // Record successful request
+        this.recordRequest(fromCurrency, toCurrency, true);
+
+        return rateData;
+      } catch (error) {
+        lastError = error;
+        console.warn(`⚠️ Attempt ${attempt} failed:`, error.message);
+
+        // Record failed request
+        this.recordRequest(fromCurrency, toCurrency, false);
+
+        // Don't retry on certain errors
+        if (this.shouldNotRetry(error)) {
+          break;
+        }
+
+        // Wait before retry (exponential backoff)
+        if (attempt < this.maxRetries) {
+          const delay = this.retryDelay * Math.pow(2, attempt - 1);
+          console.log(`⏳ Waiting ${delay}ms before retry...`);
+          await this.sleep(delay);
+        }
+      }
+    }
+
+    throw lastError;
+  }
+
+  /**
+   * Check if we should implement rate limiting
+   * @param {string} fromCurrency - Source currency code
+   * @param {string} toCurrency - Target currency code
+   */
+  async checkRateLimit(fromCurrency, toCurrency) {
+    const key = `${fromCurrency}-${toCurrency}`;
+    const now = Date.now();
+    const history = this.requestHistory.get(key) || [];
+
+    // Clean old requests (older than 1 minute)
+    const recentRequests = history.filter(time => now - time < 60000);
+
+    // Check if we're making too many requests
+    if (recentRequests.length >= 10) {
+      // Max 10 requests per minute
+      console.warn(`⚠️ Rate limiting ${key} - too many requests`);
+      await this.sleep(this.rateLimitDelay);
+    }
+
+    // Update history
+    recentRequests.push(now);
+    this.requestHistory.set(key, recentRequests);
+  }
+
+  /**
+   * Cache exchange rate with expiry
+   * @param {string} fromCurrency - Source currency code
+   * @param {string} toCurrency - Target currency code
+   * @param {Object} rateData - Rate data to cache
+   */
+  async cacheRate(fromCurrency, toCurrency, rateData) {
+    try {
+      const cacheKey = `${this.cachePrefix}${fromCurrency}-${toCurrency}`;
+      const cacheData = {
+        ...rateData,
+        cachedAt: Date.now(),
+        expiresAt: Date.now() + this.cacheExpiry
+      };
+
+      // Store in Chrome local storage
+      await chrome.storage.local.set({ [cacheKey]: cacheData });
+
+      // Also store as offline fallback with longer expiry
+      const offlineKey = `${this.cachePrefix}offline_${fromCurrency}-${toCurrency}`;
+      const offlineData = {
+        ...rateData,
+        cachedAt: Date.now(),
+        expiresAt: Date.now() + this.offlineCacheExpiry
+      };
+      await chrome.storage.local.set({ [offlineKey]: offlineData });
+
+      console.log(`💾 Cached rate for ${fromCurrency} → ${toCurrency}`);
+    } catch (error) {
+      console.warn('⚠️ Failed to cache rate:', error);
+    }
+  }
+
+  /**
+   * Get cached exchange rate if still valid
+   * @param {string} fromCurrency - Source currency code
+   * @param {string} toCurrency - Target currency code
+   * @returns {Promise<Object|null>} Cached rate data or null
+   */
+  async getCachedRate(fromCurrency, toCurrency) {
+    try {
+      const cacheKey = `${this.cachePrefix}${fromCurrency}-${toCurrency}`;
+      const result = await chrome.storage.local.get(cacheKey);
+      const cached = result[cacheKey];
+
+      if (!cached) {
+        return null;
+      }
+
+      // Check if cache is still valid
+      if (Date.now() > cached.expiresAt) {
+        // Remove expired cache
+        await chrome.storage.local.remove(cacheKey);
+        return null;
+      }
+
+      return cached;
+    } catch (error) {
+      console.warn('⚠️ Failed to get cached rate:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get offline fallback rate (longer cache)
+   * @param {number} amount - Amount to convert
+   * @param {string} fromCurrency - Source currency code
+   * @param {string} toCurrency - Target currency code
+   * @returns {Promise<Object|null>} Offline conversion result or null
+   */
+  async getOfflineFallback(amount, fromCurrency, toCurrency) {
+    try {
+      const offlineKey = `${this.cachePrefix}offline_${fromCurrency}-${toCurrency}`;
+      const result = await chrome.storage.local.get(offlineKey);
+      const cached = result[offlineKey];
+
+      if (!cached) {
+        return null;
+      }
+
+      // Check if offline cache is still valid (24 hours)
+      if (Date.now() > cached.expiresAt) {
+        await chrome.storage.local.remove(offlineKey);
+        return null;
+      }
+
+      console.log(
+        `📴 Using offline fallback for ${fromCurrency} → ${toCurrency}`
+      );
+
+      const convertedAmount = this.calculateConversion(amount, cached.rate);
+
+      return {
+        originalAmount: amount,
+        convertedAmount,
+        rate: cached.rate,
+        fromCurrency,
+        toCurrency,
+        source: `${cached.source} (offline)`,
+        timestamp: cached.timestamp,
+        cached: true,
+        offline: true,
+        precision: this.getDecimalPlaces(convertedAmount)
+      };
+    } catch (error) {
+      console.warn('⚠️ Failed to get offline fallback:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Calculate conversion with proper precision
+   * @param {number} amount - Amount to convert
+   * @param {number} rate - Exchange rate
+   * @returns {number} Converted amount
+   */
+  calculateConversion(amount, rate) {
+    const result = amount * rate;
+
+    // Round to appropriate decimal places based on amount
+    if (result >= 1000) {
+      return Math.round(result * 100) / 100; // 2 decimal places
+    } else if (result >= 1) {
+      return Math.round(result * 1000) / 1000; // 3 decimal places
+    } else {
+      return Math.round(result * 10000) / 10000; // 4 decimal places
+    }
+  }
+
+  /**
+   * Get appropriate decimal places for display
+   * @param {number} amount - Amount to check
+   * @returns {number} Number of decimal places
+   */
+  getDecimalPlaces(amount) {
+    if (amount >= 1000) {
+      return 2;
+    }
+    if (amount >= 1) {
+      return 3;
+    }
+    return 4;
+  }
+
+  /**
+   * Check if error should not trigger retry
+   * @param {Error} error - Error to check
+   * @returns {boolean} True if should not retry
+   */
+  shouldNotRetry(error) {
+    const noRetryMessages = [
+      'API key not configured',
+      'Invalid currency',
+      'Rate not available',
+      'Authentication failed',
+      'Unauthorized'
+    ];
+
+    return noRetryMessages.some(msg =>
+      error.message.toLowerCase().includes(msg.toLowerCase())
+    );
+  }
+
+  /**
+   * Record request for analytics and rate limiting
+   * @param {string} fromCurrency - Source currency code
+   * @param {string} toCurrency - Target currency code
+   * @param {boolean} _success - Whether request succeeded (unused but kept for future analytics)
+   */
+  recordRequest(fromCurrency, toCurrency, _success) {
+    const key = `${fromCurrency}-${toCurrency}`;
+    const now = Date.now();
+
+    // Simple request tracking for rate limiting
+    if (!this.requestHistory.has(key)) {
+      this.requestHistory.set(key, []);
+    }
+
+    // Keep only recent requests (last hour)
+    const history = this.requestHistory
+      .get(key)
+      .filter(time => now - time < 3600000);
+    history.push(now);
+    this.requestHistory.set(key, history);
+  }
+
+  /**
+   * Sleep utility for delays
+   * @param {number} ms - Milliseconds to sleep
+   * @returns {Promise} Promise that resolves after delay
+   */
+  sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Clear all cached rates
+   * @param {boolean} includeOffline - Whether to also clear offline cache
+   */
+  async clearCache(includeOffline = false) {
+    try {
+      const storage = await chrome.storage.local.get(null);
+      const keysToRemove = [];
+
+      for (const key of Object.keys(storage)) {
+        if (key.startsWith(this.cachePrefix)) {
+          if (includeOffline || !key.includes('offline_')) {
+            keysToRemove.push(key);
+          }
+        }
+      }
+
+      if (keysToRemove.length > 0) {
+        await chrome.storage.local.remove(keysToRemove);
+        console.log(`🗑️ Cleared ${keysToRemove.length} cached rates`);
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to clear cache:', error);
+    }
+  }
+
+  /**
+   * Get service statistics and health info
+   * @returns {Promise<Object>} Service statistics
+   */
+  async getServiceStats() {
+    try {
+      const storage = await chrome.storage.local.get(null);
+      let cacheCount = 0;
+      let offlineCacheCount = 0;
+      let totalCacheSize = 0;
+
+      for (const [key, value] of Object.entries(storage)) {
+        if (key.startsWith(this.cachePrefix)) {
+          totalCacheSize += JSON.stringify(value).length;
+          if (key.includes('offline_')) {
+            offlineCacheCount++;
+          } else {
+            cacheCount++;
+          }
+        }
+      }
+
+      return {
+        cacheCount,
+        offlineCacheCount,
+        totalCacheSize,
+        cacheExpiry: this.cacheExpiry,
+        offlineCacheExpiry: this.offlineCacheExpiry,
+        requestHistorySize: this.requestHistory.size,
+        maxRetries: this.maxRetries,
+        retryDelay: this.retryDelay,
+        apiService: this.apiService.getServiceStats()
+      };
+    } catch (error) {
+      console.warn('⚠️ Failed to get service stats:', error);
+      return {};
+    }
+  }
+
+  /**
+   * Test the service with a sample conversion
+   * @param {string} fromCurrency - Source currency (default: USD)
+   * @param {string} toCurrency - Target currency (default: EUR)
+   * @returns {Promise<Object>} Test result
+   */
+  async testService(fromCurrency = 'USD', toCurrency = 'EUR') {
+    const startTime = Date.now();
+
+    try {
+      const result = await this.convertCurrency(100, fromCurrency, toCurrency);
+      const duration = Date.now() - startTime;
+
+      return {
+        success: true,
+        result,
+        duration,
+        message: `Successfully converted 100 ${fromCurrency} to ${result.convertedAmount} ${toCurrency}`
+      };
+    } catch (error) {
+      const duration = Date.now() - startTime;
+
+      return {
+        success: false,
+        error: error.message,
+        duration,
+        message: `Failed to convert ${fromCurrency} to ${toCurrency}: ${error.message}`
+      };
+    }
+  }
+}
+
+// Export singleton instance
+export const exchangeRateService = new ExchangeRateService();
