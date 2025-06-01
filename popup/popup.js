@@ -22,6 +22,9 @@ import { settingsManager } from '/utils/settings-manager.js';
 import { apiConfigManager } from '/utils/api-config-manager.js';
 import { initializeDefaultConfig } from '/utils/default-config.js';
 
+// Phase 5, Task 5.3: Accessibility Features
+import { accessibilityManager } from '../utils/accessibility-manager.js';
+
 // State management
 let currentSettings = { ...DEFAULT_SETTINGS };
 let userPlan = 'FREE'; // TODO: Implement plan detection
@@ -152,6 +155,17 @@ async function initializePopup() {
       console.error(
         '⚠️ API configuration failed, continuing without it:',
         apiError
+      );
+    }
+
+    // Phase 5, Task 5.3: Initialize Accessibility Features
+    try {
+      await accessibilityManager.initializeForPopup();
+      console.log('♿ Accessibility features initialized');
+    } catch (accessibilityError) {
+      console.error(
+        '⚠️ Accessibility initialization failed:',
+        accessibilityError
       );
     }
 

@@ -2,8 +2,29 @@
 // Content Script for Currency Converter Extension
 // Detects currency amounts in selected text and communicates with background script
 // Phase 5, Task 5.2: Enhanced with lazy loading for performance optimization
+// Phase 5, Task 5.3: Enhanced with accessibility features
 
 console.log('Currency Converter content script loaded');
+
+// Phase 5, Task 5.3: Accessibility Manager for content script
+let accessibilityManager = null;
+
+// Load accessibility manager for content script
+(async () => {
+  try {
+    const accessibilityModule = await import(
+      chrome.runtime.getURL('utils/accessibility-manager.js')
+    );
+    accessibilityManager = new accessibilityModule.AccessibilityManager();
+
+    // Initialize accessibility features for content script
+    initializeContentAccessibility();
+
+    console.log('Content script accessibility features initialized');
+  } catch (error) {
+    console.warn('Failed to load accessibility manager:', error);
+  }
+})();
 
 // Phase 5, Task 5.1 & 5.2: Initialize Visual Feedback System with lazy loading
 let visualFeedback = null;
@@ -896,9 +917,29 @@ function createBasicTooltip(
     }
   }
 
-  // Create tooltip element
+  // Create tooltip element with accessibility features
   const tooltip = document.createElement('div');
   tooltip.id = 'currency-converter-tooltip';
+  tooltip.setAttribute('role', 'dialog');
+  tooltip.setAttribute('aria-modal', 'true');
+  tooltip.setAttribute('aria-live', 'polite');
+  tooltip.setAttribute('tabindex', '-1');
+
+  // Add accessibility label based on content
+  if (errorMessage) {
+    tooltip.setAttribute(
+      'aria-label',
+      `Currency conversion error: ${errorMessage}`
+    );
+  } else if (result) {
+    tooltip.setAttribute(
+      'aria-label',
+      `Currency conversion result: ${currencyInfo?.amount || result.originalAmount} ${currencyInfo?.currency || 'USD'} equals ${result.convertedAmount}`
+    );
+  } else {
+    tooltip.setAttribute('aria-label', 'Currency conversion in progress');
+  }
+
   tooltip.style.cssText = `
     position: fixed;
     z-index: 10000;
@@ -915,8 +956,8 @@ function createBasicTooltip(
     opacity: 0;
     transform: scale(0.9);
     transition: all 0.3s ease;
-    left: ${x}px;
-    top: ${y}px;
+    left: ${Math.max(10, Math.min(x, window.innerWidth - 330))}px;
+    top: ${Math.max(10, y)}px;
     transform-origin: center bottom;
     backdrop-filter: blur(8px);
   `;
@@ -983,16 +1024,34 @@ function createBasicTooltip(
 
   document.body.appendChild(tooltip);
 
+  // Focus the tooltip for screen readers
+  setTimeout(() => {
+    tooltip.focus();
+  }, 100);
+
   // Animate in
   requestAnimationFrame(() => {
     tooltip.style.opacity = '1';
     tooltip.style.transform = 'scale(1)';
   });
 
+  // Announce tooltip to screen reader
+  if (accessibilityManager) {
+    const ariaLabel = tooltip.getAttribute('aria-label');
+    accessibilityManager.announceToScreenReader(ariaLabel);
+  }
+
   // Add copy functionality if success result
   if (result && !errorMessage) {
     const copyButton = tooltip.querySelector('#copyConversionResult');
     if (copyButton) {
+      // Add accessibility attributes to copy button
+      copyButton.setAttribute(
+        'aria-label',
+        'Copy conversion result to clipboard'
+      );
+      copyButton.setAttribute('type', 'button');
+
       copyButton.addEventListener('click', e => {
         e.stopPropagation();
         if (visualFeedback && visualFeedback.copyToClipboard) {
@@ -1007,6 +1066,18 @@ function createBasicTooltip(
         }
         copyButton.textContent = '✅ Copied!';
         copyButton.style.background = '#10b981';
+        copyButton.setAttribute(
+          'aria-label',
+          'Conversion result copied to clipboard'
+        );
+
+        // Announce to screen reader
+        if (accessibilityManager) {
+          accessibilityManager.announceToScreenReader(
+            `Copied ${result.convertedAmount} to clipboard`
+          );
+        }
+
         setTimeout(() => {
           removeTooltip();
         }, 1000);
@@ -1014,9 +1085,16 @@ function createBasicTooltip(
     }
   }
 
-  // Enhanced removal logic
+  // Enhanced removal logic with accessibility
   const removeTooltip = () => {
     if (tooltip.parentNode) {
+      // Announce closure to screen reader
+      if (accessibilityManager) {
+        accessibilityManager.announceToScreenReader(
+          'Conversion tooltip closed'
+        );
+      }
+
       tooltip.style.opacity = '0';
       tooltip.style.transform = 'scale(0.9)';
       setTimeout(() => {
@@ -1031,19 +1109,216 @@ function createBasicTooltip(
 
   // Enhanced keyboard support
   const handleKeyDown = event => {
-    if (event.key === 'Escape' || event.key === 'Enter') {
+    if (event.key === 'Escape') {
+      event.preventDefault();
       removeTooltip();
+    } else if (event.key === 'Enter' && event.target === tooltip) {
+      event.preventDefault();
+      removeTooltip();
+    } else if (event.key === 'Tab') {
+      // Keep focus within tooltip if it has focusable elements
+      const focusableElements = tooltip.querySelectorAll(
+        'button, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusableElements.length > 0) {
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (event.shiftKey && document.activeElement === firstElement) {
+          event.preventDefault();
+          lastElement.focus();
+        } else if (!event.shiftKey && document.activeElement === lastElement) {
+          event.preventDefault();
+          firstElement.focus();
+        }
+      }
     }
   };
 
-  // Auto-remove after 8 seconds (longer for conversion results)
-  setTimeout(removeTooltip, 8000);
+  // Add keyboard event listener to tooltip itself
+  tooltip.addEventListener('keydown', handleKeyDown);
 
-  // Remove on click or key press
+  // Auto-remove after 10 seconds for better accessibility (longer for users with disabilities)
+  setTimeout(removeTooltip, 10000);
+
+  // Remove on click outside tooltip
   setTimeout(() => {
-    document.addEventListener('click', removeTooltip);
+    document.addEventListener('click', event => {
+      if (!tooltip.contains(event.target)) {
+        removeTooltip();
+      }
+    });
     document.addEventListener('keydown', handleKeyDown);
   }, 100);
 }
 
-console.log('✅ Currency converter content script with visual feedback loaded');
+/**
+ * Initialize accessibility features for content script
+ */
+function initializeContentAccessibility() {
+  if (!accessibilityManager) {
+    return;
+  }
+
+  // Initialize base accessibility features
+  accessibilityManager.init();
+
+  // Add content-specific keyboard event handlers
+  document.addEventListener('keydown', handleContentKeydown);
+
+  // Add focus management for tooltips
+  document.addEventListener('focusin', handleTooltipFocus);
+  document.addEventListener('focusout', handleTooltipBlur);
+
+  // Announce extension readiness
+  setTimeout(() => {
+    accessibilityManager.announceToScreenReader(
+      'Currency converter extension ready. Select currency amounts for conversion.'
+    );
+  }, 1000);
+}
+
+/**
+ * Handle keyboard events in content script
+ */
+function handleContentKeydown(event) {
+  if (!accessibilityManager) {
+    return;
+  }
+
+  const { key, altKey } = event;
+
+  // Alt+C - Convert selected text
+  if (altKey && key === 'c') {
+    event.preventDefault();
+    const selection = window.getSelection();
+    if (selection.rangeCount > 0 && !selection.isCollapsed) {
+      const selectedText = selection.toString().trim();
+      if (selectedText) {
+        convertSelectedCurrency(selectedText);
+        accessibilityManager.announceToScreenReader(
+          `Converting selected currency: ${selectedText}`
+        );
+      }
+    } else {
+      accessibilityManager.announceToScreenReader(
+        'Please select currency amount text first'
+      );
+    }
+  }
+
+  // Escape - Close tooltips
+  if (key === 'Escape') {
+    closeAllTooltips();
+  }
+
+  // Alt+H - Help for content script features
+  if (altKey && key === 'h') {
+    event.preventDefault();
+    announceContentHelp();
+  }
+}
+
+/**
+ * Announce help for content script features
+ */
+function announceContentHelp() {
+  if (!accessibilityManager) {
+    return;
+  }
+
+  const helpText = `
+    Currency converter keyboard shortcuts:
+    - Select currency text and press Alt+C to convert
+    - Press Escape to close conversion tooltips
+    - Right-click on currency amounts for context menu options
+    - Alt+H for this help message
+  `;
+
+  accessibilityManager.announceToScreenReader(helpText);
+}
+
+/**
+ * Handle tooltip focus for accessibility
+ */
+function handleTooltipFocus(event) {
+  const tooltip = event.target.closest('[id*="tooltip"], .vf-tooltip');
+  if (tooltip && accessibilityManager) {
+    // Announce tooltip content when focused
+    const content = tooltip.textContent || tooltip.getAttribute('aria-label');
+    if (content) {
+      accessibilityManager.announceToScreenReader(`Tooltip: ${content}`);
+    }
+  }
+}
+
+/**
+ * Handle tooltip blur for accessibility
+ */
+function handleTooltipBlur(event) {
+  // Remove any temporary accessibility states
+  const tooltip = event.target.closest('[id*="tooltip"], .vf-tooltip');
+  if (tooltip) {
+    tooltip.classList.remove('accessibility-focused');
+  }
+}
+
+/**
+ * Close all tooltips and announce to screen reader
+ */
+function closeAllTooltips() {
+  const tooltips = document.querySelectorAll('[id*="tooltip"], .vf-tooltip');
+  let closedCount = 0;
+
+  tooltips.forEach(tooltip => {
+    if (tooltip && tooltip.style.display !== 'none') {
+      tooltip.style.display = 'none';
+      tooltip.remove();
+      closedCount++;
+    }
+  });
+
+  if (closedCount > 0 && accessibilityManager) {
+    accessibilityManager.announceToScreenReader(
+      `${closedCount} tooltip${closedCount === 1 ? '' : 's'} closed`
+    );
+  }
+}
+
+/**
+ * Convert selected currency with accessibility support
+ */
+function convertSelectedCurrency(selectedText) {
+  try {
+    // Use existing currency detection logic
+    const currencyInfo = detectCurrencyWithValidation(selectedText);
+
+    if (currencyInfo) {
+      // Send message to background script for conversion
+      sendMessageSafely({
+        action: 'convertCurrency',
+        currencyInfo: currencyInfo,
+        selectedText: selectedText
+      });
+
+      if (accessibilityManager) {
+        accessibilityManager.announceToScreenReader(
+          `Converting ${currencyInfo.amount} ${currencyInfo.code} to target currencies`
+        );
+      }
+    } else {
+      if (accessibilityManager) {
+        accessibilityManager.announceToScreenReader(
+          'No valid currency detected in selected text'
+        );
+      }
+    }
+  } catch (error) {
+    console.error('Error converting selected currency:', error);
+    if (accessibilityManager) {
+      accessibilityManager.announceToScreenReader(
+        'Error occurred during currency conversion'
+      );
+    }
+  }
+}
