@@ -2,7 +2,7 @@
  * Quick test of updated API configuration
  */
 
-import { API_PROVIDERS } from './utils/api-service.js';
+import { API_PROVIDERS } from '../../utils/api-service.js';
 
 console.log('🧪 Testing updated API configuration...\n');
 

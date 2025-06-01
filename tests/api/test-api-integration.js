@@ -7,7 +7,7 @@ import {
   API_PROVIDERS,
   ApiKeyManager,
   CurrencyApiService
-} from './utils/api-service.js';
+} from '../../utils/api-service.js';
 
 // Mock Chrome storage for testing
 globalThis.chrome = {

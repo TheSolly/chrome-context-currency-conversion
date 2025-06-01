@@ -15,7 +15,7 @@ import {
   validateCurrencyCode,
   validateCurrencySelection,
   formatCurrencyOption
-} from './utils/currency-data.js';
+} from '../../utils/currency-data.js';
 
 console.log('🧪 Testing Phase 3, Task 3.2: Currency Data Management');
 console.log('='.repeat(60));

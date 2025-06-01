@@ -72,9 +72,18 @@ A Chrome extension that provides real-time currency conversion through context m
    │   ├── icon-128.png             # 128x128 PNG icon
    │   └── generate-icons.js        # Icon generation script
    ├── utils/                       # Utility functions
-   │   └── currency-utils.js        # Currency parsing & formatting
-   ├── test-currency-detection.js   # Comprehensive test suite
-   └── test-context-menu.js         # Context menu integration tests
+   │   ├── currency-utils.js        # Currency parsing & formatting
+   │   ├── currency-data.js         # Currency data management
+   │   ├── settings-manager.js      # Settings persistence
+   │   ├── api-service.js          # External API integration
+   │   └── api-config-manager.js   # API configuration
+   ├── tests/                       # Test files
+   │   ├── settings/               # Settings-related tests
+   │   ├── api/                    # API integration tests
+   │   └── currency/               # Currency detection tests
+   └── debug/                       # Debug tools
+       ├── settings/               # Settings debugging scripts
+       └── currency/               # Currency debugging scripts
    ```
 
 2. **Core Components**:

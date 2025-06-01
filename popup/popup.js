@@ -29,6 +29,76 @@ let userPlan = 'FREE'; // TODO: Implement plan detection
 const currencyPreferences = new CurrencyPreferences(); // Enhanced Task 3.2
 const currencyStats = getCurrencyStats(); // Enhanced Task 3.2
 
+// Enhanced error handling and persistence for Chrome extension environment
+const pendingSettingsOperations = new Set();
+
+// Track and wait for all pending operations before popup closes
+async function waitForPendingOperations() {
+  if (pendingSettingsOperations.size > 0) {
+    console.log(
+      `⏳ Waiting for ${pendingSettingsOperations.size} pending operations...`
+    );
+    const operations = Array.from(pendingSettingsOperations);
+    await Promise.all(operations);
+    console.log('✅ All pending operations completed');
+  }
+}
+
+// Enhanced settings update with operation tracking
+async function updateSettingWithTracking(key, value) {
+  const operationId = `${key}_${Date.now()}`;
+  console.log(`🔄 Starting tracked operation: ${operationId}`);
+
+  const operation = (async () => {
+    try {
+      // Update the setting with retry logic
+      await settingsManager.updateSetting(key, value);
+
+      // Verify the setting was saved by re-reading it
+      const verification = await settingsManager.getSettings();
+      if (verification[key] !== value) {
+        console.warn(`⚠️ Setting verification failed for ${key}, retrying...`);
+        await settingsManager.updateSetting(key, value);
+
+        // Second verification
+        const secondVerification = await settingsManager.getSettings();
+        if (secondVerification[key] !== value) {
+          throw new Error(`Failed to persist setting ${key} after retry`);
+        }
+      }
+
+      console.log(`✅ Completed tracked operation: ${operationId}`);
+    } catch (error) {
+      console.error(`❌ Failed tracked operation: ${operationId}`, error);
+      throw error;
+    }
+  })();
+
+  pendingSettingsOperations.add(operation);
+
+  try {
+    await operation;
+  } finally {
+    pendingSettingsOperations.delete(operation);
+  }
+}
+
+// Listen for popup close events to ensure operations complete
+window.addEventListener('beforeunload', async event => {
+  if (pendingSettingsOperations.size > 0) {
+    event.preventDefault();
+    event.returnValue = 'Settings are being saved...';
+    await waitForPendingOperations();
+  }
+});
+
+// Also handle visibility change (when popup loses focus)
+document.addEventListener('visibilitychange', async () => {
+  if (document.hidden && pendingSettingsOperations.size > 0) {
+    await waitForPendingOperations();
+  }
+});
+
 document.addEventListener('DOMContentLoaded', initializePopup);
 
 async function initializePopup() {
@@ -39,6 +109,8 @@ async function initializePopup() {
     await settingsManager.initialize();
     currentSettings = await settingsManager.getSettings();
 
+    console.log('📋 Loaded settings:', currentSettings);
+
     // Load user statistics
     await loadUserStats();
 
@@ -46,8 +118,7 @@ async function initializePopup() {
     await currencyPreferences.load();
 
     // Initialize UI components
-    populateCurrencySelectors();
-    populateAdditionalCurrencies();
+    await updateUIWithCurrentSettings();
     updateFeatureAccess();
 
     // Enhanced Task 3.2 - Setup advanced features
@@ -58,12 +129,19 @@ async function initializePopup() {
     setupRegionalNavigation();
 
     // Phase 4, Task 4.1: Initialize API Configuration
-    const apiContainer =
-      document.querySelector('.popup-container') || document.body;
-    apiConfigManager.init(apiContainer);
+    try {
+      const apiContainer =
+        document.querySelector('.popup-container') || document.body;
+      apiConfigManager.init(apiContainer);
 
-    // Initialize default configuration
-    initializeDefaultConfig();
+      // Initialize default configuration
+      await initializeDefaultConfig();
+    } catch (apiError) {
+      console.error(
+        '⚠️ API configuration failed, continuing without it:',
+        apiError
+      );
+    }
 
     // Set up event listeners
     setupEventListeners();
@@ -92,7 +170,13 @@ function setupEventListeners() {
   // Precision selector
   document
     .getElementById('precision')
-    .addEventListener('change', handleSettingChange);
+    .addEventListener('change', async event => {
+      await settingsManager.updateSetting(
+        'precision',
+        parseInt(event.target.value)
+      );
+      currentSettings = await settingsManager.getSettings();
+    });
 
   // Action buttons
   document
@@ -201,8 +285,8 @@ function createCurrencyItem(currency, index) {
   `;
 
   // Add remove functionality
-  item.querySelector('.remove-currency').addEventListener('click', () => {
-    removeCurrency(index);
+  item.querySelector('.remove-currency').addEventListener('click', async () => {
+    await removeCurrency(index);
   });
 
   return item;
@@ -211,17 +295,18 @@ function createCurrencyItem(currency, index) {
 function setupToggleSwitch(elementId) {
   const toggle = document.getElementById(elementId);
 
-  toggle.addEventListener('click', () => {
+  toggle.addEventListener('click', async () => {
     if (toggle.disabled) {
       return;
     }
 
     const isEnabled = toggle.classList.contains('enabled');
-    updateToggleState(toggle, !isEnabled);
+    const newValue = !isEnabled;
+    updateToggleState(toggle, newValue);
 
-    // Update settings
-    currentSettings[elementId] = !isEnabled;
-    handleSettingChange();
+    // Update settings through SettingsManager with tracking
+    await updateSettingWithTracking(elementId, newValue);
+    currentSettings = await settingsManager.getSettings();
   });
 
   // Set initial state
@@ -307,27 +392,18 @@ async function handleCurrencyChange(event) {
     return;
   }
 
-  currentSettings[id] = value;
-  await handleSettingChange();
-}
-
-async function handleSettingChange() {
-  // Phase 3, Task 3.3: Auto-save with SettingsManager debouncing
-  clearTimeout(window.saveTimeout);
-  window.saveTimeout = setTimeout(async () => {
-    try {
-      await settingsManager.saveSettings(currentSettings);
-      console.log('⚙️ Settings auto-saved');
-    } catch (error) {
-      console.error('❌ Auto-save failed:', error);
-    }
-  }, 500);
+  // Update settings through SettingsManager with tracking
+  await updateSettingWithTracking(id, value);
+  currentSettings = await settingsManager.getSettings();
 }
 
 async function saveSettings() {
   try {
+    // Wait for any pending operations to complete first
+    await waitForPendingOperations();
+
     // Phase 3, Task 3.3: Use SettingsManager for saving
-    await settingsManager.saveSettings(currentSettings);
+    await settingsManager.saveSettings();
     showStatus('Settings saved successfully!', 'success');
   } catch (error) {
     console.error('❌ Failed to save settings:', error);
@@ -345,18 +421,7 @@ async function resetSettings() {
       currentSettings = await settingsManager.getSettings();
 
       // Update UI
-      populateCurrencySelectors();
-      populateAdditionalCurrencies();
-
-      // Update toggles
-      Object.keys(currentSettings).forEach(key => {
-        const element = document.getElementById(key);
-        if (element && element.classList.contains('toggle-switch')) {
-          updateToggleState(element, currentSettings[key]);
-        } else if (element && element.tagName === 'SELECT') {
-          element.value = currentSettings[key];
-        }
-      });
+      await updateUIWithCurrentSettings();
 
       showStatus('Settings reset to defaults!', 'success');
     } catch (error) {
@@ -387,14 +452,17 @@ function showAddCurrencyDialog() {
       currency &&
       !currentSettings.additionalCurrencies.includes(currency.code)
     ) {
-      addCurrency(currency.code);
+      addCurrency(currency.code).catch(error => {
+        console.error('Failed to add currency:', error);
+        showStatus('Failed to add currency', 'error');
+      });
     } else {
       showStatus('Invalid or duplicate currency code', 'error');
     }
   }
 }
 
-function addCurrency(currencyCode) {
+async function addCurrency(currencyCode) {
   const maxCurrencies = FEATURES[userPlan].maxCurrencies;
 
   if (currentSettings.additionalCurrencies.length >= maxCurrencies) {
@@ -402,17 +470,29 @@ function addCurrency(currencyCode) {
     return;
   }
 
-  currentSettings.additionalCurrencies.push(currencyCode);
+  const newAdditionalCurrencies = [
+    ...currentSettings.additionalCurrencies,
+    currencyCode
+  ];
+  await updateSettingWithTracking(
+    'additionalCurrencies',
+    newAdditionalCurrencies
+  );
+  currentSettings = await settingsManager.getSettings();
   populateAdditionalCurrencies();
   updateFeatureAccess();
-  handleSettingChange();
 }
 
-function removeCurrency(index) {
-  currentSettings.additionalCurrencies.splice(index, 1);
+async function removeCurrency(index) {
+  const newAdditionalCurrencies = [...currentSettings.additionalCurrencies];
+  newAdditionalCurrencies.splice(index, 1);
+  await updateSettingWithTracking(
+    'additionalCurrencies',
+    newAdditionalCurrencies
+  );
+  currentSettings = await settingsManager.getSettings();
   populateAdditionalCurrencies();
   updateFeatureAccess();
-  handleSettingChange();
 }
 
 function showStatus(message, type = 'info') {
@@ -668,7 +748,9 @@ async function exportSettings() {
     // Create download using data URL
     const dataUrl =
       'data:application/json;charset=utf-8,' + encodeURIComponent(exportData);
-    const filename = `currency-converter-settings-${new Date().toISOString().split('T')[0]}.json`;
+    const filename = `currency-converter-settings-${
+      new Date().toISOString().split('T')[0]
+    }.json`;
 
     // Create temporary download link
     const downloadLink = document.createElement('a');
@@ -705,18 +787,7 @@ async function handleImportFile(event) {
       currentSettings = await settingsManager.getSettings();
 
       // Update UI with imported settings
-      populateCurrencySelectors();
-      populateAdditionalCurrencies();
-
-      // Update toggles and selects
-      Object.keys(currentSettings).forEach(key => {
-        const element = document.getElementById(key);
-        if (element && element.classList.contains('toggle-switch')) {
-          updateToggleState(element, currentSettings[key]);
-        } else if (element && element.tagName === 'SELECT') {
-          element.value = currentSettings[key];
-        }
-      });
+      await updateUIWithCurrentSettings();
 
       showStatus('Settings imported successfully!', 'success');
     } else {
@@ -776,4 +847,23 @@ function handleSupport() {
 
 function handleHelp() {
   chrome.tabs.create({ url: 'https://example.com/help' });
+}
+
+async function updateUIWithCurrentSettings() {
+  // Ensure we have the latest settings
+  currentSettings = await settingsManager.getSettings();
+
+  // Update currency selectors
+  populateCurrencySelectors();
+  populateAdditionalCurrencies();
+
+  // Update toggles and selects
+  Object.keys(currentSettings).forEach(key => {
+    const element = document.getElementById(key);
+    if (element && element.classList.contains('toggle-switch')) {
+      updateToggleState(element, currentSettings[key]);
+    } else if (element && element.tagName === 'SELECT') {
+      element.value = currentSettings[key];
+    }
+  });
 }

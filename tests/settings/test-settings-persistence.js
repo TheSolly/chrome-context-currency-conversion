@@ -1,7 +1,7 @@
 // Phase 3, Task 3.3: Settings Persistence Integration Test
 // Test file to verify SettingsManager integration with popup
 
-import { settingsManager } from './utils/settings-manager.js';
+import { settingsManager } from '../../utils/settings-manager.js';
 
 console.log('🧪 Testing Settings Manager Integration...');
 

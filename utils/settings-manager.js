@@ -52,6 +52,19 @@ export class SettingsManager {
     this.currentSettings = { ...this.DEFAULT_SETTINGS };
     this.isFirstInstall = false;
     this.migrationNeeded = false;
+
+    // Check if Chrome APIs are available
+    this.chromeApisAvailable =
+      typeof chrome !== 'undefined' &&
+      chrome.storage &&
+      chrome.storage.sync &&
+      chrome.storage.local;
+
+    if (!this.chromeApisAvailable) {
+      console.warn(
+        '⚠️ Chrome storage APIs not available, using fallback storage'
+      );
+    }
   }
 
   // Initialize settings system
@@ -83,20 +96,35 @@ export class SettingsManager {
   // Check if this is a first install
   async checkFirstInstall() {
     try {
-      const installData = await chrome.storage.local.get([
-        this.STORAGE_KEYS.INSTALL_DATE,
-        this.STORAGE_KEYS.VERSION
-      ]);
+      let installData;
 
-      if (!installData.installDate) {
+      if (this.chromeApisAvailable) {
+        installData = await chrome.storage.local.get([
+          this.STORAGE_KEYS.INSTALL_DATE,
+          this.STORAGE_KEYS.VERSION
+        ]);
+      } else {
+        installData = await this.getFallbackStorage([
+          this.STORAGE_KEYS.INSTALL_DATE,
+          this.STORAGE_KEYS.VERSION
+        ]);
+      }
+
+      if (!installData[this.STORAGE_KEYS.INSTALL_DATE]) {
         this.isFirstInstall = true;
         console.log('🎉 First install detected');
 
         // Record install date and version
-        await chrome.storage.local.set({
+        const installInfo = {
           [this.STORAGE_KEYS.INSTALL_DATE]: Date.now(),
           [this.STORAGE_KEYS.VERSION]: this.SETTINGS_VERSION
-        });
+        };
+
+        if (this.chromeApisAvailable) {
+          await chrome.storage.local.set(installInfo);
+        } else {
+          await this.setFallbackStorage(installInfo);
+        }
       }
     } catch (error) {
       console.error('❌ Error checking first install:', error);
@@ -107,16 +135,29 @@ export class SettingsManager {
   // Load settings from storage
   async loadSettings() {
     try {
-      // Load from sync storage (cross-device)
-      const syncedSettings = await chrome.storage.sync.get([
-        this.STORAGE_KEYS.USER_SETTINGS
-      ]);
+      let syncedSettings, localData;
 
-      // Load from local storage (device-specific)
-      const localData = await chrome.storage.local.get([
-        this.STORAGE_KEYS.LAST_SYNC,
-        this.STORAGE_KEYS.MIGRATION_LOG
-      ]);
+      if (this.chromeApisAvailable) {
+        // Load from sync storage (cross-device)
+        syncedSettings = await chrome.storage.sync.get([
+          this.STORAGE_KEYS.USER_SETTINGS
+        ]);
+
+        // Load from local storage (device-specific)
+        localData = await chrome.storage.local.get([
+          this.STORAGE_KEYS.LAST_SYNC,
+          this.STORAGE_KEYS.MIGRATION_LOG
+        ]);
+      } else {
+        // Fallback to localStorage
+        syncedSettings = this.getFallbackStorage(
+          this.STORAGE_KEYS.USER_SETTINGS
+        );
+        localData = this.getFallbackStorage([
+          this.STORAGE_KEYS.LAST_SYNC,
+          this.STORAGE_KEYS.MIGRATION_LOG
+        ]);
+      }
 
       if (syncedSettings[this.STORAGE_KEYS.USER_SETTINGS]) {
         // Merge with defaults to ensure all properties exist
@@ -151,15 +192,22 @@ export class SettingsManager {
       // Validate settings before saving
       const validatedSettings = this.validateSettingsData(settings);
 
-      // Save to sync storage for cross-device sync
-      await chrome.storage.sync.set({
-        [this.STORAGE_KEYS.USER_SETTINGS]: validatedSettings
-      });
+      if (this.chromeApisAvailable) {
+        // Save to sync storage for cross-device sync
+        await chrome.storage.sync.set({
+          [this.STORAGE_KEYS.USER_SETTINGS]: validatedSettings
+        });
 
-      // Update local metadata
-      await chrome.storage.local.set({
-        [this.STORAGE_KEYS.LAST_SYNC]: Date.now()
-      });
+        // Update local metadata
+        await chrome.storage.local.set({
+          [this.STORAGE_KEYS.LAST_SYNC]: Date.now()
+        });
+      } else {
+        // Fallback to localStorage
+        this.setFallbackStorage({
+          [this.STORAGE_KEYS.USER_SETTINGS]: validatedSettings
+        });
+      }
 
       this.currentSettings = validatedSettings;
 
@@ -433,6 +481,64 @@ export class SettingsManager {
     } catch (error) {
       console.error('❌ Failed to get statistics:', error);
       return null;
+    }
+  }
+
+  // Fallback storage methods for when Chrome APIs are not available
+  async getFallbackStorage(keys) {
+    try {
+      // Check if we're in a browser environment with localStorage
+      if (typeof window === 'undefined' || !window.localStorage) {
+        console.warn('localStorage not available, using empty result');
+        return {};
+      }
+
+      const result = {};
+      if (Array.isArray(keys)) {
+        keys.forEach(key => {
+          const value = window.localStorage.getItem(key);
+          if (value) {
+            try {
+              result[key] = JSON.parse(value);
+            } catch (e) {
+              console.warn(`Failed to parse stored value for key ${key}`);
+            }
+          }
+        });
+      } else {
+        const value = window.localStorage.getItem(keys);
+        if (value) {
+          try {
+            result[keys] = JSON.parse(value);
+          } catch (e) {
+            console.warn(`Failed to parse stored value for key ${keys}`);
+          }
+        }
+      }
+      return result;
+    } catch (error) {
+      console.error('Fallback storage get error:', error);
+      return {};
+    }
+  }
+
+  async setFallbackStorage(data) {
+    try {
+      // Check if we're in a browser environment with localStorage
+      if (typeof window === 'undefined' || !window.localStorage) {
+        console.warn('localStorage not available, cannot save settings');
+        return;
+      }
+
+      Object.entries(data).forEach(([key, value]) => {
+        try {
+          window.localStorage.setItem(key, JSON.stringify(value));
+        } catch (e) {
+          console.error(`Failed to save ${key} to localStorage:`, e);
+        }
+      });
+    } catch (error) {
+      console.error('Fallback storage set error:', error);
     }
   }
 }
