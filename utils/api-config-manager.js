@@ -228,7 +228,16 @@ export class ApiConfigManager {
       if (provider.requiresApiKey) {
         const option = document.createElement('option');
         option.value = key;
-        option.textContent = `${provider.name} (${provider.rateLimits.free.requests}/${provider.rateLimits.free.period})`;
+
+        // Handle different rate limit structures (some have 'free', others have 'registered')
+        const rateLimitInfo =
+          provider.rateLimits.free || provider.rateLimits.registered;
+        if (rateLimitInfo) {
+          option.textContent = `${provider.name} (${rateLimitInfo.requests}/${rateLimitInfo.period})`;
+        } else {
+          option.textContent = provider.name;
+        }
+
         select.appendChild(option);
       }
     });
@@ -249,10 +258,18 @@ export class ApiConfigManager {
     }
 
     const config = API_PROVIDERS[provider];
+
+    // Handle different rate limit structures (some have 'free', others have 'registered')
+    const rateLimitInfo =
+      config.rateLimits.free || config.rateLimits.registered;
+    const rateLimitText = rateLimitInfo
+      ? `${rateLimitInfo.requests} requests/${rateLimitInfo.period}`
+      : 'See provider documentation';
+
     infoDiv.innerHTML = `
       <div class="space-y-2">
         <div><strong>${config.name}</strong></div>
-        <div>Rate Limit: ${config.rateLimits.free.requests} requests/${config.rateLimits.free.period}</div>
+        <div>Rate Limit: ${rateLimitText}</div>
         <div>Features: ${config.rateLimits.features.join(', ')}</div>
         <div class="text-green-700">✅ ${config.pros.join(', ')}</div>
         <div class="text-red-700">⚠️ ${config.cons.join(', ')}</div>
