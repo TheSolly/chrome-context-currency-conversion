@@ -98,6 +98,10 @@ A Chrome extension that provides real-time currency conversion through context m
    - **Smart Number Parsing**: European (1.234,56) vs US (1,234.56) formats
    - **Performance Optimization**: Debounced selection processing, memory management
    - **Accessibility Features**: Keyboard navigation, ARIA labels, screen reader support
+   - **API Integration**: Pre-configured ExchangeRate-API with intelligent fallback system
+   - **Secure Key Management**: Chrome storage API for secure API key handling
+   - **Connection Testing**: Real-time API validation and performance monitoring
+   - **Caching System**: 10-minute cache with automatic expiry for optimal performance
 
    **🆕 Phase 3, Task 3.3 - Enhanced Settings Persistence**:
 
@@ -194,15 +198,42 @@ A Chrome extension that provides real-time currency conversion through context m
 - **Additional Currencies**: Support for 3 extra currencies (freemium model)
 - **Feature Toggles**: Auto-detection and manual conversion switches
 - **Premium Features**: Upgrade section with feature comparison
-- **Auto-Save**: Real-time settings persistence with debouncing
 
-**🛠️ Technical Implementation**:
+### API Integration (✅ Completed - Task 4.1)
 
-- **Tailwind CSS**: Modern utility-first CSS framework
-- **ES6 Modules**: Clean code organization with imports/exports
-- **Chrome Storage API**: Persistent settings across browser sessions
-- **Real-time Validation**: Input validation with user feedback
-- **Responsive Design**: Optimized for popup window constraints
+**🔗 Real-Time Currency Conversion**:
+
+- **Primary Provider**: ExchangeRate-API with pre-configured developer account
+- **Rate Limits**: 100,000 requests/month with registered API key
+- **Backup Providers**: Optional Fixer.io, CurrencyAPI, and Alpha Vantage support
+- **Intelligent Fallback**: Automatic provider switching on failures
+- **Secure Storage**: API keys stored securely using Chrome storage API
+- **Connection Testing**: Real-time API validation with performance metrics
+- **Caching System**: 10-minute cache for optimal performance and rate limit conservation
+- **User Configuration**: Optional additional API keys for enhanced reliability
+
+**🔧 API Configuration UI**:
+
+- **Service Status**: Real-time monitoring of all configured providers
+- **Key Management**: Secure addition/removal of API keys with format validation
+- **Connection Testing**: One-click testing of each provider with response time metrics
+- **Usage Statistics**: Track API calls, cache hits, and provider performance
+- **Setup Instructions**: Built-in guidance for obtaining API keys from each provider
+
+**📋 Setup Instructions**:
+
+1. **Secure API Key Setup**: Run `./setup-api.sh` to configure your ExchangeRate-API key securely
+   - API keys are stored in `utils/api-keys.local.js` (never committed to git)
+   - Alternative: Configure through the extension popup settings
+2. **Optional Enhancement**: Add backup API keys through the popup settings
+3. **See API_SETUP.md**: For detailed security information and manual setup options
+
+**🔒 Security Features**:
+
+- **Git-Ignored Configuration**: API keys stored in files ignored by version control
+- **Secure Local Storage**: Chrome extension storage API for encrypted key storage
+- **No Repository Exposure**: Template files contain only placeholders, never actual keys
+- **Easy Key Management**: Update keys anytime through popup interface
 
 ## Currency Data Management
 

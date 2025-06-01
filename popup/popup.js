@@ -19,6 +19,10 @@ import {
 // Phase 3, Task 3.3: Enhanced Settings Management
 import { settingsManager } from '/utils/settings-manager.js';
 
+// Phase 4, Task 4.1: API Integration
+import { apiConfigManager } from '/utils/api-config-manager.js';
+import { initializeDefaultConfig } from '/utils/default-config.js';
+
 // State management
 let currentSettings = { ...DEFAULT_SETTINGS };
 let userPlan = 'FREE'; // TODO: Implement plan detection
@@ -52,6 +56,14 @@ async function initializePopup() {
     updateCurrencyStats();
     updateRegionalDisplay();
     setupRegionalNavigation();
+
+    // Phase 4, Task 4.1: Initialize API Configuration
+    const apiContainer =
+      document.querySelector('.popup-container') || document.body;
+    apiConfigManager.init(apiContainer);
+
+    // Initialize default configuration
+    initializeDefaultConfig();
 
     // Set up event listeners
     setupEventListeners();

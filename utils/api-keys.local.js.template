@@ -1,0 +1,9 @@
+/**
+ * API Configuration File Template
+ * This file contains actual API keys and should NEVER be committed to git
+ * Copy this file to utils/api-keys.local.js and add your actual keys
+ */
+
+export const LOCAL_API_KEYS = {
+  EXCHANGERATE_API: 'your-actual-api-key-here'
+};

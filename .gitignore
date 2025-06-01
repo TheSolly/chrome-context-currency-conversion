@@ -23,6 +23,11 @@ build/
 .env.test.local
 .env.production.local
 
+# API Keys and sensitive configuration (NEVER COMMIT)
+utils/api-keys.local.js
+**/api-keys.local.js
+*.local.js
+
 # IDE and Editor files
 .vscode/
 .idea/
