@@ -52,6 +52,21 @@ export const CURRENCIES = {
   LBP: { name: 'Lebanese Pound', symbol: 'ل.ل', flag: '🇱🇧' }
 };
 
+// Cryptocurrency definitions for Smart Currency Detection - Phase 6, Task 6.1
+export const CRYPTOCURRENCIES = {
+  BTC: { name: 'Bitcoin', symbol: '₿', flag: '🟠', decimals: 8 },
+  ETH: { name: 'Ethereum', symbol: 'Ξ', flag: '🔷', decimals: 18 },
+  LTC: { name: 'Litecoin', symbol: 'Ł', flag: '⚪', decimals: 8 },
+  ADA: { name: 'Cardano', symbol: 'ADA', flag: '🔵', decimals: 6 },
+  DOT: { name: 'Polkadot', symbol: 'DOT', flag: '🟣', decimals: 10 },
+  XRP: { name: 'Ripple', symbol: 'XRP', flag: '🔵', decimals: 6 },
+  SOL: { name: 'Solana', symbol: 'SOL', flag: '🟣', decimals: 9 },
+  MATIC: { name: 'Polygon', symbol: 'MATIC', flag: '🟣', decimals: 18 }
+};
+
+// Combined currencies including cryptocurrencies
+export const ALL_CURRENCIES = { ...CURRENCIES, ...CRYPTOCURRENCIES };
+
 // Popular currencies (for quick access)
 export const POPULAR_CURRENCIES = [
   'USD',
@@ -428,4 +443,204 @@ export function testCurrencyDetection(detectFunction) {
   });
 
   return results;
+}
+
+/**
+ * Parse multiple currencies from text - Phase 6, Task 6.1: Smart Currency Detection
+ * Enhanced to handle complex formats and multiple currencies in single selection
+ * @param {string} text - Text containing currency amounts
+ * @returns {Array} Array of parsed currency objects
+ */
+export function parseMultipleCurrenciesFromText(text) {
+  if (!text || typeof text !== 'string') {
+    return [];
+  }
+
+  // Use smart currency detector for enhanced detection
+  if (typeof window !== 'undefined' && window.smartCurrencyDetector) {
+    return window.smartCurrencyDetector.detectCurrencies(text);
+  }
+
+  // Fallback to basic detection if smart detector not available
+  const currencies = [];
+  const basicResult = parseCurrencyFromText(text);
+
+  if (basicResult) {
+    currencies.push({
+      ...basicResult,
+      confidence: 0.8,
+      type: 'basic',
+      range: { start: 0, end: text.length }
+    });
+  }
+
+  return currencies;
+}
+
+/**
+ * Enhanced currency parsing with support for complex number formats
+ * Phase 6, Task 6.1: Handle formats like 1,234.56, 1.234,56
+ * @param {string} text - Text containing currency amount
+ * @returns {object|null} Parsed currency info or null
+ */
+export function parseEnhancedCurrencyFromText(text) {
+  // Remove extra whitespace
+  text = text.trim();
+
+  // Enhanced currency patterns supporting complex formats
+  const enhancedPatterns = [
+    // European format with symbol: €1.234,56
+    /^([€£¥₹₽¢₩₦₪₨₫₱₡₲₴₵₸₺₾₿$])\s*(\d{1,3}(?:\.\d{3})*,\d{1,4})$/,
+
+    // US format with symbol: $1,234.56
+    /^([€£¥₹₽¢₩₦₪₨₫₱₡₲₴₵₸₺₾₿$])\s*(\d{1,3}(?:,\d{3})*\.\d{1,4})$/,
+
+    // European format amount first: 1.234,56€
+    /^(\d{1,3}(?:\.\d{3})*,\d{1,4})\s*([€£¥₹₽¢₩₦₪₨₫₱₡₲₴₵₸₺₾₿$])$/,
+
+    // US format amount first: 1,234.56$
+    /^(\d{1,3}(?:,\d{3})*\.\d{1,4})\s*([€£¥₹₽¢₩₦₪₨₫₱₡₲₴₵₸₺₾₿$])$/,
+
+    // Swiss format with apostrophe: CHF 1'234.56
+    /^([A-Z]{3})\s+(\d{1,3}(?:'\d{3})*(?:\.\d{1,4})?)$/,
+
+    // Indian numbering system: ₹1,23,456.78
+    /^([₹$])\s*(\d{1,2}(?:,\d{2})*(?:,\d{3})*(?:\.\d{1,4})?)$/,
+
+    // Scientific notation: $1.23e6
+    /^([€£¥₹₽¢₩₦₪₨₫₱₡₲₴₵₸₺₾₿$])\s*(\d+(?:\.\d+)?[eE][+-]?\d+)$/,
+
+    // Cryptocurrency patterns: 1.5 BTC, ₿0.005
+    /^(\d+(?:\.\d+)?)\s+(BTC|ETH|LTC|ADA|DOT|XRP|SOL|MATIC)$/i,
+    /^([₿Ξ])\s*(\d+(?:\.\d+)?)$/,
+
+    // Original patterns for backward compatibility
+    /^([€£¥₹₽¢₩₦₪₨₫₱₡₲₴₵₸₺₾₿$])\s*(\d{1,3}(?:,\d{3})*(?:\.\d{1,4})?)$/,
+    /^(\d{1,3}(?:,\d{3})*(?:\.\d{1,4})?)\s*([€£¥₹₽¢₩₦₪₨₫₱₡₲₴₵₸₺₾₿$])$/,
+    /^(\d{1,3}(?:,\d{3})*(?:\.\d{1,4})?)\s+([A-Z]{3})$/,
+    /^([A-Z]{3})\s+(\d{1,3}(?:,\d{3})*(?:\.\d{1,4})?)$/
+  ];
+
+  for (const pattern of enhancedPatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      const result = parseEnhancedMatch(match, pattern, text);
+      if (result) {
+        return result;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Parse enhanced match with smart number parsing
+ */
+function parseEnhancedMatch(match, pattern, originalText) {
+  let amount, currency;
+  const patternStr = pattern.source;
+
+  // Determine pattern type and extract data
+  if (patternStr.includes('(?:.d{3})*,d{1,4}')) {
+    // European format: 1.234,56
+    if (patternStr.startsWith('^([€£¥₹₽¢₩₦₪₨₫₱₡₲₴₵₸₺₾₿$])')) {
+      currency = enhancedSymbolToCurrencyCode(match[1]);
+      amount = parseFloat(match[2].replace(/\./g, '').replace(',', '.'));
+    } else {
+      amount = parseFloat(match[1].replace(/\./g, '').replace(',', '.'));
+      currency = enhancedSymbolToCurrencyCode(match[2]);
+    }
+  } else if (patternStr.includes('(?:,d{3})*.d{1,4}')) {
+    // US format: 1,234.56
+    if (patternStr.startsWith('^([€£¥₹₽¢₩₦₪₨₫₱₡₲₴₵₸₺₾₿$])')) {
+      currency = enhancedSymbolToCurrencyCode(match[1]);
+      amount = parseFloat(match[2].replace(/,/g, ''));
+    } else {
+      amount = parseFloat(match[1].replace(/,/g, ''));
+      currency = enhancedSymbolToCurrencyCode(match[2]);
+    }
+    // eslint-disable-next-line quotes
+  } else if (patternStr.includes("(?:'d{3})*")) {
+    // Swiss format: 1'234.56
+    currency = match[1];
+    amount = parseFloat(match[2].replace(/'/g, ''));
+  } else if (patternStr.includes('(?:,d{2})*(?:,d{3})*')) {
+    // Indian format: 1,23,456.78
+    currency = enhancedSymbolToCurrencyCode(match[1]);
+    amount = parseFloat(match[2].replace(/,/g, ''));
+  } else if (patternStr.includes('[eE][+-]?d+')) {
+    // Scientific notation
+    currency = enhancedSymbolToCurrencyCode(match[1]);
+    amount = parseFloat(match[2]);
+  } else if (patternStr.includes('(BTC|ETH|LTC|ADA|DOT|XRP|SOL|MATIC)')) {
+    // Cryptocurrency with code
+    amount = parseFloat(match[1]);
+    currency = match[2].toUpperCase();
+  } else if (patternStr.includes('[₿Ξ]')) {
+    // Cryptocurrency with symbol
+    currency = enhancedSymbolToCurrencyCode(match[1]);
+    amount = parseFloat(match[2]);
+  } else {
+    // Standard patterns
+    if (patternStr.includes('([A-Z]{3})$')) {
+      amount = parseFloat(match[1].replace(/,/g, ''));
+      currency = match[2];
+    } else if (patternStr.startsWith('^([A-Z]{3})')) {
+      currency = match[1];
+      amount = parseFloat(match[2].replace(/,/g, ''));
+    } else if (patternStr.startsWith('^([€£¥₹₽¢₩₦₪₨₫₱₡₲₴₵₸₺₾₿$])')) {
+      currency = enhancedSymbolToCurrencyCode(match[1]);
+      amount = parseFloat(match[2].replace(/,/g, ''));
+    } else {
+      amount = parseFloat(match[1].replace(/,/g, ''));
+      currency = enhancedSymbolToCurrencyCode(match[2]);
+    }
+  }
+
+  if (currency && !isNaN(amount) && amount > 0) {
+    return {
+      amount: amount,
+      currency: currency,
+      originalText: originalText,
+      confidence: 0.9,
+      type: 'enhanced'
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Enhanced symbol to currency code mapping including cryptocurrencies
+ */
+function enhancedSymbolToCurrencyCode(symbol) {
+  const enhancedSymbolMap = {
+    $: 'USD',
+    '€': 'EUR',
+    '£': 'GBP',
+    '¥': 'JPY',
+    '₹': 'INR',
+    '₽': 'RUB',
+    '¢': 'USD',
+    '₩': 'KRW',
+    '₦': 'NGN',
+    '₪': 'ILS',
+    '₨': 'PKR',
+    '₫': 'VND',
+    '₱': 'PHP',
+    '₡': 'CRC',
+    '₲': 'PYG',
+    '₴': 'UAH',
+    '₵': 'GHS',
+    '₸': 'KZT',
+    '₺': 'TRY',
+    '₾': 'GEL',
+    // Cryptocurrency symbols
+    '₿': 'BTC',
+    Ξ: 'ETH',
+    Ł: 'LTC'
+  };
+
+  return enhancedSymbolMap[symbol] || 'USD';
 }

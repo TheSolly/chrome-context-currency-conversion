@@ -96,6 +96,28 @@ let initializeLazyLoading = null;
   }
 })();
 
+// Phase 6, Task 6.1: Smart Currency Detection - Load smart detector
+let smartCurrencyDetector = null;
+
+// Load smart currency detector dynamically
+(async () => {
+  try {
+    const smartDetectorModule = await import(
+      chrome.runtime.getURL('utils/smart-currency-detector.js')
+    );
+    smartCurrencyDetector = smartDetectorModule.smartCurrencyDetector;
+
+    // Make available globally for currency utils
+    if (typeof window !== 'undefined') {
+      window.smartCurrencyDetector = smartCurrencyDetector;
+    }
+
+    console.log('Smart currency detector loaded successfully');
+  } catch (error) {
+    console.warn('Failed to load smart currency detector:', error);
+  }
+})();
+
 // Currency patterns for detection - Enhanced for Task 2.1
 const CURRENCY_PATTERNS = {
   // Symbol patterns: $100, €50, £75, ¥1000, A$50, C$75, HK$100
@@ -504,8 +526,39 @@ function isInputElement(element) {
 }
 
 // Enhanced currency detection with validation and edge case handling - Task 2.2
+// Phase 6, Task 6.1: Enhanced with Smart Currency Detection
 function detectCurrencyWithValidation(text) {
   try {
+    // Phase 6, Task 6.1: Use smart currency detector if available
+    if (smartCurrencyDetector) {
+      console.log('Using smart currency detector for:', text);
+      const smartResults = smartCurrencyDetector.detectCurrencies(text);
+
+      if (smartResults && smartResults.length > 0) {
+        // Return the highest confidence result with additional metadata
+        const bestResult = smartResults[0];
+        console.log('Smart detector found currency:', bestResult);
+
+        // Convert to expected format for backward compatibility
+        const result = {
+          amount: bestResult.amount,
+          currency: bestResult.currency,
+          originalText: bestResult.originalText,
+          confidence: bestResult.confidence,
+          type: bestResult.type,
+          selectionLength: text.length,
+          hasMultipleCurrencies: smartResults.length > 1,
+          multipleCurrencies: smartResults.length > 1 ? smartResults : null,
+          format: bestResult.type || 'smart'
+        };
+
+        return result;
+      }
+    }
+
+    // Fallback to traditional detection
+    console.log('Using traditional currency detection for:', text);
+
     // Preprocess text to handle common edge cases
     const cleanedText = preprocessText(text);
 

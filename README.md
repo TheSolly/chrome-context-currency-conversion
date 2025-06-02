@@ -399,6 +399,17 @@ Exchange Rate Service successfully implemented with caching, offline fallback, e
 - **Confidence Scoring**: 0.7-0.9 confidence levels based on pattern complexity
 - **Edge Case Handling**: Multiple currencies, complex formatting, Unicode normalization
 
+### 🧠 **Smart Currency Detection - Phase 6** _NEW_
+
+- **ML-Based Detection**: Advanced pattern recognition with machine learning-like algorithms
+- **Complex Number Formats**: Supports European (1.234,56), Swiss (1'234.56), Indian (1,23,456.78) formats
+- **Cryptocurrency Support**: Bitcoin (₿), Ethereum (Ξ), Litecoin (Ł), and 5+ other cryptocurrencies
+- **Multiple Currency Selection**: Detects and handles multiple currencies in a single text selection
+- **Context-Based Inference**: Smart currency detection based on surrounding text context (country names, business terms)
+- **Scientific Notation**: Handles exponential formats like $1.23e6 and €2.5E+5
+- **Confidence Scoring**: Advanced confidence algorithms with 0.6-0.95 accuracy ratings
+- **Format Detection**: Automatic recognition of number format types (European, US, Swiss, Indian, Scientific)
+
 ### 🚀 **Performance & UX**
 
 - **Debounced Processing**: 150ms debounce prevents performance issues
