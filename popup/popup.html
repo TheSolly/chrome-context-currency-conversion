@@ -23,467 +23,730 @@
         </div>
       </header>
 
+      <!-- Navigation Tabs -->
+      <nav
+        class="bg-gray-100 border-b"
+        role="tablist"
+        aria-label="Extension sections"
+      >
+        <div class="flex">
+          <button
+            id="settingsTab"
+            class="tab-button tab-active"
+            role="tab"
+            aria-selected="true"
+            aria-controls="settingsPanel"
+            tabindex="0"
+          >
+            <span aria-hidden="true">⚙️</span>
+            Settings
+          </button>
+          <button
+            id="historyTab"
+            class="tab-button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="historyPanel"
+            tabindex="-1"
+          >
+            <span aria-hidden="true">📚</span>
+            History
+          </button>
+          <button
+            id="favoritesTab"
+            class="tab-button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="favoritesPanel"
+            tabindex="-1"
+          >
+            <span aria-hidden="true">⭐</span>
+            Favorites
+          </button>
+        </div>
+      </nav>
+
       <!-- Main Content -->
-      <main class="p-4 space-y-4" role="main" id="main-content">
-        <!-- Quick Stats -->
-        <div class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-3">
-          <div class="flex items-center justify-between text-sm">
-            <span class="text-gray-600">Conversions Today</span>
-            <span id="conversionCount" class="font-semibold text-primary-600"
-              >0</span
-            >
-          </div>
-        </div>
-
-        <!-- Currency Configuration -->
-        <section
-          class="setting-card"
-          role="region"
-          aria-labelledby="currency-config-heading"
-          id="currency-selection"
-        >
-          <div class="flex items-center gap-2 mb-3">
-            <span class="text-lg" aria-hidden="true">🎯</span>
-            <h2
-              id="currency-config-heading"
-              class="text-base font-semibold text-gray-900"
-            >
-              Primary Currencies
-            </h2>
-          </div>
-
-          <div class="space-y-3">
-            <div class="setting-group">
-              <label
-                for="baseCurrency"
-                class="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Base Currency
-              </label>
-              <select
-                id="baseCurrency"
-                class="currency-select"
-                aria-describedby="base-currency-desc"
-                aria-required="true"
-              >
-                <!-- Populated by JavaScript -->
-              </select>
-              <div id="base-currency-desc" class="sr-only">
-                Select the primary currency for conversions. This will be the
-                base currency shown in context menus.
-              </div>
-            </div>
-
-            <div class="setting-group">
-              <label
-                for="secondaryCurrency"
-                class="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Secondary Currency
-              </label>
-              <select
-                id="secondaryCurrency"
-                class="currency-select"
-                aria-describedby="secondary-currency-desc"
-                aria-required="true"
-              >
-                <!-- Populated by JavaScript -->
-              </select>
-              <div id="secondary-currency-desc" class="sr-only">
-                Select the secondary currency for conversions. This will be the
-                target currency shown in context menus.
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- Additional Currencies -->
-        <section class="setting-card">
-          <div class="flex items-center justify-between mb-3">
-            <div class="flex items-center gap-2">
-              <span class="text-lg">📋</span>
-              <h2 class="text-base font-semibold text-gray-900">
-                Quick Convert
-              </h2>
-            </div>
-            <span class="feature-badge">Free: 3 max</span>
-          </div>
-
-          <div id="additionalCurrencies" class="space-y-2">
-            <!-- Populated by JavaScript -->
-          </div>
-
-          <button
-            id="addCurrency"
-            class="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors"
-          >
-            + Add Currency
-          </button>
-        </section>
-
-        <!-- Settings -->
-        <section
-          class="setting-card"
-          role="region"
-          aria-labelledby="preferences-heading"
-          id="settings"
-        >
-          <div class="flex items-center gap-2 mb-3">
-            <span class="text-lg" aria-hidden="true">⚙️</span>
-            <h2
-              id="preferences-heading"
-              class="text-base font-semibold text-gray-900"
-            >
-              Preferences
-            </h2>
-          </div>
-
-          <div
-            class="space-y-3"
-            role="group"
-            aria-labelledby="preferences-heading"
-          >
-            <!-- Show Confidence -->
-            <div class="flex items-center justify-between">
-              <label for="showConfidence" class="text-sm text-gray-700">
-                Show detection confidence
-              </label>
-              <button
-                id="showConfidence"
-                class="toggle-switch"
-                role="switch"
-                aria-checked="true"
-                aria-labelledby="showConfidence-label"
-                aria-describedby="showConfidence-desc"
-              >
-                <span class="toggle-thumb"></span>
-              </button>
-              <div id="showConfidence-desc" class="sr-only">
-                When enabled, shows visual feedback animations during currency
-                conversions.
-              </div>
-            </div>
-
-            <!-- Auto Convert -->
-            <div class="flex items-center justify-between">
-              <div>
-                <label for="autoConvert" class="text-sm text-gray-700"
-                  >Auto-convert on selection</label
-                >
-                <span class="feature-badge ml-1" aria-label="Premium feature"
-                  >Premium</span
-                >
-              </div>
-              <button
-                id="autoConvert"
-                class="toggle-switch"
-                role="switch"
-                aria-checked="false"
-                aria-disabled="true"
-                disabled
-              >
-                <span class="toggle-thumb"></span>
-              </button>
-            </div>
-
-            <!-- Notifications -->
-            <div class="flex items-center justify-between">
-              <div>
-                <label for="showNotifications" class="text-sm text-gray-700"
-                  >Rate change notifications</label
-                >
-                <span class="feature-badge ml-1" aria-label="Premium feature"
-                  >Premium</span
-                >
-              </div>
-              <button
-                id="showNotifications"
-                class="toggle-switch"
-                role="switch"
-                aria-checked="false"
-                aria-disabled="true"
-                disabled
-              >
-                <span class="toggle-thumb"></span>
-              </button>
-            </div>
-
-            <!-- Precision -->
-            <div class="space-y-1">
-              <label for="precision" class="block text-sm text-gray-700">
-                Decimal places
-              </label>
-              <select
-                id="precision"
-                class="currency-select"
-                aria-describedby="precision-desc"
-              >
-                <option value="0">0 (123)</option>
-                <option value="1">1 (123.4)</option>
-                <option value="2" selected>2 (123.45)</option>
-                <option value="3">3 (123.456)</option>
-                <option value="4">4 (123.4567)</option>
-              </select>
-              <div id="precision-desc" class="sr-only">
-                Choose how many decimal places to show in currency conversions.
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- Action Buttons -->
-        <div class="flex gap-2" role="group" aria-label="Settings actions">
-          <button
-            id="saveSettings"
-            class="save-button flex-1 bg-primary-500 text-white py-2 px-4 rounded-lg font-medium hover:bg-primary-600 transition-colors"
-            aria-describedby="save-settings-desc"
-          >
-            Save Settings
-          </button>
-          <button
-            id="resetSettings"
-            class="reset-button px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"
-            aria-describedby="reset-settings-desc"
-          >
-            Reset
-          </button>
-          <div id="save-settings-desc" class="sr-only">
-            Save all current settings and preferences.
-          </div>
-          <div id="reset-settings-desc" class="sr-only">
-            Reset all settings to their default values.
-          </div>
-        </div>
-
-        <!-- Phase 3, Task 3.3: Settings Management -->
-        <div class="flex gap-2 text-sm">
-          <button
-            id="exportSettings"
-            class="flex-1 bg-blue-500 text-white py-2 px-3 rounded-lg font-medium hover:bg-blue-600 transition-colors"
-          >
-            📤 Export
-          </button>
-          <button
-            id="importSettings"
-            class="flex-1 bg-green-500 text-white py-2 px-3 rounded-lg font-medium hover:bg-green-600 transition-colors"
-          >
-            📥 Import
-          </button>
-          <button
-            id="settingsStats"
-            class="flex-1 bg-gray-500 text-white py-2 px-3 rounded-lg font-medium hover:bg-gray-600 transition-colors"
-          >
-            📊 Stats
-          </button>
-        </div>
-
-        <!-- Settings Statistics (Hidden by default) -->
+      <main class="relative" role="main" id="main-content">
+        <!-- Settings Panel -->
         <div
-          id="settingsStatsPanel"
-          class="hidden bg-gray-50 rounded-lg p-3 space-y-2"
+          id="settingsPanel"
+          class="tab-panel p-4 space-y-4"
+          role="tabpanel"
+          aria-labelledby="settingsTab"
         >
-          <h3 class="font-semibold text-gray-800 text-sm">
-            Settings Information
-          </h3>
-          <div class="text-xs text-gray-600 space-y-1">
-            <div class="flex justify-between">
-              <span>Version:</span>
-              <span id="settingsVersion">-</span>
-            </div>
-            <div class="flex justify-between">
-              <span>Install Date:</span>
-              <span id="installDate">-</span>
-            </div>
-            <div class="flex justify-between">
-              <span>Last Sync:</span>
-              <span id="lastSync">-</span>
-            </div>
-            <div class="flex justify-between">
-              <span>Storage Used:</span>
-              <span id="storageUsed">-</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Hidden file input for import -->
-        <input
-          type="file"
-          id="importFileInput"
-          accept=".json"
-          style="display: none"
-        />
-
-        <!-- Premium Upgrade -->
-        <section
-          class="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-3"
-        >
-          <div class="flex items-start gap-3">
-            <span class="text-lg">⭐</span>
-            <div class="flex-1">
-              <h3 class="text-sm font-semibold text-gray-900 mb-1">
-                Upgrade to Premium
-              </h3>
-              <p class="text-xs text-gray-600 mb-2">
-                Unlock unlimited currencies, real-time rates, and more!
-              </p>
-              <button
-                id="upgradePremium"
-                class="text-xs bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full font-medium hover:bg-yellow-500 transition-colors"
-              >
-                Learn More
-              </button>
-            </div>
-          </div>
-        </section>
-
-        <!-- Currency Stats Dashboard -->
-        <section class="setting-card">
-          <div class="flex items-center gap-2 mb-3">
-            <span class="text-lg">📊</span>
-            <h2 class="text-base font-semibold text-gray-900">
-              Currency Database
-            </h2>
-          </div>
-
-          <div id="currencyStats" class="grid grid-cols-2 gap-3 text-sm">
-            <div class="stat-item">
-              <span class="text-gray-600">Total Currencies</span>
-              <span id="totalCurrencies" class="font-semibold text-primary-600"
-                >--</span
-              >
-            </div>
-            <div class="stat-item">
-              <span class="text-gray-600">Popular</span>
-              <span id="popularCurrencies" class="font-semibold text-green-600"
-                >--</span
-              >
-            </div>
-            <div class="stat-item">
-              <span class="text-gray-600">Regions</span>
-              <span id="totalRegions" class="font-semibold text-blue-600"
-                >--</span
-              >
-            </div>
-            <div class="stat-item">
-              <span class="text-gray-600">Favorites</span>
-              <span id="favoriteCount" class="font-semibold text-purple-600"
-                >--</span
+          <!-- Quick Stats -->
+          <div
+            class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-3"
+          >
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-gray-600">Conversions Today</span>
+              <span id="conversionCount" class="font-semibold text-primary-600"
+                >0</span
               >
             </div>
           </div>
 
-          <!-- Regional Overview -->
-          <div class="mt-3 pt-3 border-t border-gray-200">
-            <div class="text-xs text-gray-500 mb-2">By Region:</div>
-            <div id="regionStats" class="flex flex-wrap gap-1">
-              <!-- Populated by JavaScript -->
-            </div>
-          </div>
-        </section>
-
-        <!-- Favorites Management -->
-        <section
-          class="setting-card favorites-section"
-          role="region"
-          aria-labelledby="favorites-heading"
-        >
-          <div class="flex items-center justify-between mb-3">
-            <div class="flex items-center gap-2">
-              <span class="text-lg" aria-hidden="true">⭐</span>
+          <!-- Currency Configuration -->
+          <section
+            class="setting-card"
+            role="region"
+            aria-labelledby="currency-config-heading"
+            id="currency-selection"
+          >
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-lg" aria-hidden="true">🎯</span>
               <h2
-                id="favorites-heading"
+                id="currency-config-heading"
                 class="text-base font-semibold text-gray-900"
               >
-                Favorite Currencies
+                Primary Currencies
               </h2>
             </div>
-            <span
-              class="text-xs text-gray-500"
-              aria-label="Maximum 10 favorites"
-              >Max 10</span
-            >
-          </div>
 
-          <div
-            id="favoritesList"
-            class="favorite-currencies space-y-2 min-h-[60px]"
-            role="list"
-            aria-label="Favorite currencies"
-          >
-            <!-- Populated by JavaScript -->
-          </div>
+            <div class="space-y-3">
+              <div class="setting-group">
+                <label
+                  for="baseCurrency"
+                  class="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Base Currency
+                </label>
+                <select
+                  id="baseCurrency"
+                  class="currency-select"
+                  aria-describedby="base-currency-desc"
+                  aria-required="true"
+                >
+                  <!-- Populated by JavaScript -->
+                </select>
+                <div id="base-currency-desc" class="sr-only">
+                  Select the primary currency for conversions. This will be the
+                  base currency shown in context menus.
+                </div>
+              </div>
 
-          <div class="mt-3 pt-3 border-t border-gray-200">
-            <div class="text-xs text-gray-500 mb-2">Recently Used:</div>
-            <div id="recentlyUsed" class="flex flex-wrap gap-1">
+              <div class="setting-group">
+                <label
+                  for="secondaryCurrency"
+                  class="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Secondary Currency
+                </label>
+                <select
+                  id="secondaryCurrency"
+                  class="currency-select"
+                  aria-describedby="secondary-currency-desc"
+                  aria-required="true"
+                >
+                  <!-- Populated by JavaScript -->
+                </select>
+                <div id="secondary-currency-desc" class="sr-only">
+                  Select the secondary currency for conversions. This will be
+                  the target currency shown in context menus.
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Additional Currencies -->
+          <section class="setting-card">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <span class="text-lg">📋</span>
+                <h2 class="text-base font-semibold text-gray-900">
+                  Quick Convert
+                </h2>
+              </div>
+              <span class="feature-badge">Free: 3 max</span>
+            </div>
+
+            <div id="additionalCurrencies" class="space-y-2">
               <!-- Populated by JavaScript -->
             </div>
+
+            <button
+              id="addCurrency"
+              class="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              + Add Currency
+            </button>
+          </section>
+
+          <!-- Settings -->
+          <section
+            class="setting-card"
+            role="region"
+            aria-labelledby="preferences-heading"
+            id="settings"
+          >
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-lg" aria-hidden="true">⚙️</span>
+              <h2
+                id="preferences-heading"
+                class="text-base font-semibold text-gray-900"
+              >
+                Preferences
+              </h2>
+            </div>
+
+            <div
+              class="space-y-3"
+              role="group"
+              aria-labelledby="preferences-heading"
+            >
+              <!-- Show Confidence -->
+              <div class="flex items-center justify-between">
+                <label for="showConfidence" class="text-sm text-gray-700">
+                  Show detection confidence
+                </label>
+                <button
+                  id="showConfidence"
+                  class="toggle-switch"
+                  role="switch"
+                  aria-checked="true"
+                  aria-labelledby="showConfidence-label"
+                  aria-describedby="showConfidence-desc"
+                >
+                  <span class="toggle-thumb"></span>
+                </button>
+                <div id="showConfidence-desc" class="sr-only">
+                  When enabled, shows visual feedback animations during currency
+                  conversions.
+                </div>
+              </div>
+
+              <!-- Auto Convert -->
+              <div class="flex items-center justify-between">
+                <div>
+                  <label for="autoConvert" class="text-sm text-gray-700"
+                    >Auto-convert on selection</label
+                  >
+                  <span class="feature-badge ml-1" aria-label="Premium feature"
+                    >Premium</span
+                  >
+                </div>
+                <button
+                  id="autoConvert"
+                  class="toggle-switch"
+                  role="switch"
+                  aria-checked="false"
+                  aria-disabled="true"
+                  disabled
+                >
+                  <span class="toggle-thumb"></span>
+                </button>
+              </div>
+
+              <!-- Notifications -->
+              <div class="flex items-center justify-between">
+                <div>
+                  <label for="showNotifications" class="text-sm text-gray-700"
+                    >Rate change notifications</label
+                  >
+                  <span class="feature-badge ml-1" aria-label="Premium feature"
+                    >Premium</span
+                  >
+                </div>
+                <button
+                  id="showNotifications"
+                  class="toggle-switch"
+                  role="switch"
+                  aria-checked="false"
+                  aria-disabled="true"
+                  disabled
+                >
+                  <span class="toggle-thumb"></span>
+                </button>
+              </div>
+
+              <!-- Precision -->
+              <div class="space-y-1">
+                <label for="precision" class="block text-sm text-gray-700">
+                  Decimal places
+                </label>
+                <select
+                  id="precision"
+                  class="currency-select"
+                  aria-describedby="precision-desc"
+                >
+                  <option value="0">0 (123)</option>
+                  <option value="1">1 (123.4)</option>
+                  <option value="2" selected>2 (123.45)</option>
+                  <option value="3">3 (123.456)</option>
+                  <option value="4">4 (123.4567)</option>
+                </select>
+                <div id="precision-desc" class="sr-only">
+                  Choose how many decimal places to show in currency
+                  conversions.
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Action Buttons -->
+          <div class="flex gap-2" role="group" aria-label="Settings actions">
+            <button
+              id="saveSettings"
+              class="save-button flex-1 bg-primary-500 text-white py-2 px-4 rounded-lg font-medium hover:bg-primary-600 transition-colors"
+              aria-describedby="save-settings-desc"
+            >
+              Save Settings
+            </button>
+            <button
+              id="resetSettings"
+              class="reset-button px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"
+              aria-describedby="reset-settings-desc"
+            >
+              Reset
+            </button>
+            <div id="save-settings-desc" class="sr-only">
+              Save all current settings and preferences.
+            </div>
+            <div id="reset-settings-desc" class="sr-only">
+              Reset all settings to their default values.
+            </div>
           </div>
-        </section>
 
-        <!-- Regional Currency Filter -->
-        <section class="setting-card">
-          <div class="flex items-center gap-2 mb-3">
-            <span class="text-lg">🌍</span>
-            <h2 class="text-base font-semibold text-gray-900">
-              Browse by Region
-            </h2>
+          <!-- Phase 3, Task 3.3: Settings Management -->
+          <div class="flex gap-2 text-sm">
+            <button
+              id="exportSettings"
+              class="flex-1 bg-blue-500 text-white py-2 px-3 rounded-lg font-medium hover:bg-blue-600 transition-colors"
+            >
+              📤 Export
+            </button>
+            <button
+              id="importSettings"
+              class="flex-1 bg-green-500 text-white py-2 px-3 rounded-lg font-medium hover:bg-green-600 transition-colors"
+            >
+              📥 Import
+            </button>
+            <button
+              id="settingsStats"
+              class="flex-1 bg-gray-500 text-white py-2 px-3 rounded-lg font-medium hover:bg-gray-600 transition-colors"
+            >
+              📊 Stats
+            </button>
           </div>
 
-          <div class="grid grid-cols-2 gap-2">
-            <button
-              id="regionAmericas"
-              class="region-button"
-              data-region="americas"
-            >
-              <span class="text-lg">🌎</span>
-              <div class="text-left">
-                <div class="font-medium text-sm">Americas</div>
-                <div class="text-xs text-gray-500" id="americasCount">
-                  -- currencies
-                </div>
+          <!-- Settings Statistics (Hidden by default) -->
+          <div
+            id="settingsStatsPanel"
+            class="hidden bg-gray-50 rounded-lg p-3 space-y-2"
+          >
+            <h3 class="font-semibold text-gray-800 text-sm">
+              Settings Information
+            </h3>
+            <div class="text-xs text-gray-600 space-y-1">
+              <div class="flex justify-between">
+                <span>Version:</span>
+                <span id="settingsVersion">-</span>
               </div>
-            </button>
-
-            <button
-              id="regionEurope"
-              class="region-button"
-              data-region="europe"
-            >
-              <span class="text-lg">🇪🇺</span>
-              <div class="text-left">
-                <div class="font-medium text-sm">Europe</div>
-                <div class="text-xs text-gray-500" id="europeCount">
-                  -- currencies
-                </div>
+              <div class="flex justify-between">
+                <span>Install Date:</span>
+                <span id="installDate">-</span>
               </div>
-            </button>
-
-            <button id="regionAsia" class="region-button" data-region="asia">
-              <span class="text-lg">🌏</span>
-              <div class="text-left">
-                <div class="font-medium text-sm">Asia & Pacific</div>
-                <div class="text-xs text-gray-500" id="asiaCount">
-                  -- currencies
-                </div>
+              <div class="flex justify-between">
+                <span>Last Sync:</span>
+                <span id="lastSync">-</span>
               </div>
-            </button>
+              <div class="flex justify-between">
+                <span>Storage Used:</span>
+                <span id="storageUsed">-</span>
+              </div>
+            </div>
+          </div>
 
-            <button
-              id="regionAfrica"
-              class="region-button"
-              data-region="africa"
+          <!-- Hidden file input for import -->
+          <input
+            type="file"
+            id="importFileInput"
+            accept=".json"
+            style="display: none"
+          />
+
+          <!-- Premium Upgrade -->
+          <section
+            class="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-3"
+          >
+            <div class="flex items-start gap-3">
+              <span class="text-lg">⭐</span>
+              <div class="flex-1">
+                <h3 class="text-sm font-semibold text-gray-900 mb-1">
+                  Upgrade to Premium
+                </h3>
+                <p class="text-xs text-gray-600 mb-2">
+                  Unlock unlimited currencies, real-time rates, and more!
+                </p>
+                <button
+                  id="upgradePremium"
+                  class="text-xs bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full font-medium hover:bg-yellow-500 transition-colors"
+                >
+                  Learn More
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <!-- Currency Stats Dashboard -->
+          <section class="setting-card">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-lg">📊</span>
+              <h2 class="text-base font-semibold text-gray-900">
+                Currency Database
+              </h2>
+            </div>
+
+            <div id="currencyStats" class="grid grid-cols-2 gap-3 text-sm">
+              <div class="stat-item">
+                <span class="text-gray-600">Total Currencies</span>
+                <span
+                  id="totalCurrencies"
+                  class="font-semibold text-primary-600"
+                  >--</span
+                >
+              </div>
+              <div class="stat-item">
+                <span class="text-gray-600">Popular</span>
+                <span
+                  id="popularCurrencies"
+                  class="font-semibold text-green-600"
+                  >--</span
+                >
+              </div>
+              <div class="stat-item">
+                <span class="text-gray-600">Regions</span>
+                <span id="totalRegions" class="font-semibold text-blue-600"
+                  >--</span
+                >
+              </div>
+              <div class="stat-item">
+                <span class="text-gray-600">Favorites</span>
+                <span id="favoriteCount" class="font-semibold text-purple-600"
+                  >--</span
+                >
+              </div>
+            </div>
+
+            <!-- Regional Overview -->
+            <div class="mt-3 pt-3 border-t border-gray-200">
+              <div class="text-xs text-gray-500 mb-2">By Region:</div>
+              <div id="regionStats" class="flex flex-wrap gap-1">
+                <!-- Populated by JavaScript -->
+              </div>
+            </div>
+          </section>
+
+          <!-- Favorites Management -->
+          <section
+            class="setting-card favorites-section"
+            role="region"
+            aria-labelledby="favorites-heading"
+          >
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <span class="text-lg" aria-hidden="true">⭐</span>
+                <h2
+                  id="favorites-heading"
+                  class="text-base font-semibold text-gray-900"
+                >
+                  Favorite Currencies
+                </h2>
+              </div>
+              <span
+                class="text-xs text-gray-500"
+                aria-label="Maximum 10 favorites"
+                >Max 10</span
+              >
+            </div>
+
+            <div
+              id="favoritesList"
+              class="favorite-currencies space-y-2 min-h-[60px]"
+              role="list"
+              aria-label="Favorite currencies"
             >
+              <!-- Populated by JavaScript -->
+            </div>
+
+            <div class="mt-3 pt-3 border-t border-gray-200">
+              <div class="text-xs text-gray-500 mb-2">Recently Used:</div>
+              <div id="recentlyUsed" class="flex flex-wrap gap-1">
+                <!-- Populated by JavaScript -->
+              </div>
+            </div>
+          </section>
+
+          <!-- Regional Currency Filter -->
+          <section class="setting-card">
+            <div class="flex items-center gap-2 mb-3">
               <span class="text-lg">🌍</span>
-              <div class="text-left">
-                <div class="font-medium text-sm">Africa & ME</div>
-                <div class="text-xs text-gray-500" id="africaCount">
-                  -- currencies
+              <h2 class="text-base font-semibold text-gray-900">
+                Browse by Region
+              </h2>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <button
+                id="regionAmericas"
+                class="region-button"
+                data-region="americas"
+              >
+                <span class="text-lg">🌎</span>
+                <div class="text-left">
+                  <div class="font-medium text-sm">Americas</div>
+                  <div class="text-xs text-gray-500" id="americasCount">
+                    -- currencies
+                  </div>
                 </div>
+              </button>
+
+              <button
+                id="regionEurope"
+                class="region-button"
+                data-region="europe"
+              >
+                <span class="text-lg">🇪🇺</span>
+                <div class="text-left">
+                  <div class="font-medium text-sm">Europe</div>
+                  <div class="text-xs text-gray-500" id="europeCount">
+                    -- currencies
+                  </div>
+                </div>
+              </button>
+
+              <button id="regionAsia" class="region-button" data-region="asia">
+                <span class="text-lg">🌏</span>
+                <div class="text-left">
+                  <div class="font-medium text-sm">Asia & Pacific</div>
+                  <div class="text-xs text-gray-500" id="asiaCount">
+                    -- currencies
+                  </div>
+                </div>
+              </button>
+
+              <button
+                id="regionAfrica"
+                class="region-button"
+                data-region="africa"
+              >
+                <span class="text-lg">🌍</span>
+                <div class="text-left">
+                  <div class="font-medium text-sm">Africa & ME</div>
+                  <div class="text-xs text-gray-500" id="africaCount">
+                    -- currencies
+                  </div>
+                </div>
+              </button>
+            </div>
+          </section>
+        </div>
+        <!-- End Settings Panel -->
+
+        <!-- History Panel -->
+        <div
+          id="historyPanel"
+          class="tab-panel hidden p-4 space-y-4"
+          role="tabpanel"
+          aria-labelledby="historyTab"
+        >
+          <!-- History Header -->
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-lg" aria-hidden="true">📚</span>
+              <h2 class="text-base font-semibold text-gray-900">
+                Conversion History
+              </h2>
+            </div>
+            <div class="flex gap-2">
+              <button
+                id="exportHistory"
+                class="text-xs px-2 py-1 bg-primary-100 text-primary-700 rounded hover:bg-primary-200 transition-colors"
+                title="Export history"
+              >
+                Export
+              </button>
+              <button
+                id="clearHistory"
+                class="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                title="Clear history"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+
+          <!-- History Stats -->
+          <div class="grid grid-cols-2 gap-3">
+            <div
+              class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-3"
+            >
+              <div class="text-xs text-gray-600">Total Conversions</div>
+              <div
+                id="totalConversions"
+                class="text-lg font-semibold text-primary-600"
+              >
+                0
               </div>
+            </div>
+            <div
+              class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-3"
+            >
+              <div class="text-xs text-gray-600">This Week</div>
+              <div
+                id="weekConversions"
+                class="text-lg font-semibold text-emerald-600"
+              >
+                0
+              </div>
+            </div>
+          </div>
+
+          <!-- History Filters -->
+          <div class="flex gap-2 text-xs">
+            <button id="filterAll" class="filter-btn filter-active">All</button>
+            <button id="filterToday" class="filter-btn">Today</button>
+            <button id="filterWeek" class="filter-btn">Week</button>
+            <button id="filterMonth" class="filter-btn">Month</button>
+          </div>
+
+          <!-- History List -->
+          <div id="historyList" class="space-y-2 max-h-64 overflow-y-auto">
+            <!-- History items will be populated by JavaScript -->
+            <div class="text-center text-gray-500 text-sm py-8">
+              No conversions yet
+            </div>
+          </div>
+
+          <!-- Popular Pairs -->
+          <div class="border-t pt-4">
+            <h3 class="text-sm font-medium text-gray-900 mb-2">
+              Popular Conversions
+            </h3>
+            <div id="popularPairs" class="space-y-1">
+              <!-- Popular pairs will be populated by JavaScript -->
+            </div>
+          </div>
+        </div>
+        <!-- End History Panel -->
+
+        <!-- Favorites Panel -->
+        <div
+          id="favoritesPanel"
+          class="tab-panel hidden p-4 space-y-4"
+          role="tabpanel"
+          aria-labelledby="favoritesTab"
+        >
+          <!-- Favorites Header -->
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-lg" aria-hidden="true">⭐</span>
+              <h2 class="text-base font-semibold text-gray-900">
+                Favorite Conversions
+              </h2>
+            </div>
+            <button
+              id="addFavorite"
+              class="text-xs px-2 py-1 bg-primary-100 text-primary-700 rounded hover:bg-primary-200 transition-colors"
+              title="Add favorite"
+            >
+              + Add
             </button>
           </div>
-        </section>
+
+          <!-- Add Favorite Form (hidden by default) -->
+          <div id="addFavoriteForm" class="hidden setting-card">
+            <h3 class="text-sm font-medium text-gray-900 mb-3">
+              Add New Favorite
+            </h3>
+            <div class="space-y-3">
+              <div>
+                <label class="block text-xs text-gray-600 mb-1"
+                  >From Currency</label
+                >
+                <select id="favFromCurrency" class="currency-select">
+                  <option value="">Select currency...</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs text-gray-600 mb-1"
+                  >To Currency</label
+                >
+                <select id="favToCurrency" class="currency-select">
+                  <option value="">Select currency...</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs text-gray-600 mb-1"
+                  >Amount (optional)</label
+                >
+                <input
+                  type="number"
+                  id="favAmount"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  placeholder="e.g. 100"
+                  step="0.01"
+                />
+              </div>
+              <div>
+                <label class="block text-xs text-gray-600 mb-1"
+                  >Label (optional)</label
+                >
+                <input
+                  type="text"
+                  id="favLabel"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  placeholder="e.g. Monthly salary"
+                />
+              </div>
+              <div class="flex gap-2">
+                <button
+                  id="saveFavorite"
+                  class="flex-1 px-3 py-2 bg-primary-600 text-white rounded-lg text-sm hover:bg-primary-700 transition-colors"
+                >
+                  Save
+                </button>
+                <button
+                  id="cancelFavorite"
+                  class="flex-1 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Favorites List -->
+          <div id="favoritesList" class="space-y-2">
+            <!-- Favorites will be populated by JavaScript -->
+            <div class="text-center text-gray-500 text-sm py-8">
+              No favorites yet. Add your frequently used conversions for quick
+              access!
+            </div>
+          </div>
+
+          <!-- Quick Convert from Favorites -->
+          <div class="border-t pt-4">
+            <h3 class="text-sm font-medium text-gray-900 mb-2">
+              Quick Convert
+            </h3>
+            <div class="text-xs text-gray-600 mb-2">
+              Enter an amount and click a favorite to convert instantly
+            </div>
+            <input
+              type="number"
+              id="quickConvertAmount"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm mb-2"
+              placeholder="Enter amount..."
+              step="0.01"
+            />
+            <div id="quickConvertButtons" class="space-y-1">
+              <!-- Quick convert buttons will be populated by JavaScript -->
+            </div>
+          </div>
+        </div>
+        <!-- End Favorites Panel -->
       </main>
 
       <!-- Footer -->

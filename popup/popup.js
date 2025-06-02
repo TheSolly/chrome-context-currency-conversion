@@ -25,6 +25,9 @@ import { initializeDefaultConfig } from '/utils/default-config.js';
 // Phase 5, Task 5.3: Accessibility Features
 import { accessibilityManager } from '../utils/accessibility-manager.js';
 
+// Phase 6, Task 6.2: Conversion History
+let currentActiveTab = 'settings';
+
 // State management
 let currentSettings = { ...DEFAULT_SETTINGS };
 let userPlan = 'FREE'; // TODO: Implement plan detection
@@ -172,6 +175,11 @@ async function initializePopup() {
     // Set up event listeners
     setupEventListeners();
 
+    // Phase 6, Task 6.2: Initialize tab navigation and conversion history
+    initializeTabNavigation();
+    setupHistoryFilters();
+    await initializeConversionHistory();
+
     console.log('✅ Enhanced popup initialization complete (Task 3.2)');
   } catch (error) {
     console.error('❌ Failed to initialize popup:', error);
@@ -239,6 +247,10 @@ function setupEventListeners() {
 
   // Setup conversion testing currency selectors
   setupConversionTestingCurrencies();
+
+  // Phase 6, Task 6.2: Setup new functionality
+  setupAddFavoriteForm();
+  setupHistoryManagement();
 }
 
 function populateCurrencySelectors() {
@@ -967,3 +979,708 @@ function setupConversionTestingCurrencies() {
 
 // Initialize popup when DOM is loaded
 document.addEventListener('DOMContentLoaded', initializePopup);
+
+// Phase 6, Task 6.2: Tab Navigation Functions
+
+/**
+ * Initialize tab navigation
+ */
+function initializeTabNavigation() {
+  const tabButtons = document.querySelectorAll('.tab-button');
+
+  tabButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      const targetPanelId = button.getAttribute('aria-controls');
+      switchTab(targetPanelId);
+    });
+
+    // Keyboard navigation
+    button.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        const targetPanelId = button.getAttribute('aria-controls');
+        switchTab(targetPanelId);
+      }
+    });
+  });
+
+  // Set initial active tab
+  switchTab('settingsPanel');
+}
+
+/**
+ * Switch to a specific tab
+ */
+function switchTab(targetPanelId) {
+  const tabButtons = document.querySelectorAll('.tab-button');
+  const tabPanels = document.querySelectorAll('.tab-panel');
+
+  // Update buttons
+  tabButtons.forEach(button => {
+    const isActive = button.getAttribute('aria-controls') === targetPanelId;
+    button.classList.toggle('tab-active', isActive);
+    button.setAttribute('aria-selected', isActive.toString());
+    button.tabIndex = isActive ? 0 : -1;
+  });
+
+  // Update panels
+  tabPanels.forEach(panel => {
+    const isActive = panel.id === targetPanelId;
+    panel.classList.toggle('hidden', !isActive);
+  });
+
+  // Update current active tab
+  currentActiveTab = targetPanelId.replace('Panel', '');
+
+  // Load content for specific tabs
+  if (targetPanelId === 'historyPanel') {
+    loadHistoryContent();
+  } else if (targetPanelId === 'favoritesPanel') {
+    loadFavoritesContent();
+  }
+}
+
+// Phase 6, Task 6.2: History Management Functions
+
+/**
+ * Initialize conversion history integration
+ */
+async function initializeConversionHistory() {
+  try {
+    console.log('📚 Initializing conversion history integration');
+
+    // Test connection to background script
+    const response = await chrome.runtime.sendMessage({
+      action: 'getConversionStats'
+    });
+
+    if (response && response.success) {
+      console.log('✅ Conversion history connection established');
+      updateHistoryStats(response.stats);
+    }
+  } catch (error) {
+    console.error('❌ Failed to initialize conversion history:', error);
+  }
+}
+
+/**
+ * Load and display history content
+ */
+async function loadHistoryContent() {
+  try {
+    const historyResponse = await chrome.runtime.sendMessage({
+      action: 'getHistory',
+      filter: getActiveHistoryFilter()
+    });
+
+    if (historyResponse && historyResponse.success) {
+      displayHistoryItems(historyResponse.history);
+    }
+
+    const statsResponse = await chrome.runtime.sendMessage({
+      action: 'getConversionStats'
+    });
+
+    if (statsResponse && statsResponse.success) {
+      updateHistoryStats(statsResponse.stats);
+      displayPopularPairs(statsResponse.stats.popularPairs);
+    }
+  } catch (error) {
+    console.error('❌ Failed to load history content:', error);
+  }
+}
+
+/**
+ * Display history items in the list
+ */
+function displayHistoryItems(historyItems) {
+  const historyList = document.getElementById('historyList');
+
+  if (!historyItems || historyItems.length === 0) {
+    historyList.innerHTML = `
+      <div class="text-center text-gray-500 text-sm py-8">
+        No conversions yet
+      </div>
+    `;
+    return;
+  }
+
+  historyList.innerHTML = historyItems
+    .map(
+      item => `
+    <div class="history-item" data-id="${item.id}">
+      <div class="flex items-center justify-between">
+        <div class="flex-1">
+          <div class="text-sm font-medium text-gray-900">
+            ${formatAmount(item.fromAmount)} ${item.fromCurrency} → ${formatAmount(item.toAmount)} ${item.toCurrency}
+          </div>
+          <div class="text-xs text-gray-500">
+            Rate: 1 ${item.fromCurrency} = ${formatAmount(item.rate)} ${item.toCurrency}
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-gray-500">
+            ${formatTimestamp(item.timestamp)}
+          </span>
+          <button 
+            class="add-to-favorites-btn text-gray-400 hover:text-yellow-500 transition-colors"
+            data-from="${item.fromCurrency}"
+            data-to="${item.toCurrency}"
+            title="Add to favorites"
+          >
+            ⭐
+          </button>
+        </div>
+      </div>
+    </div>
+  `
+    )
+    .join('');
+
+  // Add event listeners for favorite buttons
+  historyList.querySelectorAll('.add-to-favorites-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const fromCurrency = btn.dataset.from;
+      const toCurrency = btn.dataset.to;
+      addToFavoritesFromHistory(fromCurrency, toCurrency);
+    });
+  });
+}
+
+/**
+ * Update history statistics display
+ */
+function updateHistoryStats(stats) {
+  const totalElement = document.getElementById('totalConversions');
+  const weekElement = document.getElementById('weekConversions');
+  const countElement = document.getElementById('conversionCount');
+
+  if (totalElement) {
+    totalElement.textContent = stats.totalConversions || 0;
+  }
+  if (weekElement) {
+    weekElement.textContent = stats.weekConversions || 0;
+  }
+  if (countElement) {
+    countElement.textContent = stats.todayConversions || 0;
+  }
+}
+
+/**
+ * Display popular currency pairs
+ */
+function displayPopularPairs(popularPairs) {
+  const container = document.getElementById('popularPairs');
+
+  if (!popularPairs || popularPairs.length === 0) {
+    container.innerHTML = `
+      <div class="text-xs text-gray-500">
+        No popular pairs yet
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = popularPairs
+    .slice(0, 3)
+    .map(
+      pair => `
+    <div class="flex items-center justify-between text-xs p-2 bg-gray-50 rounded">
+      <span>${pair.fromCurrency} → ${pair.toCurrency}</span>
+      <span class="text-gray-500">${pair.count} times</span>
+    </div>
+  `
+    )
+    .join('');
+}
+
+/**
+ * Get the currently active history filter
+ */
+function getActiveHistoryFilter() {
+  const activeFilter = document.querySelector('.filter-btn.filter-active');
+  return activeFilter
+    ? activeFilter.id.replace('filter', '').toLowerCase()
+    : 'all';
+}
+
+/**
+ * Setup history filter buttons
+ */
+function setupHistoryFilters() {
+  const filterButtons = document.querySelectorAll('.filter-btn');
+
+  filterButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      // Update active filter
+      filterButtons.forEach(b => b.classList.remove('filter-active'));
+      btn.classList.add('filter-active');
+
+      // Reload history with new filter
+      if (currentActiveTab === 'history') {
+        loadHistoryContent();
+      }
+    });
+  });
+}
+
+/**
+ * Add a currency pair to favorites from history
+ */
+async function addToFavoritesFromHistory(fromCurrency, toCurrency) {
+  try {
+    const response = await chrome.runtime.sendMessage({
+      action: 'addToFavorites',
+      favorite: {
+        fromCurrency,
+        toCurrency,
+        label: `${fromCurrency} to ${toCurrency}`
+      }
+    });
+
+    if (response && response.success) {
+      showStatusMessage('Added to favorites!', 'success');
+      if (currentActiveTab === 'favorites') {
+        loadFavoritesContent();
+      }
+    }
+  } catch (error) {
+    console.error('❌ Failed to add to favorites:', error);
+    showStatusMessage('Failed to add to favorites', 'error');
+  }
+}
+
+// Phase 6, Task 6.2: Favorites Management Functions
+
+/**
+ * Load and display favorites content
+ */
+async function loadFavoritesContent() {
+  try {
+    const response = await chrome.runtime.sendMessage({
+      action: 'getFavorites'
+    });
+
+    if (response && response.success) {
+      displayFavoriteItems(response.favorites);
+      setupFavoriteQuickConvert(response.favorites);
+    }
+  } catch (error) {
+    console.error('❌ Failed to load favorites content:', error);
+  }
+}
+
+/**
+ * Display favorite items
+ */
+function displayFavoriteItems(favorites) {
+  const favoritesList = document.getElementById('favoritesList');
+
+  if (!favorites || favorites.length === 0) {
+    favoritesList.innerHTML = `
+      <div class="text-center text-gray-500 text-sm py-8">
+        No favorites yet. Add your frequently used conversions for quick access!
+      </div>
+    `;
+    return;
+  }
+
+  favoritesList.innerHTML = favorites
+    .map(
+      fav => `
+    <div class="favorite-item" data-id="${fav.id}">
+      <div class="flex items-center justify-between">
+        <div class="flex-1">
+          <div class="text-sm font-medium text-gray-900">
+            ${fav.fromCurrency} → ${fav.toCurrency}
+            ${fav.amount ? ` (${formatAmount(fav.amount)})` : ''}
+          </div>
+          ${fav.label ? `<div class="text-xs text-gray-500">${fav.label}</div>` : ''}
+        </div>
+        <div class="flex items-center gap-2">
+          <button 
+            class="quick-convert-btn text-xs px-2 py-1 bg-primary-100 text-primary-700 rounded hover:bg-primary-200 transition-colors"
+            data-from="${fav.fromCurrency}"
+            data-to="${fav.toCurrency}"
+            data-amount="${fav.amount || ''}"
+          >
+            Convert
+          </button>
+          <button 
+            class="remove-favorite-btn text-gray-400 hover:text-red-500 transition-colors"
+            data-id="${fav.id}"
+            title="Remove from favorites"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+    </div>
+  `
+    )
+    .join('');
+
+  // Add event listeners
+  favoritesList.querySelectorAll('.remove-favorite-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      removeFavorite(btn.dataset.id);
+    });
+  });
+
+  favoritesList.querySelectorAll('.quick-convert-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      performQuickConvert(btn.dataset.from, btn.dataset.to, btn.dataset.amount);
+    });
+  });
+}
+
+/**
+ * Setup quick convert buttons for favorites
+ */
+function setupFavoriteQuickConvert(favorites) {
+  const container = document.getElementById('quickConvertButtons');
+
+  if (!favorites || favorites.length === 0) {
+    container.innerHTML = `
+      <div class="text-xs text-gray-500">
+        Add some favorites first
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = favorites
+    .map(
+      fav => `
+    <button 
+      class="quick-convert-pair-btn w-full text-left text-xs p-2 border border-gray-200 rounded hover:bg-gray-50 transition-colors"
+      data-from="${fav.fromCurrency}"
+      data-to="${fav.toCurrency}"
+    >
+      ${fav.fromCurrency} → ${fav.toCurrency}
+      ${fav.label ? ` (${fav.label})` : ''}
+    </button>
+  `
+    )
+    .join('');
+
+  // Add event listeners
+  container.querySelectorAll('.quick-convert-pair-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const amount = document.getElementById('quickConvertAmount').value;
+      if (amount) {
+        performQuickConvert(btn.dataset.from, btn.dataset.to, amount);
+      }
+    });
+  });
+}
+
+/**
+ * Remove a favorite
+ */
+async function removeFavorite(favoriteId) {
+  try {
+    const response = await chrome.runtime.sendMessage({
+      action: 'removeFromFavorites',
+      favoriteId
+    });
+
+    if (response && response.success) {
+      showStatusMessage('Removed from favorites', 'success');
+      loadFavoritesContent();
+    }
+  } catch (error) {
+    console.error('❌ Failed to remove favorite:', error);
+    showStatusMessage('Failed to remove favorite', 'error');
+  }
+}
+
+/**
+ * Perform a quick conversion
+ */
+async function performQuickConvert(fromCurrency, toCurrency, amount) {
+  if (!amount) {
+    showStatusMessage('Please enter an amount', 'error');
+    return;
+  }
+
+  try {
+    // Use the existing conversion service
+    const response = await chrome.runtime.sendMessage({
+      action: 'convertCurrency',
+      fromCurrency,
+      toCurrency,
+      amount: parseFloat(amount)
+    });
+
+    if (response && response.success) {
+      const result = `${formatAmount(amount)} ${fromCurrency} = ${formatAmount(response.convertedAmount)} ${toCurrency}`;
+      showStatusMessage(result, 'success', 5000);
+
+      // Refresh history if on history tab
+      if (currentActiveTab === 'history') {
+        setTimeout(() => loadHistoryContent(), 1000);
+      }
+    }
+  } catch (error) {
+    console.error('❌ Quick conversion failed:', error);
+    showStatusMessage('Conversion failed', 'error');
+  }
+}
+
+// Phase 6, Task 6.2: Utility Functions
+
+/**
+ * Format amount for display
+ */
+function formatAmount(amount) {
+  if (!amount) {
+    return '0';
+  }
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 4
+  }).format(parseFloat(amount));
+}
+
+/**
+ * Format timestamp for display
+ */
+function formatTimestamp(timestamp) {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) {
+    return 'Just now';
+  }
+  if (diffMins < 60) {
+    return `${diffMins}m ago`;
+  }
+  if (diffHours < 24) {
+    return `${diffHours}h ago`;
+  }
+  if (diffDays < 7) {
+    return `${diffDays}d ago`;
+  }
+
+  return date.toLocaleDateString();
+}
+
+/**
+ * Show status message to user
+ */
+function showStatusMessage(message, type = 'success', duration = 3000) {
+  const statusDiv = document.getElementById('statusMessage');
+  if (!statusDiv) {
+    return;
+  }
+
+  statusDiv.textContent = message;
+  statusDiv.className = `fixed top-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg shadow-lg z-50 transition-all duration-300 ${
+    type === 'error' ? 'bg-red-500 text-white' : 'bg-green-500 text-white'
+  }`;
+
+  statusDiv.classList.remove('hidden');
+
+  setTimeout(() => {
+    statusDiv.classList.add('hidden');
+  }, duration);
+}
+
+// Phase 6, Task 6.2: Add Favorite Form Functions
+
+/**
+ * Setup add favorite form
+ */
+function setupAddFavoriteForm() {
+  const addBtn = document.getElementById('addFavorite');
+  const form = document.getElementById('addFavoriteForm');
+  const saveBtn = document.getElementById('saveFavorite');
+  const cancelBtn = document.getElementById('cancelFavorite');
+
+  // Populate currency selectors
+  const fromSelect = document.getElementById('favFromCurrency');
+  const toSelect = document.getElementById('favToCurrency');
+
+  populateCurrencySelector(fromSelect);
+  populateCurrencySelector(toSelect);
+
+  addBtn.addEventListener('click', () => {
+    form.classList.remove('hidden');
+    addBtn.classList.add('hidden');
+  });
+
+  cancelBtn.addEventListener('click', () => {
+    form.classList.add('hidden');
+    addBtn.classList.remove('hidden');
+    clearFavoriteForm();
+  });
+
+  saveBtn.addEventListener('click', async () => {
+    await saveFavorite();
+  });
+}
+
+/**
+ * Populate a currency selector with options
+ */
+function populateCurrencySelector(select) {
+  const popularCurrencies = getPopularCurrencies();
+  const allCurrencies = getAllCurrencies();
+
+  select.innerHTML = '<option value="">Select currency...</option>';
+
+  // Add popular currencies first
+  const popularGroup = document.createElement('optgroup');
+  popularGroup.label = 'Popular Currencies';
+  popularCurrencies.forEach(currency => {
+    const option = document.createElement('option');
+    option.value = currency.code;
+    option.textContent = formatCurrencyOption(currency);
+    popularGroup.appendChild(option);
+  });
+  select.appendChild(popularGroup);
+
+  // Add all other currencies
+  const otherGroup = document.createElement('optgroup');
+  otherGroup.label = 'All Currencies';
+  allCurrencies
+    .filter(c => !c.popular)
+    .forEach(currency => {
+      const option = document.createElement('option');
+      option.value = currency.code;
+      option.textContent = formatCurrencyOption(currency);
+      otherGroup.appendChild(option);
+    });
+  select.appendChild(otherGroup);
+}
+
+/**
+ * Save a new favorite
+ */
+async function saveFavorite() {
+  const fromCurrency = document.getElementById('favFromCurrency').value;
+  const toCurrency = document.getElementById('favToCurrency').value;
+  const amount = document.getElementById('favAmount').value;
+  const label = document.getElementById('favLabel').value;
+
+  if (!fromCurrency || !toCurrency) {
+    showStatusMessage('Please select both currencies', 'error');
+    return;
+  }
+
+  if (fromCurrency === toCurrency) {
+    showStatusMessage('From and To currencies must be different', 'error');
+    return;
+  }
+
+  try {
+    const favorite = {
+      fromCurrency,
+      toCurrency,
+      amount: amount ? parseFloat(amount) : null,
+      label: label || `${fromCurrency} to ${toCurrency}`
+    };
+
+    const response = await chrome.runtime.sendMessage({
+      action: 'addToFavorites',
+      favorite
+    });
+
+    if (response && response.success) {
+      showStatusMessage('Favorite saved!', 'success');
+      clearFavoriteForm();
+      document.getElementById('addFavoriteForm').classList.add('hidden');
+      document.getElementById('addFavorite').classList.remove('hidden');
+      loadFavoritesContent();
+    }
+  } catch (error) {
+    console.error('❌ Failed to save favorite:', error);
+    showStatusMessage('Failed to save favorite', 'error');
+  }
+}
+
+/**
+ * Clear the add favorite form
+ */
+function clearFavoriteForm() {
+  document.getElementById('favFromCurrency').value = '';
+  document.getElementById('favToCurrency').value = '';
+  document.getElementById('favAmount').value = '';
+  document.getElementById('favLabel').value = '';
+}
+
+// Phase 6, Task 6.2: History Management Functions
+
+/**
+ * Setup history management buttons
+ */
+function setupHistoryManagement() {
+  const exportBtn = document.getElementById('exportHistory');
+  const clearBtn = document.getElementById('clearHistory');
+
+  exportBtn.addEventListener('click', exportHistory);
+  clearBtn.addEventListener('click', clearHistory);
+}
+
+/**
+ * Export conversion history
+ */
+async function exportHistory() {
+  try {
+    const response = await chrome.runtime.sendMessage({
+      action: 'exportHistory'
+    });
+    if (response && response.success) {
+      // Create and download the export file
+      const blob = new window.Blob([response.data], {
+        type: 'application/json'
+      });
+      const url = window.URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `currency-conversion-history-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      showStatusMessage('History exported successfully!', 'success');
+    }
+  } catch (error) {
+    console.error('❌ Failed to export history:', error);
+    showStatusMessage('Failed to export history', 'error');
+  }
+}
+
+/**
+ * Clear conversion history
+ */
+async function clearHistory() {
+  if (
+    !confirm(
+      'Are you sure you want to clear all conversion history? This cannot be undone.'
+    )
+  ) {
+    return;
+  }
+
+  try {
+    const response = await chrome.runtime.sendMessage({
+      action: 'clearHistory'
+    });
+
+    if (response && response.success) {
+      showStatusMessage('History cleared successfully!', 'success');
+      loadHistoryContent();
+    }
+  } catch (error) {
+    console.error('❌ Failed to clear history:', error);
+    showStatusMessage('Failed to clear history', 'error');
+  }
+}

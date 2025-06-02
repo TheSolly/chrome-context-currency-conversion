@@ -10,6 +10,8 @@ import {
   formatExchangeRate,
   formatConversionTimestamp
 } from '/utils/conversion-utils.js';
+// Phase 6, Task 6.2: Import Conversion History
+import { conversionHistory } from '/utils/conversion-history.js';
 
 // Global state management
 let currentCurrencyInfo = null;
@@ -70,6 +72,14 @@ chrome.runtime.onInstalled.addListener(async () => {
     console.log('⚙️ Settings Manager initialized in background');
   } catch (error) {
     logError(error, 'settingsManagerInit');
+  }
+
+  // Phase 6, Task 6.2: Initialize Conversion History
+  try {
+    await conversionHistory.initialize();
+    console.log('📚 Conversion History initialized in background');
+  } catch (error) {
+    logError(error, 'conversionHistoryInit');
   }
 
   await initializeContextMenus();
@@ -368,6 +378,90 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse(getExtensionStats());
     }
 
+    // Phase 6, Task 6.2: Handle conversion history requests
+    if (request.action === 'getHistory') {
+      try {
+        const history = conversionHistory.getHistory(request.filters || {});
+        sendResponse({ success: true, history });
+      } catch (error) {
+        logError(error, 'getHistory', request.filters);
+        sendResponse({ success: false, error: error.message });
+      }
+    }
+
+    if (request.action === 'getFavorites') {
+      try {
+        const favorites = conversionHistory.getFavorites(
+          request.sortBy || 'createdAt'
+        );
+        sendResponse({ success: true, favorites });
+      } catch (error) {
+        logError(error, 'getFavorites', request.sortBy);
+        sendResponse({ success: false, error: error.message });
+      }
+    }
+
+    if (request.action === 'addToFavorites') {
+      conversionHistory
+        .addToFavorites(
+          request.fromCurrency,
+          request.toCurrency,
+          request.amount,
+          request.label
+        )
+        .then(favorite => sendResponse({ success: true, favorite }))
+        .catch(error => {
+          logError(error, 'addToFavorites', request);
+          sendResponse({ success: false, error: error.message });
+        });
+      return true; // Will respond asynchronously
+    }
+
+    if (request.action === 'removeFromFavorites') {
+      conversionHistory
+        .removeFromFavorites(request.favoriteId)
+        .then(removed => sendResponse({ success: true, removed }))
+        .catch(error => {
+          logError(error, 'removeFromFavorites', request.favoriteId);
+          sendResponse({ success: false, error: error.message });
+        });
+      return true; // Will respond asynchronously
+    }
+
+    if (request.action === 'getConversionStats') {
+      try {
+        const stats = conversionHistory.getStats();
+        const popularPairs = conversionHistory.getPopularPairs(10);
+        sendResponse({ success: true, stats, popularPairs });
+      } catch (error) {
+        logError(error, 'getConversionStats');
+        sendResponse({ success: false, error: error.message });
+      }
+    }
+
+    if (request.action === 'exportHistory') {
+      try {
+        const exportData = conversionHistory.exportHistory(
+          request.format || 'json'
+        );
+        sendResponse({ success: true, exportData });
+      } catch (error) {
+        logError(error, 'exportHistory', request.format);
+        sendResponse({ success: false, error: error.message });
+      }
+    }
+
+    if (request.action === 'clearHistory') {
+      conversionHistory
+        .clearHistory(request.type || 'all')
+        .then(() => sendResponse({ success: true }))
+        .catch(error => {
+          logError(error, 'clearHistory', request.type);
+          sendResponse({ success: false, error: error.message });
+        });
+      return true; // Will respond asynchronously
+    }
+
     if (request.action === 'reloadSettings') {
       // Reload settings when user updates preferences
       console.log('🔄 Received reloadSettings request');
@@ -626,6 +720,26 @@ async function performCurrencyConversion(currencyData, targetCurrency = null) {
     };
 
     console.log('✅ Currency conversion completed:', result);
+
+    // Phase 6, Task 6.2: Save successful conversion to history
+    try {
+      await conversionHistory.addConversion({
+        fromCurrency: result.fromCurrency,
+        toCurrency: result.toCurrency,
+        originalAmount: result.originalAmount,
+        convertedAmount: result.convertedAmount,
+        exchangeRate: result.exchangeRate,
+        timestamp: Date.now(),
+        source: 'context-menu',
+        confidence: result.confidence,
+        webpage: null // Could be enhanced to capture current webpage URL
+      });
+      console.log('📚 Conversion saved to history');
+    } catch (historyError) {
+      console.warn('⚠️ Failed to save conversion to history:', historyError);
+      // Don't fail the conversion if history saving fails
+    }
+
     return result;
   } catch (conversionError) {
     console.error('❌ Currency conversion failed:', conversionError);

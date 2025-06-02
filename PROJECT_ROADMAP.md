@@ -189,12 +189,12 @@ A Chrome extension that provides real-time currency conversion through context m
 - [x] Support multiple currencies in single selection
 - [x] Add cryptocurrency support (Bitcoin, Ethereum, etc.)
 
-### Task 6.2: Conversion History
+### Task 6.2: Conversion History ✅ COMPLETED
 
-- [ ] Store recent conversions
-- [ ] Create history view in popup
-- [ ] Add favorites/bookmarks for common conversions
-- [ ] Export conversion history
+- [x] Store recent conversions
+- [x] Create history view in popup
+- [x] Add favorites/bookmarks for common conversions
+- [x] Export conversion history
 
 ### Task 6.3: Rate Alerts & Notifications
 
