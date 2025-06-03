@@ -419,7 +419,22 @@ window.popupUtils = {
 };
 
 // Initialize popup when DOM is loaded
-document.addEventListener('DOMContentLoaded', initializePopup);
+
+document.addEventListener('DOMContentLoaded', () => {
+  initializePopup();
+  // Donation button logic
+  const donateBtn = document.getElementById('donateButton');
+  if (donateBtn) {
+    donateBtn.addEventListener('click', () => {
+      // Open donation link (e.g., Buy Me a Coffee, PayPal, Stripe)
+      window.open(
+        'https://www.buymeacoffee.com/sollydev',
+        '_blank',
+        'noopener'
+      );
+    });
+  }
+});
 
 // Export for testing
 export {

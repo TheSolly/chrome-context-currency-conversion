@@ -10,6 +10,32 @@ export class SubscriptionTab {
   }
 
   /**
+   * Load affiliate offers for financial services
+   */
+  async loadAffiliateOffers() {
+    // Dynamically import affiliate links
+    const { getAffiliateLinks } = await import('../affiliate-links.js');
+    const offers = getAffiliateLinks();
+    const container = document.getElementById('affiliateOffers');
+    if (!container) return;
+    container.innerHTML = '';
+    offers.forEach(offer => {
+      const offerDiv = document.createElement('div');
+      offerDiv.className =
+        'flex items-center gap-3 p-2 border rounded-lg mb-2 bg-gray-50 hover:bg-gray-100 transition-colors';
+      offerDiv.innerHTML = `
+        <img src="${offer.logo}" alt="${offer.name} logo" class="w-8 h-8 rounded"/>
+        <div class="flex-1">
+          <div class="font-semibold text-sm">${offer.name}</div>
+          <div class="text-xs text-gray-500">${offer.description}</div>
+        </div>
+        <a href="${offer.url}" target="_blank" rel="noopener" class="text-primary-600 font-medium underline text-xs">Learn More</a>
+      `;
+      container.appendChild(offerDiv);
+    });
+  }
+
+  /**
    * Initialize the subscription tab
    */
   async initialize() {
@@ -26,6 +52,11 @@ export class SubscriptionTab {
 
       // Setup event listeners
       this.setupEventListeners();
+
+      // Load affiliate offers after DOM is ready
+      setTimeout(() => {
+        this.loadAffiliateOffers();
+      }, 500);
 
       this.initialized = true;
       console.log('✅ Subscription tab initialized');
