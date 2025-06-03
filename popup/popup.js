@@ -180,6 +180,9 @@ async function initializePopup() {
     setupHistoryFilters();
     await initializeConversionHistory();
 
+    // Phase 6, Task 6.3: Initialize rate alerts functionality
+    initializeAlerts();
+
     console.log('✅ Enhanced popup initialization complete (Task 3.2)');
   } catch (error) {
     console.error('❌ Failed to initialize popup:', error);
@@ -251,6 +254,9 @@ function setupEventListeners() {
   // Phase 6, Task 6.2: Setup new functionality
   setupAddFavoriteForm();
   setupHistoryManagement();
+
+  // Phase 6, Task 6.3: Initialize alerts functionality
+  initializeAlerts();
 }
 
 function populateCurrencySelectors() {
@@ -1037,6 +1043,8 @@ function switchTab(targetPanelId) {
     loadHistoryContent();
   } else if (targetPanelId === 'favoritesPanel') {
     loadFavoritesContent();
+  } else if (targetPanelId === 'alertsPanel') {
+    loadAlertsContent();
   }
 }
 
@@ -1682,5 +1690,691 @@ async function clearHistory() {
   } catch (error) {
     console.error('❌ Failed to clear history:', error);
     showStatusMessage('Failed to clear history', 'error');
+  }
+}
+
+// Phase 6, Task 6.3: Rate Alerts & Notifications Implementation
+
+/**
+ * Load and display alerts content
+ */
+async function loadAlertsContent() {
+  try {
+    // Load alerts from background
+    const response = await chrome.runtime.sendMessage({
+      action: 'rateAlerts',
+      subAction: 'getAlerts'
+    });
+
+    if (response && response.success) {
+      displayAlerts(response.alerts || []);
+      await loadAlertSettings();
+      await loadAlertHistory();
+      await loadTrendAnalysis();
+    } else {
+      console.error('Failed to load alerts:', response?.error);
+      showStatusMessage('Failed to load alerts', 'error');
+    }
+  } catch (error) {
+    console.error('❌ Failed to load alerts content:', error);
+    showStatusMessage('Error loading alerts', 'error');
+  }
+}
+
+/**
+ * Display alerts in the UI
+ */
+function displayAlerts(alerts) {
+  const alertsList = document.getElementById('alertsList');
+  const alertsEmpty = document.getElementById('alertsEmpty');
+
+  if (!alerts || alerts.length === 0) {
+    alertsList.innerHTML = '';
+    alertsEmpty.classList.remove('hidden');
+    return;
+  }
+
+  alertsEmpty.classList.add('hidden');
+
+  alertsList.innerHTML = alerts
+    .map(
+      alert => `
+    <div class="alert-item p-3 border rounded-lg ${alert.isActive ? 'border-blue-300 bg-blue-50' : 'border-gray-300 bg-gray-50'}" data-alert-id="${alert.id}">
+      <div class="flex justify-between items-start">
+        <div class="flex-1">
+          <div class="flex items-center space-x-2">
+            <span class="font-medium">${alert.fromCurrency} → ${alert.toCurrency}</span>
+            <span class="px-2 py-1 text-xs rounded ${alert.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
+              ${alert.isActive ? 'Active' : 'Inactive'}
+            </span>
+            <span class="px-2 py-1 text-xs rounded bg-blue-100 text-blue-800">
+              ${alert.type}
+            </span>
+          </div>
+          <div class="mt-1 text-sm text-gray-600">
+            Target: ${formatTargetRate(alert)}
+          </div>
+          <div class="mt-1 text-xs text-gray-500">
+            Created: ${new Date(alert.createdAt).toLocaleDateString()}
+            ${alert.lastTriggered ? `• Last triggered: ${new Date(alert.lastTriggered).toLocaleDateString()}` : ''}
+          </div>
+        </div>
+        <div class="flex space-x-2">
+          <button class="edit-alert-btn text-blue-600 hover:text-blue-800 text-sm" data-alert-id="${alert.id}">
+            Edit
+          </button>
+          <button class="toggle-alert-btn text-${alert.isActive ? 'orange' : 'green'}-600 hover:text-${alert.isActive ? 'orange' : 'green'}-800 text-sm" data-alert-id="${alert.id}">
+            ${alert.isActive ? 'Pause' : 'Activate'}
+          </button>
+          <button class="delete-alert-btn text-red-600 hover:text-red-800 text-sm" data-alert-id="${alert.id}">
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  `
+    )
+    .join('');
+
+  // Add event listeners to alert action buttons
+  setupAlertActionListeners();
+}
+
+/**
+ * Format target rate display
+ */
+function formatTargetRate(alert) {
+  if (alert.type === 'above') {
+    return `Above ${alert.targetRate}`;
+  } else if (alert.type === 'below') {
+    return `Below ${alert.targetRate}`;
+  } else if (alert.type === 'change') {
+    return `${alert.targetRate > 0 ? '+' : ''}${alert.targetRate}% change`;
+  }
+  return alert.targetRate;
+}
+
+/**
+ * Setup event listeners for alert actions
+ */
+function setupAlertActionListeners() {
+  // Edit alert buttons
+  document.querySelectorAll('.edit-alert-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const alertId = e.target.getAttribute('data-alert-id');
+      editAlert(alertId);
+    });
+  });
+
+  // Toggle alert buttons
+  document.querySelectorAll('.toggle-alert-btn').forEach(btn => {
+    btn.addEventListener('click', async e => {
+      const alertId = e.target.getAttribute('data-alert-id');
+      await toggleAlert(alertId);
+    });
+  });
+
+  // Delete alert buttons
+  document.querySelectorAll('.delete-alert-btn').forEach(btn => {
+    btn.addEventListener('click', async e => {
+      const alertId = e.target.getAttribute('data-alert-id');
+      await deleteAlert(alertId);
+    });
+  });
+}
+
+/**
+ * Setup new alert form
+ */
+function setupNewAlertForm() {
+  const newAlertForm = document.getElementById('newAlertForm');
+
+  if (newAlertForm) {
+    newAlertForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      await createNewAlert();
+    });
+  }
+
+  // Populate currency selectors for alerts
+  populateAlertCurrencySelectors();
+
+  // Setup alert type change listener
+  const alertTypeSelect = document.getElementById('alertType');
+  if (alertTypeSelect) {
+    alertTypeSelect.addEventListener('change', updateAlertTargetInput);
+  }
+}
+
+/**
+ * Populate currency selectors for alerts
+ */
+function populateAlertCurrencySelectors() {
+  const fromCurrencySelect = document.getElementById('alertFromCurrency');
+  const toCurrencySelect = document.getElementById('alertToCurrency');
+
+  if (!fromCurrencySelect || !toCurrencySelect) {
+    return;
+  }
+
+  const popularCurrencies = getPopularCurrencies();
+  const allCurrencies = getAllCurrencies();
+
+  [fromCurrencySelect, toCurrencySelect].forEach(select => {
+    select.innerHTML = '';
+
+    // Add popular currencies
+    const popularGroup = document.createElement('optgroup');
+    popularGroup.label = 'Popular Currencies';
+    popularCurrencies.forEach(currency => {
+      const option = document.createElement('option');
+      option.value = currency.code;
+      option.textContent = formatCurrencyOption(currency);
+      popularGroup.appendChild(option);
+    });
+    select.appendChild(popularGroup);
+
+    // Add all currencies
+    const allGroup = document.createElement('optgroup');
+    allGroup.label = 'All Currencies';
+    allCurrencies
+      .filter(c => !c.popular)
+      .forEach(currency => {
+        const option = document.createElement('option');
+        option.value = currency.code;
+        option.textContent = formatCurrencyOption(currency);
+        allGroup.appendChild(option);
+      });
+    select.appendChild(allGroup);
+  });
+
+  // Set default values from current settings
+  fromCurrencySelect.value = currentSettings.baseCurrency || 'USD';
+  toCurrencySelect.value = currentSettings.secondaryCurrency || 'EUR';
+}
+
+/**
+ * Update alert target input based on alert type
+ */
+function updateAlertTargetInput() {
+  const alertType = document.getElementById('alertType')?.value;
+  const targetLabel = document.getElementById('alertTargetLabel');
+  const targetInput = document.getElementById('alertTargetRate');
+
+  if (!targetLabel || !targetInput) {
+    return;
+  }
+
+  switch (alertType) {
+    case 'above':
+      targetLabel.textContent = 'Target Rate (above):';
+      targetInput.placeholder = 'e.g., 1.20';
+      targetInput.step = '0.0001';
+      targetInput.min = '0';
+      break;
+    case 'below':
+      targetLabel.textContent = 'Target Rate (below):';
+      targetInput.placeholder = 'e.g., 1.15';
+      targetInput.step = '0.0001';
+      targetInput.min = '0';
+      break;
+    case 'change':
+      targetLabel.textContent = 'Percentage Change:';
+      targetInput.placeholder = 'e.g., 5 for +5% or -3 for -3%';
+      targetInput.step = '0.1';
+      targetInput.removeAttribute('min');
+      break;
+  }
+}
+
+/**
+ * Create a new alert
+ */
+async function createNewAlert() {
+  try {
+    const form = document.getElementById('newAlertForm');
+
+    const alertData = {
+      fromCurrency: form.elements.fromCurrency.value,
+      toCurrency: form.elements.toCurrency.value,
+      type: form.elements.alertType.value,
+      targetRate: parseFloat(form.elements.targetRate.value),
+      label:
+        form.elements.alertLabel.value ||
+        `${form.elements.fromCurrency.value} → ${form.elements.toCurrency.value}`
+    };
+
+    // Validate input
+    if (
+      !alertData.fromCurrency ||
+      !alertData.toCurrency ||
+      !alertData.type ||
+      isNaN(alertData.targetRate)
+    ) {
+      showStatusMessage('Please fill in all required fields', 'error');
+      return;
+    }
+
+    if (alertData.fromCurrency === alertData.toCurrency) {
+      showStatusMessage('From and To currencies must be different', 'error');
+      return;
+    }
+
+    const response = await chrome.runtime.sendMessage({
+      action: 'rateAlerts',
+      subAction: 'createAlert',
+      alertData
+    });
+
+    if (response && response.success) {
+      showStatusMessage('Alert created successfully!', 'success');
+      form.reset();
+      await loadAlertsContent(); // Refresh the alerts list
+    } else {
+      showStatusMessage(response?.error || 'Failed to create alert', 'error');
+    }
+  } catch (error) {
+    console.error('❌ Failed to create alert:', error);
+    showStatusMessage('Failed to create alert', 'error');
+  }
+}
+
+/**
+ * Edit an existing alert
+ */
+async function editAlert(alertId) {
+  try {
+    // Get current alert data
+    const response = await chrome.runtime.sendMessage({
+      action: 'rateAlerts',
+      subAction: 'getAlert',
+      alertId
+    });
+
+    if (response && response.success && response.alert) {
+      const alert = response.alert;
+
+      // Populate form with current data
+      document.getElementById('alertFromCurrency').value = alert.fromCurrency;
+      document.getElementById('alertToCurrency').value = alert.toCurrency;
+      document.getElementById('alertType').value = alert.type;
+      document.getElementById('alertTargetRate').value = alert.targetRate;
+      document.getElementById('alertLabel').value = alert.label;
+
+      updateAlertTargetInput();
+
+      // Change form to edit mode
+      const form = document.getElementById('newAlertForm');
+      const submitBtn = form.querySelector('button[type="submit"]');
+      submitBtn.textContent = 'Update Alert';
+      submitBtn.dataset.editId = alertId;
+
+      // Add cancel button
+      if (!document.getElementById('cancelEditBtn')) {
+        const cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
+        cancelBtn.id = 'cancelEditBtn';
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.className =
+          'px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600';
+        cancelBtn.addEventListener('click', cancelEditAlert);
+        submitBtn.parentNode.insertBefore(cancelBtn, submitBtn.nextSibling);
+      }
+
+      // Update form handler
+      form.onsubmit = async e => {
+        e.preventDefault();
+        await updateAlert(alertId);
+      };
+
+      // Scroll to form
+      form.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      showStatusMessage('Failed to load alert data', 'error');
+    }
+  } catch (error) {
+    console.error('❌ Failed to edit alert:', error);
+    showStatusMessage('Failed to edit alert', 'error');
+  }
+}
+
+/**
+ * Update an existing alert
+ */
+async function updateAlert(alertId) {
+  try {
+    const form = document.getElementById('newAlertForm');
+
+    const alertData = {
+      fromCurrency: form.elements.fromCurrency.value,
+      toCurrency: form.elements.toCurrency.value,
+      type: form.elements.alertType.value,
+      targetRate: parseFloat(form.elements.targetRate.value),
+      label: form.elements.alertLabel.value
+    };
+
+    const response = await chrome.runtime.sendMessage({
+      action: 'rateAlerts',
+      subAction: 'updateAlert',
+      alertId,
+      alertData
+    });
+
+    if (response && response.success) {
+      showStatusMessage('Alert updated successfully!', 'success');
+      cancelEditAlert();
+      await loadAlertsContent();
+    } else {
+      showStatusMessage(response?.error || 'Failed to update alert', 'error');
+    }
+  } catch (error) {
+    console.error('❌ Failed to update alert:', error);
+    showStatusMessage('Failed to update alert', 'error');
+  }
+}
+
+/**
+ * Cancel alert editing
+ */
+function cancelEditAlert() {
+  const form = document.getElementById('newAlertForm');
+  form.reset();
+
+  const submitBtn = form.querySelector('button[type="submit"]');
+  submitBtn.textContent = 'Create Alert';
+  delete submitBtn.dataset.editId;
+
+  const cancelBtn = document.getElementById('cancelEditBtn');
+  if (cancelBtn) {
+    cancelBtn.remove();
+  }
+
+  // Restore original form handler
+  form.onsubmit = async e => {
+    e.preventDefault();
+    await createNewAlert();
+  };
+}
+
+/**
+ * Toggle alert active state
+ */
+async function toggleAlert(alertId) {
+  try {
+    const response = await chrome.runtime.sendMessage({
+      action: 'rateAlerts',
+      subAction: 'toggleAlert',
+      alertId
+    });
+
+    if (response && response.success) {
+      showStatusMessage('Alert status updated!', 'success');
+      await loadAlertsContent();
+    } else {
+      showStatusMessage(response?.error || 'Failed to toggle alert', 'error');
+    }
+  } catch (error) {
+    console.error('❌ Failed to toggle alert:', error);
+    showStatusMessage('Failed to toggle alert', 'error');
+  }
+}
+
+/**
+ * Delete an alert
+ */
+async function deleteAlert(alertId) {
+  if (!confirm('Are you sure you want to delete this alert?')) {
+    return;
+  }
+
+  try {
+    const response = await chrome.runtime.sendMessage({
+      action: 'rateAlerts',
+      subAction: 'deleteAlert',
+      alertId
+    });
+
+    if (response && response.success) {
+      showStatusMessage('Alert deleted successfully!', 'success');
+      await loadAlertsContent();
+    } else {
+      showStatusMessage(response?.error || 'Failed to delete alert', 'error');
+    }
+  } catch (error) {
+    console.error('❌ Failed to delete alert:', error);
+    showStatusMessage('Failed to delete alert', 'error');
+  }
+}
+
+/**
+ * Load and display alert settings
+ */
+async function loadAlertSettings() {
+  try {
+    const response = await chrome.runtime.sendMessage({
+      action: 'rateAlerts',
+      subAction: 'getSettings'
+    });
+
+    if (response && response.success) {
+      const settings = response.settings;
+
+      // Update UI with current settings
+      document.getElementById('enableNotifications').checked =
+        settings.enableNotifications;
+      document.getElementById('enableSounds').checked = settings.enableSounds;
+      document.getElementById('enableDailySummary').checked =
+        settings.enableDailySummary;
+      document.getElementById('enableWeeklySummary').checked =
+        settings.enableWeeklySummary;
+      document.getElementById('checkInterval').value = settings.checkInterval;
+      document.getElementById('maxAlertsPerDay').value =
+        settings.maxAlertsPerDay;
+    }
+  } catch (error) {
+    console.error('❌ Failed to load alert settings:', error);
+  }
+}
+
+/**
+ * Save alert settings
+ */
+async function saveAlertSettings() {
+  try {
+    const settings = {
+      enableNotifications: document.getElementById('enableNotifications')
+        .checked,
+      enableSounds: document.getElementById('enableSounds').checked,
+      enableDailySummary: document.getElementById('enableDailySummary').checked,
+      enableWeeklySummary: document.getElementById('enableWeeklySummary')
+        .checked,
+      checkInterval: parseInt(document.getElementById('checkInterval').value),
+      maxAlertsPerDay: parseInt(
+        document.getElementById('maxAlertsPerDay').value
+      )
+    };
+
+    const response = await chrome.runtime.sendMessage({
+      action: 'rateAlerts',
+      subAction: 'updateSettings',
+      settings
+    });
+
+    if (response && response.success) {
+      showStatusMessage('Alert settings saved!', 'success');
+    } else {
+      showStatusMessage(response?.error || 'Failed to save settings', 'error');
+    }
+  } catch (error) {
+    console.error('❌ Failed to save alert settings:', error);
+    showStatusMessage('Failed to save settings', 'error');
+  }
+}
+
+/**
+ * Load and display alert history
+ */
+async function loadAlertHistory() {
+  try {
+    const response = await chrome.runtime.sendMessage({
+      action: 'rateAlerts',
+      subAction: 'getHistory'
+    });
+
+    if (response && response.success) {
+      displayAlertHistory(response.history || []);
+    }
+  } catch (error) {
+    console.error('❌ Failed to load alert history:', error);
+  }
+}
+
+/**
+ * Display alert history
+ */
+function displayAlertHistory(history) {
+  const historyContainer = document.getElementById('alertHistoryList');
+
+  if (!history || history.length === 0) {
+    historyContainer.innerHTML =
+      '<p class="text-gray-500 text-center py-4">No alert history yet</p>';
+    return;
+  }
+
+  historyContainer.innerHTML = history
+    .slice(0, 10)
+    .map(
+      item => `
+    <div class="history-item p-3 border-b border-gray-200 last:border-b-0">
+      <div class="flex justify-between items-start">
+        <div>
+          <div class="font-medium text-sm">${item.fromCurrency} → ${item.toCurrency}</div>
+          <div class="text-xs text-gray-600">Rate: ${item.rate} (Target: ${item.targetRate})</div>
+          <div class="text-xs text-gray-500">${new Date(item.triggeredAt).toLocaleString()}</div>
+        </div>
+        <span class="px-2 py-1 text-xs rounded bg-blue-100 text-blue-800">
+          ${item.alertType}
+        </span>
+      </div>
+    </div>
+  `
+    )
+    .join('');
+}
+
+/**
+ * Load and display trend analysis
+ */
+async function loadTrendAnalysis() {
+  try {
+    const response = await chrome.runtime.sendMessage({
+      action: 'rateAlerts',
+      subAction: 'getTrendAnalysis'
+    });
+
+    if (response && response.success) {
+      displayTrendAnalysis(response.trends || {});
+    }
+  } catch (error) {
+    console.error('❌ Failed to load trend analysis:', error);
+  }
+}
+
+/**
+ * Display trend analysis
+ */
+function displayTrendAnalysis(trends) {
+  const trendsContainer = document.getElementById('trendAnalysisList');
+
+  if (!trends || Object.keys(trends).length === 0) {
+    trendsContainer.innerHTML =
+      '<p class="text-gray-500 text-center py-4">No trend data available yet</p>';
+    return;
+  }
+
+  trendsContainer.innerHTML = Object.entries(trends)
+    .map(([pair, data]) => {
+      const [from, to] = pair.split('-');
+      const trend = data.trend || 0;
+      const trendClass =
+        trend > 0
+          ? 'text-green-600'
+          : trend < 0
+            ? 'text-red-600'
+            : 'text-gray-600';
+      const trendIcon = trend > 0 ? '↗️' : trend < 0 ? '↘️' : '➡️';
+
+      return `
+      <div class="trend-item p-3 border rounded-lg">
+        <div class="flex justify-between items-center">
+          <div>
+            <div class="font-medium">${from} → ${to}</div>
+            <div class="text-sm text-gray-600">
+              Current: ${data.currentRate || 'N/A'}
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="flex items-center space-x-1 ${trendClass}">
+              <span>${trendIcon}</span>
+              <span class="font-medium">${trend > 0 ? '+' : ''}${trend.toFixed(2)}%</span>
+            </div>
+            <div class="text-xs text-gray-500">
+              ${data.dataPoints || 0} data points
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    })
+    .join('');
+}
+
+/**
+ * Setup alert settings event listeners
+ */
+function setupAlertSettings() {
+  // Settings form
+  const settingsForm = document.getElementById('alertSettingsForm');
+  if (settingsForm) {
+    settingsForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      await saveAlertSettings();
+    });
+  }
+
+  // Individual setting changes
+  [
+    'enableNotifications',
+    'enableSounds',
+    'enableDailySummary',
+    'enableWeeklySummary'
+  ].forEach(id => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.addEventListener('change', saveAlertSettings);
+    }
+  });
+
+  ['checkInterval', 'maxAlertsPerDay'].forEach(id => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.addEventListener('change', saveAlertSettings);
+    }
+  });
+}
+
+/**
+ * Initialize alerts functionality
+ */
+function initializeAlerts() {
+  setupNewAlertForm();
+  setupAlertSettings();
+
+  // Add event listener for tab switching to alerts
+  const alertsTab = document.querySelector('[aria-controls="alertsPanel"]');
+  if (alertsTab) {
+    alertsTab.addEventListener('click', () => {
+      loadAlertsContent();
+    });
   }
 }

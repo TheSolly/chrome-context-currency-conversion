@@ -846,20 +846,24 @@ function detectCurrency(text) {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   try {
     if (request.action === 'showLoadingFeedback') {
-      visualFeedback.showToast(
-        `Converting to ${request.targetCurrency}...`,
-        'info',
-        2000
-      );
+      if (visualFeedback && visualFeedback.showToast) {
+        visualFeedback.showToast(
+          `Converting to ${request.targetCurrency}...`,
+          'info',
+          2000
+        );
+      }
       sendResponse({ success: true });
     }
 
     if (request.action === 'showErrorFeedback') {
-      visualFeedback.showToast(
-        `Conversion failed: ${request.error}`,
-        'error',
-        4000
-      );
+      if (visualFeedback && visualFeedback.showToast) {
+        visualFeedback.showToast(
+          `Conversion failed: ${request.error}`,
+          'error',
+          4000
+        );
+      }
       sendResponse({ success: true });
     }
 
@@ -872,11 +876,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           null,
           request.result.errorMessage
         );
-        visualFeedback.showToast(
-          `Conversion failed: ${request.result.errorMessage}`,
-          'error',
-          4000
-        );
+        if (visualFeedback && visualFeedback.showToast) {
+          visualFeedback.showToast(
+            `Conversion failed: ${request.result.errorMessage}`,
+            'error',
+            4000
+          );
+        }
       } else {
         // Show successful conversion result
         displayConversionTooltip(
@@ -885,17 +891,113 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           request.result
         );
 
-        // Show success toast with copy option
-        const toastMessage = `${request.result.convertedAmount} ${request.result.toCurrency} (Click to copy)`;
-        const toast = visualFeedback.showToast(toastMessage, 'success', 5000);
+        // DEBUG: Log the conversion result to see what fields are available
+        console.log('🔍 Conversion result received:', request.result);
+        console.log(
+          '🔍 formattedAmount field:',
+          request.result.formattedAmount
+        );
+        console.log(
+          '🔍 convertedAmount field:',
+          request.result.convertedAmount
+        );
+        console.log('🔍 toCurrency field:', request.result.toCurrency);
 
-        // Make toast clickable to copy result
-        if (toast) {
-          toast.style.cursor = 'pointer';
-          toast.addEventListener('click', () => {
-            visualFeedback.copyToClipboard(request.result.convertedAmount);
-            visualFeedback.hideToast(toast);
+        // Use the pre-formatted amount from the conversion result, or format it if not available
+        const formattedAmount =
+          request.result.formattedAmount ||
+          (() => {
+            const formatCurrency = (amount, currency) => {
+              const value = parseFloat(amount);
+              if (isNaN(value)) {
+                return amount;
+              }
+
+              try {
+                return new Intl.NumberFormat('en-US', {
+                  style: 'currency',
+                  currency: currency,
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 4
+                }).format(value);
+              } catch {
+                return `${amount} ${currency}`;
+              }
+            };
+
+            return formatCurrency(
+              String(request.result.convertedAmount).replace(/[^\d.-]/g, ''),
+              request.result.toCurrency
+            );
+          })();
+
+        const toastMessage = `${formattedAmount} (Click to copy)`;
+
+        // Extract numeric value for copying (remove currency symbols and letters)
+        const numericValue = formattedAmount.replace(/[^\d,.-]/g, '').trim();
+
+        if (visualFeedback && visualFeedback.showToast) {
+          const toast = visualFeedback.showToast(toastMessage, 'success', 5000);
+
+          // Make toast clickable to copy result
+          if (toast) {
+            toast.style.cursor = 'pointer';
+            toast.addEventListener('click', () => {
+              visualFeedback.copyToClipboard(
+                numericValue,
+                true,
+                'Number copied!'
+              );
+              visualFeedback.hideToast(toast);
+            });
+          }
+        } else {
+          // Fallback if visual feedback is not loaded
+          console.warn(
+            '⚠️ Visual feedback not loaded, creating fallback toast'
+          );
+          const fallbackToast = document.createElement('div');
+          fallbackToast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #4CAF50;
+            color: white;
+            padding: 16px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 10000;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            max-width: 300px;
+            cursor: pointer;
+          `;
+
+          fallbackToast.textContent = toastMessage;
+          fallbackToast.addEventListener('click', () => {
+            if (window.navigator && window.navigator.clipboard) {
+              window.navigator.clipboard
+                .writeText(numericValue)
+                .then(() => {
+                  fallbackToast.textContent = 'Number copied!';
+                  setTimeout(() => fallbackToast.remove(), 1000);
+                })
+                .catch(() => {
+                  console.warn('Failed to copy to clipboard');
+                  fallbackToast.remove();
+                });
+            } else {
+              console.warn('Clipboard API not available');
+              fallbackToast.remove();
+            }
           });
+
+          document.body.appendChild(fallbackToast);
+          setTimeout(() => {
+            if (fallbackToast.parentNode) {
+              fallbackToast.remove();
+            }
+          }, 5000);
         }
       }
       sendResponse({ success: true });
@@ -987,7 +1089,7 @@ function createBasicTooltip(
   } else if (result) {
     tooltip.setAttribute(
       'aria-label',
-      `Currency conversion result: ${currencyInfo?.amount || result.originalAmount} ${currencyInfo?.currency || 'USD'} equals ${result.convertedAmount}`
+      `Currency conversion result: ${currencyInfo?.amount || result.originalAmount} ${currencyInfo?.currency || 'USD'} equals ${result.formattedAmount || result.convertedAmount}`
     );
   } else {
     tooltip.setAttribute('aria-label', 'Currency conversion in progress');
@@ -1043,10 +1145,10 @@ function createBasicTooltip(
       </div>
       <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px; border-radius: 8px; margin-bottom: 8px;">
         <div style="font-size: 18px; font-weight: bold; margin-bottom: 4px;">
-          ${result.convertedAmount}
+          ${result.formattedAmount || result.convertedAmount}
         </div>
         <div style="font-size: 12px; opacity: 0.9;">
-          ${currencyInfo?.amount || result.originalAmount} ${fromCurrency} → ${result.convertedAmount}
+          ${currencyInfo?.amount || result.originalAmount} ${fromCurrency} → ${result.formattedAmount || result.convertedAmount}
         </div>
       </div>
       <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">
@@ -1107,14 +1209,44 @@ function createBasicTooltip(
 
       copyButton.addEventListener('click', e => {
         e.stopPropagation();
+
+        // Use the pre-formatted amount, or format it if not available
+        const formattedAmount =
+          result.formattedAmount ||
+          (() => {
+            const formatCurrency = (amount, currency) => {
+              const value = parseFloat(amount);
+              if (isNaN(value)) {
+                return amount;
+              }
+
+              try {
+                return new Intl.NumberFormat('en-US', {
+                  style: 'currency',
+                  currency: currency,
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 4
+                }).format(value);
+              } catch {
+                return `${amount} ${currency}`;
+              }
+            };
+
+            return formatCurrency(
+              String(result.convertedAmount).replace(/[^\d.-]/g, ''),
+              result.toCurrency || 'USD'
+            );
+          })();
+
+        // Extract numeric value for copying (remove currency symbols and letters)
+        const numericValue = formattedAmount.replace(/[^\d,.-]/g, '').trim();
+
         if (visualFeedback && visualFeedback.copyToClipboard) {
-          visualFeedback.copyToClipboard(result.convertedAmount);
+          visualFeedback.copyToClipboard(numericValue);
         } else {
           // Fallback copy to clipboard
           if (window.navigator && window.navigator.clipboard) {
-            window.navigator.clipboard
-              .writeText(result.convertedAmount)
-              .catch(() => {});
+            window.navigator.clipboard.writeText(numericValue).catch(() => {});
           }
         }
         copyButton.textContent = '✅ Copied!';
@@ -1127,7 +1259,7 @@ function createBasicTooltip(
         // Announce to screen reader
         if (accessibilityManager) {
           accessibilityManager.announceToScreenReader(
-            `Copied ${result.convertedAmount} to clipboard`
+            `Copied ${numericValue} to clipboard`
           );
         }
 

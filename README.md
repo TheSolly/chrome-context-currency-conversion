@@ -125,8 +125,9 @@ A Chrome extension that provides real-time currency conversion through context m
    - **Caching System**: 15-minute cache with automatic expiry and offline fallback
    - **Exchange Rate Service**: Comprehensive conversion engine with retry logic and error handling
    - **Conversion History**: Complete tracking system with favorites, statistics, and export functionality
+   - **Rate Alerts & Notifications**: Comprehensive alert system with target rate monitoring, push notifications, trend analysis, and alert history
 
-   **🆕 Phase 4, Task 4.2 - Exchange Rate Service ✅ COMPLETED**:
+   **🆕 Phase 6, Task 6.3 - Rate Alerts & Notifications ✅ COMPLETED**:
 
    - **Currency Conversion Engine**: Full-featured ExchangeRateService with precision calculations
    - **Smart Caching**: 15-minute active cache + 24-hour offline fallback cache
@@ -629,3 +630,18 @@ The extension now features professional-grade currency detection that rivals com
 - **Performance Optimized**: Cached results and efficient conversion calculations
 
 ---
+
+### 🔔 **Rate Alerts & Notifications - Phase 6** _NEW_
+
+- **Target Rate Monitoring**: Set custom target exchange rates with above/below/equals conditions
+- **Push Notifications**: Real-time Chrome notifications when rate targets are reached
+- **Smart Monitoring**: Configurable check intervals (15, 30, 60 minutes) with Chrome alarms API
+- **Alert Management**: Complete CRUD operations for creating, updating, deleting, and listing alerts
+- **Trend Analysis**: 7/30/90-day historical analysis with volatility calculations and trend detection
+- **Alert History**: Track all triggered alerts with timestamps, rates, and conditions
+- **Notification Settings**: Customizable sound, visual, and email notification preferences
+- **Rate Summaries**: Daily and weekly exchange rate summaries with key insights
+- **Alert Persistence**: Reliable storage using Chrome storage API with data validation
+- **Background Processing**: Efficient monitoring using Chrome alarms without battery drain
+- **Error Handling**: Graceful degradation when notifications are disabled or APIs unavailable
+- **Data Export**: Export alert history and trend data for external analysis

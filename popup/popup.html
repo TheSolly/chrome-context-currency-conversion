@@ -63,6 +63,17 @@
             <span aria-hidden="true">⭐</span>
             Favorites
           </button>
+          <button
+            id="alertsTab"
+            class="tab-button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="alertsPanel"
+            tabindex="-1"
+          >
+            <span aria-hidden="true">🔔</span>
+            Alerts
+          </button>
         </div>
       </nav>
 
@@ -747,6 +758,304 @@
           </div>
         </div>
         <!-- End Favorites Panel -->
+
+        <!-- Rate Alerts Panel -->
+        <div
+          id="alertsPanel"
+          class="tab-panel hidden p-4 space-y-4"
+          role="tabpanel"
+          aria-labelledby="alertsTab"
+        >
+          <!-- Alerts Header -->
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-lg" aria-hidden="true">🔔</span>
+              <h2 class="text-base font-semibold text-gray-900">Rate Alerts</h2>
+            </div>
+            <div class="flex gap-2">
+              <button
+                id="triggerRateCheck"
+                class="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                title="Check rates now"
+              >
+                📊 Check Now
+              </button>
+              <button
+                id="addAlert"
+                class="text-xs px-2 py-1 bg-primary-100 text-primary-700 rounded hover:bg-primary-200 transition-colors"
+                title="Add alert"
+              >
+                + Add Alert
+              </button>
+            </div>
+          </div>
+
+          <!-- Alert Settings Summary -->
+          <div
+            class="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-3"
+          >
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-gray-600">Active Alerts</span>
+              <span id="activeAlertsCount" class="font-semibold text-yellow-700"
+                >0</span
+              >
+            </div>
+            <div class="flex items-center justify-between text-sm mt-1">
+              <span class="text-gray-600">Notifications</span>
+              <span id="notificationsStatus" class="text-xs text-gray-500"
+                >Enabled</span
+              >
+            </div>
+          </div>
+
+          <!-- Add Alert Form (hidden by default) -->
+          <div id="addAlertForm" class="hidden setting-card">
+            <h3 class="text-sm font-medium text-gray-900 mb-3">
+              Create New Rate Alert
+            </h3>
+            <form id="newAlertForm" class="space-y-3">
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs text-gray-600 mb-1"
+                    >From Currency</label
+                  >
+                  <select
+                    id="alertFromCurrency"
+                    name="fromCurrency"
+                    class="currency-select"
+                  >
+                    <option value="">Select currency...</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-600 mb-1"
+                    >To Currency</label
+                  >
+                  <select
+                    id="alertToCurrency"
+                    name="toCurrency"
+                    class="currency-select"
+                  >
+                    <option value="">Select currency...</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs text-gray-600 mb-1"
+                  >Alert Condition</label
+                >
+                <select
+                  id="alertType"
+                  name="alertType"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                >
+                  <option value="above">Rate goes above target</option>
+                  <option value="below">Rate goes below target</option>
+                  <option value="change">Rate changes by percentage</option>
+                </select>
+              </div>
+
+              <div>
+                <label
+                  id="alertTargetLabel"
+                  class="block text-xs text-gray-600 mb-1"
+                  >Target Rate</label
+                >
+                <input
+                  type="number"
+                  id="alertTargetRate"
+                  name="targetRate"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  placeholder="e.g. 1.2500"
+                  step="0.0001"
+                />
+              </div>
+
+              <div>
+                <label class="block text-xs text-gray-600 mb-1"
+                  >Alert Name (optional)</label
+                >
+                <input
+                  type="text"
+                  id="alertLabel"
+                  name="alertLabel"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  placeholder="e.g. EUR/USD Watch"
+                />
+              </div>
+
+              <div class="flex gap-2">
+                <button
+                  type="submit"
+                  class="flex-1 px-3 py-2 bg-primary-600 text-white rounded-lg text-sm hover:bg-primary-700 transition-colors"
+                >
+                  Create Alert
+                </button>
+                <button
+                  type="button"
+                  id="cancelAlert"
+                  class="flex-1 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Alerts List -->
+          <div id="alertsList" class="space-y-2">
+            <!-- Alerts will be populated by JavaScript -->
+            <div
+              id="noAlertsMessage"
+              class="text-center text-gray-500 text-sm py-8"
+            >
+              No rate alerts configured. Create your first alert to get notified
+              of exchange rate changes!
+            </div>
+          </div>
+
+          <!-- Alert Settings -->
+          <div class="border-t pt-4">
+            <h3 class="text-sm font-medium text-gray-900 mb-3">
+              Alert Settings
+            </h3>
+
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <label class="text-sm text-gray-700"
+                  >Enable Notifications</label
+                >
+                <input
+                  type="checkbox"
+                  id="enableAlertNotifications"
+                  class="toggle-checkbox"
+                  checked
+                />
+              </div>
+
+              <div class="flex items-center justify-between">
+                <label class="text-sm text-gray-700">Daily Summary</label>
+                <input
+                  type="checkbox"
+                  id="enableDailySummary"
+                  class="toggle-checkbox"
+                  checked
+                />
+              </div>
+
+              <div class="flex items-center justify-between">
+                <label class="text-sm text-gray-700">Weekly Summary</label>
+                <input
+                  type="checkbox"
+                  id="enableWeeklySummary"
+                  class="toggle-checkbox"
+                  checked
+                />
+              </div>
+
+              <div>
+                <label class="block text-xs text-gray-600 mb-1"
+                  >Check Interval (minutes)</label
+                >
+                <select
+                  id="alertCheckInterval"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                >
+                  <option value="15">Every 15 minutes</option>
+                  <option value="30">Every 30 minutes</option>
+                  <option value="60" selected>Every hour</option>
+                  <option value="120">Every 2 hours</option>
+                  <option value="360">Every 6 hours</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs text-gray-600 mb-1"
+                  >Summary Time</label
+                >
+                <input
+                  type="time"
+                  id="alertSummaryTime"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                  value="09:00"
+                />
+              </div>
+
+              <div class="flex items-center justify-between">
+                <label class="text-sm text-gray-700">Quiet Hours</label>
+                <input
+                  type="checkbox"
+                  id="enableQuietHours"
+                  class="toggle-checkbox"
+                />
+              </div>
+
+              <div id="quietHoursSection" class="hidden grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-xs text-gray-600 mb-1">Start</label>
+                  <input
+                    type="time"
+                    id="quietHoursStart"
+                    class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                    value="22:00"
+                  />
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-600 mb-1">End</label>
+                  <input
+                    type="time"
+                    id="quietHoursEnd"
+                    class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                    value="08:00"
+                  />
+                </div>
+              </div>
+
+              <button
+                id="saveAlertSettings"
+                class="w-full px-3 py-2 bg-secondary-600 text-white rounded-lg text-sm hover:bg-secondary-700 transition-colors"
+              >
+                Save Alert Settings
+              </button>
+            </div>
+          </div>
+
+          <!-- Trend Analysis -->
+          <div class="border-t pt-4">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-medium text-gray-900">Trend Analysis</h3>
+              <button
+                id="refreshTrends"
+                class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
+              >
+                📈 Refresh
+              </button>
+            </div>
+
+            <div id="trendsList" class="space-y-2">
+              <div class="text-center text-gray-500 text-sm py-4">
+                Click "Refresh" to analyze recent exchange rate trends
+              </div>
+            </div>
+          </div>
+
+          <!-- Alert History -->
+          <div class="border-t pt-4">
+            <h3 class="text-sm font-medium text-gray-900 mb-3">
+              Recent Alerts
+            </h3>
+            <div
+              id="alertHistoryList"
+              class="space-y-2 max-h-32 overflow-y-auto"
+            >
+              <div class="text-center text-gray-500 text-sm py-4">
+                No recent alerts
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- End Alerts Panel -->
       </main>
 
       <!-- Footer -->

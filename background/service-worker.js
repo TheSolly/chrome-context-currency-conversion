@@ -12,6 +12,8 @@ import {
 } from '/utils/conversion-utils.js';
 // Phase 6, Task 6.2: Import Conversion History
 import { conversionHistory } from '/utils/conversion-history.js';
+// Phase 6, Task 6.3: Import Rate Alerts Manager
+import { rateAlertsManager } from '/utils/rate-alerts-manager.js';
 
 // Global state management
 let currentCurrencyInfo = null;
@@ -80,6 +82,14 @@ chrome.runtime.onInstalled.addListener(async () => {
     console.log('📚 Conversion History initialized in background');
   } catch (error) {
     logError(error, 'conversionHistoryInit');
+  }
+
+  // Phase 6, Task 6.3: Initialize Rate Alerts Manager
+  try {
+    await rateAlertsManager.initialize();
+    console.log('🔔 Rate Alerts Manager initialized in background');
+  } catch (error) {
+    logError(error, 'rateAlertsManagerInit');
   }
 
   await initializeContextMenus();
@@ -282,6 +292,11 @@ async function handleCurrencyConversion(info, tab, targetCurrency = null) {
       );
 
       console.log('✅ Conversion completed successfully:', conversionResult);
+      console.log(
+        '🔍 DEBUG formattedAmount in result:',
+        conversionResult.formattedAmount
+      );
+      console.log('🔍 DEBUG _debugInfo:', conversionResult._debugInfo);
 
       // Send the actual result to content script
       if (tab?.id) {
@@ -711,6 +726,17 @@ async function performCurrencyConversion(currencyData, targetCurrency = null) {
         conversionResult.convertedAmount,
         conversionResult.toCurrency
       ),
+
+      // DEBUG: Log the formatted amount being created
+      _debugInfo: {
+        rawAmount: conversionResult.convertedAmount,
+        currency: conversionResult.toCurrency,
+        formatted: formatConvertedAmount(
+          conversionResult.convertedAmount,
+          conversionResult.toCurrency
+        )
+      },
+
       formattedRate: formatExchangeRate(
         conversionResult.rate,
         conversionResult.fromCurrency,
@@ -720,6 +746,8 @@ async function performCurrencyConversion(currencyData, targetCurrency = null) {
     };
 
     console.log('✅ Currency conversion completed:', result);
+    console.log('🔍 DEBUG formattedAmount in result:', result.formattedAmount);
+    console.log('🔍 DEBUG _debugInfo:', result._debugInfo);
 
     // Phase 6, Task 6.2: Save successful conversion to history
     try {
@@ -811,5 +839,177 @@ async function updateContextMenuCurrencies() {
     console.log('🔄 Context menus updated with new settings');
   } catch (error) {
     logError(error, 'updateContextMenuCurrencies');
+  }
+}
+
+// Phase 6, Task 6.3: Rate Alerts notification handling
+chrome.notifications.onClicked.addListener(async notificationId => {
+  try {
+    console.log('📱 Notification clicked:', notificationId);
+
+    // Clear the notification
+    await chrome.notifications.clear(notificationId);
+
+    // Handle different notification types
+    if (notificationId.startsWith('alert_')) {
+      // Rate alert notification - open popup to manage alerts
+      await chrome.action.openPopup();
+    } else if (
+      notificationId.startsWith('daily-summary') ||
+      notificationId.startsWith('weekly-summary')
+    ) {
+      // Summary notification - could open a detailed view
+      await chrome.action.openPopup();
+    }
+  } catch (error) {
+    logError(error, 'notificationClick', { notificationId });
+  }
+});
+
+chrome.notifications.onClosed.addListener(async (notificationId, byUser) => {
+  console.log('📱 Notification closed:', notificationId, 'by user:', byUser);
+});
+
+// Handle notification button clicks (if we add action buttons in future)
+chrome.notifications.onButtonClicked.addListener(
+  async (notificationId, buttonIndex) => {
+    try {
+      console.log(
+        '📱 Notification button clicked:',
+        notificationId,
+        'button:',
+        buttonIndex
+      );
+
+      // Handle specific button actions based on notification type
+      if (notificationId.startsWith('alert_')) {
+        switch (buttonIndex) {
+          case 0: {
+            // Could be "View Details" button
+            await chrome.action.openPopup();
+            break;
+          }
+          case 1: {
+            // Could be "Disable Alert" button
+            const alertId = notificationId.replace('alert_', '');
+            await rateAlertsManager.updateAlert(alertId, { enabled: false });
+            break;
+          }
+        }
+      }
+
+      await chrome.notifications.clear(notificationId);
+    } catch (error) {
+      logError(error, 'notificationButtonClick', {
+        notificationId,
+        buttonIndex
+      });
+    }
+  }
+);
+
+// Phase 6, Task 6.3: Additional message handlers for rate alerts
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // Handle rate alerts related messages from popup
+  if (message.type === 'RATE_ALERTS_ACTION') {
+    handleRateAlertsMessage(message, sendResponse);
+    return true; // Keep the message channel open for async response
+  }
+
+  // Existing message handlers remain unchanged
+  return false;
+});
+
+// Handle rate alerts messages from popup
+async function handleRateAlertsMessage(message, sendResponse) {
+  try {
+    switch (message.action) {
+      case 'CREATE_ALERT': {
+        const newAlert = await rateAlertsManager.createAlert(message.data);
+        sendResponse({ success: true, data: newAlert });
+        break;
+      }
+
+      case 'UPDATE_ALERT': {
+        const updatedAlert = await rateAlertsManager.updateAlert(
+          message.data.id,
+          message.data.updates
+        );
+        sendResponse({ success: true, data: updatedAlert });
+        break;
+      }
+
+      case 'DELETE_ALERT': {
+        const deletedAlert = await rateAlertsManager.deleteAlert(
+          message.data.id
+        );
+        sendResponse({ success: true, data: deletedAlert });
+        break;
+      }
+
+      case 'GET_ALERTS': {
+        const alerts = rateAlertsManager.getAlerts();
+        sendResponse({ success: true, data: alerts });
+        break;
+      }
+
+      case 'GET_ALERT_SETTINGS': {
+        const alertSettings = rateAlertsManager.getAlertSettings();
+        sendResponse({ success: true, data: alertSettings });
+        break;
+      }
+
+      case 'UPDATE_ALERT_SETTINGS': {
+        const newAlertSettings = await rateAlertsManager.updateAlertSettings(
+          message.data
+        );
+        sendResponse({ success: true, data: newAlertSettings });
+        break;
+      }
+
+      case 'GET_ALERT_HISTORY': {
+        const alertHistory = rateAlertsManager.getAlertHistory(
+          message.data?.limit
+        );
+        sendResponse({ success: true, data: alertHistory });
+        break;
+      }
+
+      case 'GET_RATE_HISTORY': {
+        const rateHistory = rateAlertsManager.getRateHistory(
+          message.data?.fromCurrency,
+          message.data?.toCurrency,
+          message.data?.limit
+        );
+        sendResponse({ success: true, data: rateHistory });
+        break;
+      }
+
+      case 'GET_TREND_DATA': {
+        const trendData = rateAlertsManager.getTrendData(message.data?.period);
+        sendResponse({ success: true, data: trendData });
+        break;
+      }
+
+      case 'ANALYZE_TRENDS': {
+        const trends = await rateAlertsManager.analyzeTrends(
+          message.data?.days
+        );
+        sendResponse({ success: true, data: trends });
+        break;
+      }
+
+      case 'TRIGGER_RATE_CHECK': {
+        await rateAlertsManager.checkRates();
+        sendResponse({ success: true, message: 'Rate check triggered' });
+        break;
+      }
+
+      default:
+        sendResponse({ success: false, error: 'Unknown rate alerts action' });
+    }
+  } catch (error) {
+    logError(error, 'handleRateAlertsMessage', message);
+    sendResponse({ success: false, error: error.message });
   }
 }

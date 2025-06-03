@@ -4,7 +4,13 @@
   "version": "1.0.0",
   "description": "Convert currencies directly from context menu when you highlight amounts on web pages",
 
-  "permissions": ["contextMenus", "storage", "activeTab"],
+  "permissions": [
+    "contextMenus",
+    "storage",
+    "activeTab",
+    "notifications",
+    "alarms"
+  ],
 
   "host_permissions": ["https://*/*", "http://*/*"],
 

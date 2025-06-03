@@ -1,5 +1,6 @@
 import js from '@eslint/js';
 import prettier from 'eslint-config-prettier';
+import prettierPlugin from 'eslint-plugin-prettier';
 
 export default [
   js.configs.recommended,
@@ -25,6 +26,9 @@ export default [
   },
   // Browser extension files
   {
+    plugins: {
+      prettier: prettierPlugin
+    },
     languageOptions: {
       ecmaVersion: 2021,
       sourceType: 'module',
@@ -49,19 +53,13 @@ export default [
       }
     },
     rules: {
+      'prettier/prettier': 'error',
       'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
       'no-console': 'off',
       'prefer-const': 'error',
       'no-var': 'error',
       eqeqeq: ['error', 'always'],
       curly: ['error', 'all'],
-      'brace-style': ['error', '1tbs'],
-      'comma-dangle': ['error', 'never'],
-      quotes: ['error', 'single'],
-      semi: ['error', 'always'],
-      indent: ['error', 2],
-      'no-trailing-spaces': 'error',
-      'eol-last': 'error',
       'no-prototype-builtins': 'off'
     }
   }

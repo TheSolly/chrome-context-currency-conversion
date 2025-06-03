@@ -429,9 +429,33 @@ export class VisualFeedbackManager {
       }
     };
 
+    // Format the currency amount properly
+    const formatCurrency = (amount, currency) => {
+      const value = parseFloat(amount);
+      if (isNaN(value)) {
+        return amount;
+      }
+
+      try {
+        return new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: currency,
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 4
+        }).format(value);
+      } catch {
+        return `${amount} ${currency}`;
+      }
+    };
+
+    const formattedAmount = formatCurrency(
+      String(result.convertedAmount).replace(/[^\d.-]/g, ''),
+      result.toCurrency || 'USD'
+    );
+
     const copyButtonHtml = showCopyButton
       ? `
-      <button class="vf-copy-button" data-copy-text="${String(result.convertedAmount)}">
+      <button class="vf-copy-button" data-copy-text="${formattedAmount}">
         📋 Copy
       </button>
     `
@@ -440,11 +464,11 @@ export class VisualFeedbackManager {
     resultEl.innerHTML = `
       ${copyButtonHtml}
       <div class="vf-conversion-amount">
-        ${result.convertedAmount} ${result.toCurrency || 'TO'}
+        ${formattedAmount}
       </div>
       <div class="vf-conversion-details">
         <div class="vf-conversion-summary">
-          ${result.originalAmount} ${result.fromCurrency || 'FROM'} → ${result.convertedAmount} ${result.toCurrency || 'TO'}
+          ${result.originalAmount} ${result.fromCurrency || 'FROM'} → ${formattedAmount}
         </div>
         <div class="vf-exchange-rate">
           ${formatExchangeRate(result.exchangeRate, result.fromCurrency || 'FROM', result.toCurrency || 'TO')}
@@ -464,8 +488,8 @@ export class VisualFeedbackManager {
       if (copyButton) {
         copyButton.addEventListener('click', () => {
           const textToCopy =
-            copyButton.getAttribute('data-copy-text') || result.convertedAmount;
-          this.copyToClipboard(textToCopy);
+            copyButton.getAttribute('data-copy-text') || formattedAmount;
+          this.copyToClipboard(textToCopy, true, 'Amount copied!');
         });
       }
     }
@@ -681,9 +705,14 @@ export class VisualFeedbackManager {
         copyButton.addEventListener('mouseleave', () => {
           copyButton.style.transform = 'scale(1)';
         });
+
         copyButton.addEventListener('click', async e => {
           e.stopPropagation();
-          const success = await this.copyToClipboard(formattedConverted);
+          const success = await this.copyToClipboard(
+            formattedConverted,
+            true,
+            'Amount copied!'
+          );
           if (success) {
             copyButton.innerHTML = '✅ Copied!';
             copyButton.style.background =
@@ -845,7 +874,7 @@ export class VisualFeedbackManager {
 
   /**
    * Copy text to clipboard with visual feedback
-   */ async copyToClipboard(text, showFeedback = true) {
+   */ async copyToClipboard(text, showFeedback = true, customMessage = null) {
     try {
       if (
         typeof window !== 'undefined' &&
@@ -864,7 +893,8 @@ export class VisualFeedbackManager {
       }
 
       if (showFeedback) {
-        this.showToast('Copied to clipboard!', 'success', 2000);
+        const message = customMessage || `Copied ${text} to clipboard!`;
+        this.showToast(message, 'success', 2000);
       }
 
       return true;
