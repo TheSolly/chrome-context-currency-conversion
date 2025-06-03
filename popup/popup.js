@@ -286,7 +286,8 @@ function setupEventListeners() {
 // Phase 6, Task 6.3: Initialize rate alerts functionality
 function initializeAlerts() {
   // Set up rate alerts UI and event listeners
-  // This would connect to the rate alerts manager
+  setupNewAlertForm();
+  setupAlertSettings();
   console.log('📊 Rate alerts initialized');
 }
 
@@ -450,6 +451,12 @@ async function handleCurrencyChange(event) {
   // Update settings through SettingsManager with tracking
   await updateSettingWithTracking(id, value);
   currentSettings = await settingsManager.getSettings();
+
+  // Add selected currency to favorites automatically (if not already there)
+  if (value && currencyPreferences.getFavorites().indexOf(value) === -1) {
+    setTimeout(() => addToFavorites(value), 500);
+  }
+
   console.log(
     `✅ Settings updated, new secondaryCurrency: ${currentSettings.secondaryCurrency}`
   );
@@ -457,6 +464,11 @@ async function handleCurrencyChange(event) {
 
 async function saveSettings() {
   try {
+    // Validate settings before saving
+    if (!validateAndUpdateSettings()) {
+      return;
+    }
+
     // Wait for any pending operations to complete first
     await waitForPendingOperations();
 
@@ -533,12 +545,20 @@ function showAddCurrencyDialog() {
 }
 
 async function addCurrency(currencyCode) {
+  // Check feature access before adding currency
+  if (!checkFeatureAccess('maxCurrencies', 1)) {
+    return;
+  }
+
   const maxCurrencies = FEATURES[userPlan].maxCurrencies;
 
   if (currentSettings.additionalCurrencies.length >= maxCurrencies) {
     showStatus(`Maximum ${maxCurrencies} currencies allowed`, 'error');
     return;
   }
+
+  // Track feature usage
+  await trackFeatureUsage('currencyAdded', 1);
 
   const newAdditionalCurrencies = [
     ...currentSettings.additionalCurrencies,
@@ -1703,17 +1723,20 @@ async function loadAlertsContent() {
   try {
     // Load alerts from background
     const response = await chrome.runtime.sendMessage({
-      action: 'rateAlerts',
-      subAction: 'getAlerts'
+      type: 'RATE_ALERTS_ACTION',
+      action: 'GET_ALERTS'
     });
 
     if (response && response.success) {
-      displayAlerts(response.alerts || []);
+      displayAlerts(response.data || []);
       await loadAlertSettings();
       await loadAlertHistory();
       await loadTrendAnalysis();
     } else {
-      console.error('Failed to load alerts:', response?.error);
+      console.error(
+        'Failed to load alerts:',
+        response?.error || 'Unknown error'
+      );
       showStatusMessage('Failed to load alerts', 'error');
     }
   } catch (error) {
@@ -1727,15 +1750,24 @@ async function loadAlertsContent() {
  */
 function displayAlerts(alerts) {
   const alertsList = document.getElementById('alertsList');
-  const alertsEmpty = document.getElementById('alertsEmpty');
+  const alertsEmpty = document.getElementById('noAlertsMessage');
 
-  if (!alerts || alerts.length === 0) {
-    alertsList.innerHTML = '';
-    alertsEmpty.classList.remove('hidden');
+  if (!alertsList) {
+    console.error('❌ Alert list element not found');
     return;
   }
 
-  alertsEmpty.classList.add('hidden');
+  if (!alerts || alerts.length === 0) {
+    alertsList.innerHTML = '';
+    if (alertsEmpty) {
+      alertsEmpty.classList.remove('hidden');
+    }
+    return;
+  }
+
+  if (alertsEmpty) {
+    alertsEmpty.classList.add('hidden');
+  }
 
   alertsList.innerHTML = alerts
     .map(
@@ -1962,9 +1994,9 @@ async function createNewAlert() {
     }
 
     const response = await chrome.runtime.sendMessage({
-      action: 'rateAlerts',
-      subAction: 'createAlert',
-      alertData
+      type: 'RATE_ALERTS_ACTION',
+      action: 'CREATE_ALERT',
+      data: alertData
     });
 
     if (response && response.success) {
@@ -1987,28 +2019,54 @@ async function editAlert(alertId) {
   try {
     // Get current alert data
     const response = await chrome.runtime.sendMessage({
-      action: 'rateAlerts',
-      subAction: 'getAlert',
-      alertId
+      type: 'RATE_ALERTS_ACTION',
+      action: 'GET_ALERTS' // Get all alerts and find the one we need
     });
 
-    if (response && response.success && response.alert) {
-      const alert = response.alert;
+    if (response && response.success && response.data) {
+      const alert = response.data.find(a => a.id === alertId);
+      if (!alert) {
+        showStatusMessage('Alert not found', 'error');
+        return;
+      }
 
       // Populate form with current data
-      document.getElementById('alertFromCurrency').value = alert.fromCurrency;
-      document.getElementById('alertToCurrency').value = alert.toCurrency;
-      document.getElementById('alertType').value = alert.type;
-      document.getElementById('alertTargetRate').value = alert.targetRate;
-      document.getElementById('alertLabel').value = alert.label;
+      const fromCurrencyInput = document.getElementById('alertFromCurrency');
+      const toCurrencyInput = document.getElementById('alertToCurrency');
+      const alertTypeInput = document.getElementById('alertType');
+      const targetRateInput = document.getElementById('alertTargetRate');
+      const labelInput = document.getElementById('alertLabel');
+
+      if (fromCurrencyInput) {
+        fromCurrencyInput.value = alert.fromCurrency;
+      }
+      if (toCurrencyInput) {
+        toCurrencyInput.value = alert.toCurrency;
+      }
+      if (alertTypeInput) {
+        alertTypeInput.value = alert.type;
+      }
+      if (targetRateInput) {
+        targetRateInput.value = alert.targetRate;
+      }
+      if (labelInput) {
+        labelInput.value = alert.label;
+      }
 
       updateAlertTargetInput();
 
       // Change form to edit mode
       const form = document.getElementById('newAlertForm');
+      if (!form) {
+        console.error('❌ Alert form element not found');
+        return;
+      }
+
       const submitBtn = form.querySelector('button[type="submit"]');
-      submitBtn.textContent = 'Update Alert';
-      submitBtn.dataset.editId = alertId;
+      if (submitBtn) {
+        submitBtn.textContent = 'Update Alert';
+        submitBtn.dataset.editId = alertId;
+      }
 
       // Add cancel button
       if (!document.getElementById('cancelEditBtn')) {
@@ -2055,10 +2113,12 @@ async function updateAlert(alertId) {
     };
 
     const response = await chrome.runtime.sendMessage({
-      action: 'rateAlerts',
-      subAction: 'updateAlert',
-      alertId,
-      alertData
+      type: 'RATE_ALERTS_ACTION',
+      action: 'UPDATE_ALERT',
+      data: {
+        id: alertId,
+        updates: alertData
+      }
     });
 
     if (response && response.success) {
@@ -2102,10 +2162,31 @@ function cancelEditAlert() {
  */
 async function toggleAlert(alertId) {
   try {
+    // First get all alerts to find the current status
+    const getResponse = await chrome.runtime.sendMessage({
+      type: 'RATE_ALERTS_ACTION',
+      action: 'GET_ALERTS'
+    });
+
+    if (!getResponse || !getResponse.success) {
+      showStatusMessage('Failed to get alert status', 'error');
+      return;
+    }
+
+    const alert = getResponse.data.find(a => a.id === alertId);
+    if (!alert) {
+      showStatusMessage('Alert not found', 'error');
+      return;
+    }
+
+    // Toggle the enabled status
     const response = await chrome.runtime.sendMessage({
-      action: 'rateAlerts',
-      subAction: 'toggleAlert',
-      alertId
+      type: 'RATE_ALERTS_ACTION',
+      action: 'UPDATE_ALERT',
+      data: {
+        id: alertId,
+        updates: { enabled: !alert.enabled }
+      }
     });
 
     if (response && response.success) {
@@ -2130,9 +2211,9 @@ async function deleteAlert(alertId) {
 
   try {
     const response = await chrome.runtime.sendMessage({
-      action: 'rateAlerts',
-      subAction: 'deleteAlert',
-      alertId
+      type: 'RATE_ALERTS_ACTION',
+      action: 'DELETE_ALERT',
+      data: { id: alertId }
     });
 
     if (response && response.success) {
@@ -2153,24 +2234,37 @@ async function deleteAlert(alertId) {
 async function loadAlertSettings() {
   try {
     const response = await chrome.runtime.sendMessage({
-      action: 'rateAlerts',
-      subAction: 'getSettings'
+      type: 'RATE_ALERTS_ACTION',
+      action: 'GET_ALERT_SETTINGS'
     });
 
     if (response && response.success) {
-      const settings = response.settings;
+      const settings = response.data;
 
-      // Update UI with current settings
-      document.getElementById('enableNotifications').checked =
-        settings.enableNotifications;
-      document.getElementById('enableSounds').checked = settings.enableSounds;
-      document.getElementById('enableDailySummary').checked =
-        settings.enableDailySummary;
-      document.getElementById('enableWeeklySummary').checked =
-        settings.enableWeeklySummary;
-      document.getElementById('checkInterval').value = settings.checkInterval;
-      document.getElementById('maxAlertsPerDay').value =
-        settings.maxAlertsPerDay;
+      // Update UI with current settings - using correct element IDs and null checks
+      const enableNotifications = document.getElementById(
+        'enableAlertNotifications'
+      );
+      if (enableNotifications) {
+        enableNotifications.checked = settings.enableNotifications;
+      }
+
+      const enableDailySummary = document.getElementById('enableDailySummary');
+      if (enableDailySummary) {
+        enableDailySummary.checked = settings.enableDailySummary;
+      }
+
+      const enableWeeklySummary = document.getElementById(
+        'enableWeeklySummary'
+      );
+      if (enableWeeklySummary) {
+        enableWeeklySummary.checked = settings.enableWeeklySummary;
+      }
+
+      const checkInterval = document.getElementById('alertCheckInterval');
+      if (checkInterval) {
+        checkInterval.value = settings.checkInterval;
+      }
     }
   } catch (error) {
     console.error('❌ Failed to load alert settings:', error);
@@ -2182,23 +2276,30 @@ async function loadAlertSettings() {
  */
 async function saveAlertSettings() {
   try {
+    const enableNotifications = document.getElementById(
+      'enableAlertNotifications'
+    );
+    const enableDailySummary = document.getElementById('enableDailySummary');
+    const enableWeeklySummary = document.getElementById('enableWeeklySummary');
+    const checkInterval = document.getElementById('alertCheckInterval');
+
     const settings = {
-      enableNotifications: document.getElementById('enableNotifications')
-        .checked,
-      enableSounds: document.getElementById('enableSounds').checked,
-      enableDailySummary: document.getElementById('enableDailySummary').checked,
-      enableWeeklySummary: document.getElementById('enableWeeklySummary')
-        .checked,
-      checkInterval: parseInt(document.getElementById('checkInterval').value),
-      maxAlertsPerDay: parseInt(
-        document.getElementById('maxAlertsPerDay').value
-      )
+      enableNotifications: enableNotifications
+        ? enableNotifications.checked
+        : false,
+      enableDailySummary: enableDailySummary
+        ? enableDailySummary.checked
+        : false,
+      enableWeeklySummary: enableWeeklySummary
+        ? enableWeeklySummary.checked
+        : false,
+      checkInterval: checkInterval ? parseInt(checkInterval.value) : 60
     };
 
     const response = await chrome.runtime.sendMessage({
-      action: 'rateAlerts',
-      subAction: 'updateSettings',
-      settings
+      type: 'RATE_ALERTS_ACTION',
+      action: 'UPDATE_ALERT_SETTINGS',
+      data: settings
     });
 
     if (response && response.success) {
@@ -2218,12 +2319,12 @@ async function saveAlertSettings() {
 async function loadAlertHistory() {
   try {
     const response = await chrome.runtime.sendMessage({
-      action: 'rateAlerts',
-      subAction: 'getHistory'
+      type: 'RATE_ALERTS_ACTION',
+      action: 'GET_ALERT_HISTORY'
     });
 
     if (response && response.success) {
-      displayAlertHistory(response.history || []);
+      displayAlertHistory(response.data || []);
     }
   } catch (error) {
     console.error('❌ Failed to load alert history:', error);
@@ -2235,6 +2336,11 @@ async function loadAlertHistory() {
  */
 function displayAlertHistory(history) {
   const historyContainer = document.getElementById('alertHistoryList');
+
+  if (!historyContainer) {
+    console.error('❌ Alert history container element not found');
+    return;
+  }
 
   if (!history || history.length === 0) {
     historyContainer.innerHTML =
@@ -2269,12 +2375,13 @@ function displayAlertHistory(history) {
 async function loadTrendAnalysis() {
   try {
     const response = await chrome.runtime.sendMessage({
-      action: 'rateAlerts',
-      subAction: 'getTrendAnalysis'
+      type: 'RATE_ALERTS_ACTION',
+      action: 'ANALYZE_TRENDS',
+      data: { days: 30 } // Default to 30 days
     });
 
     if (response && response.success) {
-      displayTrendAnalysis(response.trends || {});
+      displayTrendAnalysis(response.data || {});
     }
   } catch (error) {
     console.error('❌ Failed to load trend analysis:', error);
@@ -2286,6 +2393,13 @@ async function loadTrendAnalysis() {
  */
 function displayTrendAnalysis(trends) {
   const trendsContainer = document.getElementById('trendAnalysisList');
+
+  if (!trendsContainer) {
+    console.warn(
+      '⚠️ Trend analysis container element not found - feature may not be implemented in UI'
+    );
+    return;
+  }
 
   if (!trends || Object.keys(trends).length === 0) {
     trendsContainer.innerHTML =
@@ -2951,10 +3065,17 @@ function updateFeatureAccess() {
  */
 function checkFeatureAccess(featureName, amount = 1) {
   if (!subscriptionManager) {
-    return { allowed: false, reason: 'Subscription system not available' };
+    console.warn('Subscription system not available, allowing action');
+    return true; // Allow action if subscription system is not available
   }
 
-  return subscriptionManager.canPerformAction(featureName, amount);
+  const result = subscriptionManager.canPerformAction(featureName, amount);
+  if (!result.allowed) {
+    showStatus(result.reason || 'Feature not available in your plan', 'error');
+    return false;
+  }
+
+  return true;
 }
 
 /**

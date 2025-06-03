@@ -224,7 +224,7 @@ A Chrome extension that provides real-time currency conversion through context m
 
 - [ ] Research Chrome extension ad policies
 - [ ] Implement non-intrusive ad placements
-- [ ] Partner with relevant ad networks
+- [ ] Partner with relevant ad networks including Egypt/MENA region
 - [ ] A/B test ad positions and formats
 
 ### Task 7.3: Alternative Monetization
