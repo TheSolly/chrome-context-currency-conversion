@@ -947,6 +947,76 @@ export class PaymentProviderFactory {
 }
 
 /**
+ * Get payment providers for UI display
+ * @param {string} countryCode - Optional country code to filter providers
+ * @returns {Array} Array of payment provider information for display
+ */
+export async function getPaymentProviders(countryCode = 'US') {
+  try {
+    const providers = PaymentProviderFactory.getProviderForCountry(countryCode);
+
+    // Provider display information
+    const providerInfo = {
+      stripe: {
+        name: 'Stripe',
+        icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiByeD0iOCIgZmlsbD0iIzY3NzJFNSIvPgo8cGF0aCBkPSJNMTMuNSAxNi41QzEzLjUgMTQuNTcgMTUuMDcgMTMgMTcgMTNIMjNDMjQuOTMgMTMgMjYuNSAxNC41NyAyNi41IDE2LjVWMjMuNUMyNi41IDI1LjQzIDI0LjkzIDI3IDIzIDI3SDE3QzE1LjA3IDI3IDEzLjUgMjUuNDMgMTMuNSAyMy41VjE2LjVaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K',
+        recommended: countryCode === 'US'
+      },
+      paypal: {
+        name: 'PayPal',
+        icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiByeD0iOCIgZmlsbD0iIzAwNDBBMyIvPgo8cGF0aCBkPSJNMTAgMTVIMjVDMjcuNzYgMTUgMzAgMTcuMjQgMzAgMjBDMzAgMjIuNzYgMjcuNzYgMjUgMjUgMjVIMjBMMTguNSAyOEgxNUwxNyAyNUgxNUMxMi4yNCAyNSAxMCAyMi43NiAxMCAyMFYxNVoiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPgo=',
+        recommended: false
+      },
+      paddle: {
+        name: 'Paddle',
+        icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiByeD0iOCIgZmlsbD0iIzIzMUY1NyIvPgo8cGF0aCBkPSJNMTUgMTJMMjUgMThMMjAgMjVMMTAgMTlMMTUgMTJaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K',
+        recommended: countryCode === 'GB'
+      },
+      paymob: {
+        name: 'Paymob',
+        icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiByeD0iOCIgZmlsbD0iIzAwOEI4QiIvPgo8cGF0aCBkPSJNMTUgMTVIMjVWMjVIMTVWMTVaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K',
+        recommended: countryCode === 'EG'
+      }
+    };
+
+    // Default fallback icon
+    const defaultIcon =
+      'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiByeD0iOCIgZmlsbD0iIzY2NjY2NiIvPgo8L3N2Zz4K';
+
+    // Map providers to display format
+    const displayProviders = providers.map(provider => ({
+      id: provider.id,
+      name: providerInfo[provider.id]?.name || provider.name,
+      icon: providerInfo[provider.id]?.icon || defaultIcon,
+      recommended: providerInfo[provider.id]?.recommended || false,
+      priority: provider.priority
+    }));
+
+    return displayProviders;
+  } catch (error) {
+    console.error('Error getting payment providers:', error);
+
+    // Return fallback providers if factory fails
+    return [
+      {
+        id: 'paypal',
+        name: 'PayPal',
+        icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiByeD0iOCIgZmlsbD0iIzAwNDBBMyIvPgo8cGF0aCBkPSJNMTAgMTVIMjVDMjcuNzYgMTUgMzAgMTcuMjQgMzAgMjBDMzAgMjIuNzYgMjcuNzYgMjUgMjUgMjVIMjBMMTguNSAyOEgxNUwxNyAyNUgxNUMxMi4yNCAyNSAxMCAyMi43NiAxMCAyMFYxNVoiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPgo=',
+        recommended: true,
+        priority: 1
+      },
+      {
+        id: 'stripe',
+        name: 'Stripe',
+        icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiByeD0iOCIgZmlsbD0iIzY3NzJFNSIvPgo8cGF0aCBkPSJNMTMuNSAxNi41QzEzLjUgMTQuNTcgMTUuMDcgMTMgMTcgMTNIMjNDMjQuOTMgMTMgMjYuNSAxNC41NyAyNi41IDE2LjVWMjMuNUMyNi41IDI1LjQzIDI0LjkzIDI3IDIzIDI3SDE3QzE1LjA3IDI3IDEzLjUgMjUuNDMgMTMuNSAyMy41VjE2LjVaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K',
+        recommended: false,
+        priority: 2
+      }
+    ];
+  }
+}
+
+/**
  * Payment Configuration Manager
  */
 export class PaymentConfigManager {
