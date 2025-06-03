@@ -9,6 +9,7 @@ import { settingsManager } from '/utils/settings-manager.js';
 import { initializeDefaultConfig } from '/utils/default-config.js';
 import { accessibilityManager } from '/utils/accessibility-manager.js';
 import { getSubscriptionManager } from '/utils/subscription-manager-v2.js';
+import { initializeAds, showInterstitialIfEligible } from './ad-integration.js';
 
 // Import tab manager
 import { TabManager } from './tabs/tab-manager.js';
@@ -139,7 +140,7 @@ async function initializeCoreServices() {
     await new Promise(resolve => setTimeout(resolve, 100));
 
     const subscriptionInfo = subscriptionManager.getSubscriptionInfo();
-    userPlan = subscriptionInfo.plan;
+    userPlan = subscriptionInfo?.plan || 'FREE';
     console.log(`✅ Subscription manager initialized with plan: ${userPlan}`);
   } catch (error) {
     console.error('❌ Subscription manager failed:', error);
@@ -148,10 +149,62 @@ async function initializeCoreServices() {
     userPlan = 'FREE';
   }
 
+  // Initialize ad system (for free users only)
+  try {
+    if (userPlan === 'FREE') {
+      console.log('🎯 Initializing ad system...');
+      try {
+        // Initialize ad systems separately to prevent cascading failures
+        initializeAds();
+        console.log('✅ Ad system initialized');
+
+        // Try to show interstitial, but catch any errors
+        try {
+          showInterstitialIfEligible('popup_open');
+        } catch (interstitialError) {
+          console.warn(
+            'Non-critical error showing interstitial:',
+            interstitialError.message || interstitialError
+          );
+        }
+      } catch (adError) {
+        console.error('Failed to initialize ads:', adError.message || adError);
+        errors.push({
+          service: 'ads',
+          error: {
+            message: adError.message || 'Unknown ad system error',
+            stack: adError.stack || 'No stack trace available'
+          }
+        });
+      }
+    } else {
+      console.log('💎 Premium user - ads disabled');
+    }
+  } catch (error) {
+    console.error(
+      '❌ Ad system initialization failed:',
+      error.message || 'Unknown error'
+    );
+    errors.push({
+      service: 'ads',
+      error: {
+        message: error.message || 'Unknown ad system error',
+        stack: error.stack || 'No stack trace available'
+      }
+    });
+  }
+
   if (errors.length > 0) {
+    // Format errors for better logging
+    const formattedErrors = errors.map(e => ({
+      service: e.service,
+      message: e.error?.message || 'Unknown error',
+      stack: e.error?.stack || 'No stack trace'
+    }));
+
     console.warn(
       `⚠️ ${errors.length} service(s) failed to initialize:`,
-      errors
+      formattedErrors
     );
 
     // Only throw if critical services failed

@@ -13,6 +13,7 @@ import {
   CurrencyPreferences
 } from '/utils/currency-data.js';
 import { settingsManager } from '/utils/settings-manager.js';
+import { AdSettingsComponent } from './ad-settings-component.js';
 
 export class SettingsTab {
   constructor() {
@@ -20,6 +21,7 @@ export class SettingsTab {
     this.currencyPreferences = new CurrencyPreferences();
     this.currencyStats = getCurrencyStats();
     this.pendingSettingsOperations = new Set();
+    this.adSettingsComponent = new AdSettingsComponent();
     this.initialized = false;
   }
 
@@ -37,6 +39,9 @@ export class SettingsTab {
 
       // Setup event listeners
       this.setupEventListeners();
+
+      // Initialize ad settings component
+      await this.adSettingsComponent.initialize();
 
       this.initialized = true;
       console.log('✅ Settings tab initialized');
@@ -56,6 +61,14 @@ export class SettingsTab {
 
       // Update UI with current settings
       await this.updateUIWithCurrentSettings();
+
+      // Update ad settings component visibility
+      const adSettingsSection = document.getElementById('adSettingsSection');
+      if (adSettingsSection) {
+        adSettingsSection.style.display = this.adSettingsComponent.isVisible()
+          ? 'block'
+          : 'none';
+      }
 
       console.log('📋 Settings content loaded');
     } catch (error) {

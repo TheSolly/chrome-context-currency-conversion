@@ -1,0 +1,155 @@
+/* Ad-related styles */
+
+.ad-container-wrapper {
+  width: 100%;
+  margin: 12px 0;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.ad-container {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #f9f9f9;
+  border: 1px solid #e0e0e0;
+}
+
+.ad-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: #888;
+  padding: 2px 6px;
+  position: absolute;
+  top: 0;
+  right: 0;
+  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 0 0 0 4px;
+}
+
+.ad-position-bottom {
+  margin-top: 16px;
+  border-top: 1px solid #e0e0e0;
+  padding-top: 8px;
+  width: 100%;
+}
+
+.ad-position-sidebar {
+  float: right;
+  margin-left: 12px;
+  margin-bottom: 12px;
+}
+
+.ad-position-betweenItems {
+  margin: 8px 0;
+  width: 100%;
+}
+
+.ad-format-banner {
+  width: 100%;
+  height: 90px;
+}
+
+.ad-format-native {
+  width: 100%;
+  min-height: 120px;
+  padding: 12px;
+}
+
+.premium-badge {
+  display: inline-block;
+  background-color: #007bff;
+  color: white;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 8px;
+  cursor: pointer;
+}
+
+.premium-upsell {
+  font-size: 11px;
+  color: #666;
+  text-align: center;
+  margin-top: 4px;
+}
+
+.ad-interstitial {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Ad settings styles */
+#adSettingsSection {
+  transition: opacity 0.3s ease;
+}
+
+#adSettingsSection .toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 24px;
+}
+
+#adSettingsSection .toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+#adSettingsSection .toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: 0.4s;
+  border-radius: 24px;
+}
+
+#adSettingsSection .toggle-slider:before {
+  position: absolute;
+  content: '';
+  height: 16px;
+  width: 16px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: 0.4s;
+  border-radius: 50%;
+}
+
+#adSettingsSection input:checked + .toggle-slider {
+  background-color: #2196f3;
+}
+
+#adSettingsSection input:checked + .toggle-slider:before {
+  transform: translateX(16px);
+}
+
+#adSettingsSection select {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: white;
+}
+
+#adSettingsSection #upgradeFromAds {
+  transition: background-color 0.2s;
+}
+
+#adSettingsSection #upgradeFromAds:hover {
+  background-color: #0056b3;
+}

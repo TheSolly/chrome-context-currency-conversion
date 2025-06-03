@@ -12,7 +12,15 @@ import { PaymentProviderFactory } from './payment-providers-v2.js';
  */
 export class SubscriptionManager {
   constructor() {
-    this.currentSubscription = null;
+    // Initialize with default free subscription to prevent null errors
+    this.currentSubscription = {
+      plan: 'FREE',
+      status: 'active',
+      startDate: new Date().toISOString(),
+      endDate: null,
+      subscriptionId: null,
+      paymentProvider: null
+    };
     this.userCountry = null;
     this.paymentProvider = null;
     this.usageTracking = new Map();
@@ -311,6 +319,18 @@ export class SubscriptionManager {
    * Get subscription info
    */
   getSubscriptionInfo() {
+    // Ensure currentSubscription is initialized
+    if (!this.currentSubscription) {
+      this.currentSubscription = {
+        plan: 'FREE',
+        status: 'active',
+        startDate: new Date().toISOString(),
+        endDate: null,
+        subscriptionId: null,
+        paymentProvider: null
+      };
+    }
+
     const plan =
       SUBSCRIPTION_PLANS[this.currentSubscription.plan] ||
       SUBSCRIPTION_PLANS.FREE;
