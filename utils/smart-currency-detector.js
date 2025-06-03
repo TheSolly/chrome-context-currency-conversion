@@ -1,4 +1,3 @@
-/* eslint-disable indent */
 // Smart Currency Detection System - Phase 6, Task 6.1
 // Enhanced ML-based currency detection with advanced pattern recognition
 

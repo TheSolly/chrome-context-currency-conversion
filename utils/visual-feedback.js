@@ -1,4 +1,3 @@
-/* eslint-disable indent */
 // Visual Feedback System for Currency Converter Extension
 // Phase 5, Task 5.1: Visual Feedback System Implementation
 

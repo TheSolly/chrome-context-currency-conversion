@@ -74,6 +74,17 @@
             <span aria-hidden="true">🔔</span>
             Alerts
           </button>
+          <button
+            id="subscriptionTab"
+            class="tab-button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="subscriptionPanel"
+            tabindex="-1"
+          >
+            <span aria-hidden="true">💎</span>
+            Premium
+          </button>
         </div>
       </nav>
 
@@ -1056,6 +1067,355 @@
           </div>
         </div>
         <!-- End Alerts Panel -->
+
+        <!-- Subscription Panel -->
+        <div
+          id="subscriptionPanel"
+          class="tab-panel hidden p-4 space-y-4"
+          role="tabpanel"
+          aria-labelledby="subscriptionTab"
+        >
+          <!-- Current Plan Header -->
+          <div
+            class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-4"
+          >
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <span class="text-2xl" aria-hidden="true">💎</span>
+                <div>
+                  <h2 class="text-lg font-semibold text-gray-900">
+                    <span id="currentPlanName">Free Plan</span>
+                  </h2>
+                  <p class="text-sm text-gray-600" id="currentPlanDescription">
+                    Basic features with limited usage
+                  </p>
+                </div>
+              </div>
+              <div class="text-right">
+                <div
+                  class="text-2xl font-bold text-primary-600"
+                  id="currentPlanPrice"
+                >
+                  $0
+                </div>
+                <div class="text-xs text-gray-500" id="currentPlanInterval">
+                  forever
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Usage Statistics -->
+          <div class="setting-card">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-lg" aria-hidden="true">📊</span>
+              <h3 class="text-base font-semibold text-gray-900">Usage Stats</h3>
+            </div>
+
+            <div id="usageStats" class="space-y-3">
+              <!-- Daily Conversions -->
+              <div class="usage-item">
+                <div class="flex justify-between items-center mb-1">
+                  <span class="text-sm text-gray-700">Daily Conversions</span>
+                  <span class="text-sm font-medium" id="conversionsUsage"
+                    >0 / 50</span
+                  >
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    class="bg-primary-600 h-2 rounded-full transition-all duration-300"
+                    id="conversionsProgress"
+                    style="width: 0%"
+                  ></div>
+                </div>
+              </div>
+
+              <!-- Currency Pairs -->
+              <div class="usage-item">
+                <div class="flex justify-between items-center mb-1">
+                  <span class="text-sm text-gray-700">Currency Pairs</span>
+                  <span class="text-sm font-medium" id="currenciesUsage"
+                    >2 / 2</span
+                  >
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    class="bg-secondary-600 h-2 rounded-full transition-all duration-300"
+                    id="currenciesProgress"
+                    style="width: 100%"
+                  ></div>
+                </div>
+              </div>
+
+              <!-- History Entries -->
+              <div class="usage-item">
+                <div class="flex justify-between items-center mb-1">
+                  <span class="text-sm text-gray-700">History Entries</span>
+                  <span class="text-sm font-medium" id="historyUsage"
+                    >0 / 10</span
+                  >
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    class="bg-green-600 h-2 rounded-full transition-all duration-300"
+                    id="historyProgress"
+                    style="width: 0%"
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Feature Comparison -->
+          <div class="setting-card">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-lg" aria-hidden="true">⚡</span>
+              <h3 class="text-base font-semibold text-gray-900">Features</h3>
+            </div>
+
+            <div class="space-y-2" id="featureComparison">
+              <div
+                class="flex items-center justify-between py-2 border-b border-gray-100"
+              >
+                <span class="text-sm text-gray-700">Daily Conversions</span>
+                <span class="text-sm font-medium text-gray-900">50</span>
+              </div>
+              <div
+                class="flex items-center justify-between py-2 border-b border-gray-100"
+              >
+                <span class="text-sm text-gray-700">Currency Pairs</span>
+                <span class="text-sm font-medium text-gray-900">2</span>
+              </div>
+              <div
+                class="flex items-center justify-between py-2 border-b border-gray-100"
+              >
+                <span class="text-sm text-gray-700">Rate Updates</span>
+                <span class="text-sm font-medium text-gray-900">Daily</span>
+              </div>
+              <div
+                class="flex items-center justify-between py-2 border-b border-gray-100"
+              >
+                <span class="text-sm text-gray-700">History</span>
+                <span class="text-sm font-medium text-gray-900"
+                  >10 entries</span
+                >
+              </div>
+              <div class="flex items-center justify-between py-2">
+                <span class="text-sm text-gray-700">Rate Alerts</span>
+                <span class="text-sm text-red-600">❌ Not available</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Upgrade Options -->
+          <div id="upgradeSection" class="space-y-3">
+            <!-- Premium Plan -->
+            <div
+              class="plan-card border-2 border-primary-200 rounded-lg p-4 bg-primary-50"
+            >
+              <div class="flex items-center justify-between mb-3">
+                <div>
+                  <h4 class="font-semibold text-primary-900">Premium Plan</h4>
+                  <p class="text-sm text-primary-700">
+                    Perfect for regular users
+                  </p>
+                </div>
+                <div class="text-right">
+                  <div class="text-xl font-bold text-primary-600">$4.99</div>
+                  <div class="text-xs text-primary-600">/month</div>
+                </div>
+              </div>
+
+              <div class="space-y-1 mb-4">
+                <div class="flex items-center gap-2 text-sm">
+                  <span class="text-green-600">✅</span>
+                  <span>500 daily conversions</span>
+                </div>
+                <div class="flex items-center gap-2 text-sm">
+                  <span class="text-green-600">✅</span>
+                  <span>20 currency pairs</span>
+                </div>
+                <div class="flex items-center gap-2 text-sm">
+                  <span class="text-green-600">✅</span>
+                  <span>Hourly rate updates</span>
+                </div>
+                <div class="flex items-center gap-2 text-sm">
+                  <span class="text-green-600">✅</span>
+                  <span>100 history entries</span>
+                </div>
+                <div class="flex items-center gap-2 text-sm">
+                  <span class="text-green-600">✅</span>
+                  <span>5 rate alerts</span>
+                </div>
+                <div class="flex items-center gap-2 text-sm">
+                  <span class="text-green-600">✅</span>
+                  <span>Ad-free experience</span>
+                </div>
+              </div>
+
+              <button
+                id="upgradeToPremium"
+                class="w-full bg-primary-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-primary-700 transition-colors"
+              >
+                Upgrade to Premium
+              </button>
+            </div>
+
+            <!-- Pro Plan -->
+            <div
+              class="plan-card border-2 border-purple-200 rounded-lg p-4 bg-purple-50"
+            >
+              <div class="flex items-center justify-between mb-3">
+                <div>
+                  <h4 class="font-semibold text-purple-900">
+                    Professional Plan
+                  </h4>
+                  <p class="text-sm text-purple-700">
+                    For power users & businesses
+                  </p>
+                </div>
+                <div class="text-right">
+                  <div class="text-xl font-bold text-purple-600">$14.99</div>
+                  <div class="text-xs text-purple-600">/month</div>
+                </div>
+              </div>
+
+              <div class="space-y-1 mb-4">
+                <div class="flex items-center gap-2 text-sm">
+                  <span class="text-green-600">✅</span>
+                  <span>Unlimited conversions</span>
+                </div>
+                <div class="flex items-center gap-2 text-sm">
+                  <span class="text-green-600">✅</span>
+                  <span>Unlimited currency pairs</span>
+                </div>
+                <div class="flex items-center gap-2 text-sm">
+                  <span class="text-green-600">✅</span>
+                  <span>Real-time rate updates</span>
+                </div>
+                <div class="flex items-center gap-2 text-sm">
+                  <span class="text-green-600">✅</span>
+                  <span>Unlimited history</span>
+                </div>
+                <div class="flex items-center gap-2 text-sm">
+                  <span class="text-green-600">✅</span>
+                  <span>50 rate alerts</span>
+                </div>
+                <div class="flex items-center gap-2 text-sm">
+                  <span class="text-green-600">✅</span>
+                  <span>API access</span>
+                </div>
+                <div class="flex items-center gap-2 text-sm">
+                  <span class="text-green-600">✅</span>
+                  <span>Priority support</span>
+                </div>
+              </div>
+
+              <button
+                id="upgradeToPro"
+                class="w-full bg-purple-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-purple-700 transition-colors"
+              >
+                Upgrade to Pro
+              </button>
+            </div>
+          </div>
+
+          <!-- Payment Provider Selection -->
+          <div id="paymentSection" class="hidden setting-card">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-lg" aria-hidden="true">💳</span>
+              <h3 class="text-base font-semibold text-gray-900">
+                Payment Method
+              </h3>
+            </div>
+
+            <div class="space-y-2" id="paymentProviders">
+              <!-- Payment providers will be populated by JavaScript -->
+            </div>
+
+            <div class="mt-4 p-3 bg-blue-50 rounded-lg">
+              <p class="text-xs text-blue-800">
+                🔒 Secure payment processing. Cancel anytime from your account
+                settings.
+              </p>
+            </div>
+          </div>
+
+          <!-- Current Subscription Management -->
+          <div id="subscriptionManagement" class="hidden setting-card">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-lg" aria-hidden="true">⚙️</span>
+              <h3 class="text-base font-semibold text-gray-900">
+                Manage Subscription
+              </h3>
+            </div>
+
+            <div class="space-y-3">
+              <div class="flex justify-between items-center">
+                <span class="text-sm text-gray-700">Status</span>
+                <span
+                  class="text-sm font-medium text-green-600"
+                  id="subscriptionStatus"
+                  >Active</span
+                >
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-sm text-gray-700">Next Billing</span>
+                <span class="text-sm font-medium" id="nextBilling">-</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-sm text-gray-700">Payment Method</span>
+                <span class="text-sm font-medium" id="paymentMethod">-</span>
+              </div>
+            </div>
+
+            <div class="mt-4 pt-4 border-t border-gray-200">
+              <button
+                id="cancelSubscription"
+                class="w-full bg-red-100 text-red-700 py-2 px-4 rounded-lg font-medium hover:bg-red-200 transition-colors"
+              >
+                Cancel Subscription
+              </button>
+            </div>
+          </div>
+
+          <!-- Support Options -->
+          <div class="setting-card">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-lg" aria-hidden="true">❤️</span>
+              <h3 class="text-base font-semibold text-gray-900">
+                Support Development
+              </h3>
+            </div>
+
+            <p class="text-sm text-gray-600 mb-3">
+              Love the extension? Support our development with a one-time
+              donation.
+            </p>
+
+            <div class="flex gap-2">
+              <button
+                id="donate5"
+                class="flex-1 bg-green-100 text-green-700 py-2 px-3 rounded-lg text-sm font-medium hover:bg-green-200 transition-colors"
+              >
+                $5
+              </button>
+              <button
+                id="donate10"
+                class="flex-1 bg-green-100 text-green-700 py-2 px-3 rounded-lg text-sm font-medium hover:bg-green-200 transition-colors"
+              >
+                $10
+              </button>
+              <button
+                id="donate25"
+                class="flex-1 bg-green-100 text-green-700 py-2 px-3 rounded-lg text-sm font-medium hover:bg-green-200 transition-colors"
+              >
+                $25
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- End Subscription Panel -->
       </main>
 
       <!-- Footer -->

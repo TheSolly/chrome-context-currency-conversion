@@ -1,4 +1,3 @@
-/* eslint-disable indent */
 // Phase 6, Task 6.2: Conversion History Management
 // Comprehensive system for storing, managing, and analyzing conversion history
 

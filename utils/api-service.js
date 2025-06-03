@@ -1,4 +1,3 @@
-/* eslint-disable indent */
 /**
  * Currency API Service
  * Handles currency conversion with multiple API providers and fallback mechanisms

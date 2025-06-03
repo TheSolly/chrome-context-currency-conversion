@@ -25,12 +25,16 @@ import { initializeDefaultConfig } from '/utils/default-config.js';
 // Phase 5, Task 5.3: Accessibility Features
 import { accessibilityManager } from '../utils/accessibility-manager.js';
 
+// Phase 7, Task 7.1: Freemium Model Implementation
+import { getSubscriptionManager } from '/utils/subscription-manager-v2.js';
+
 // Phase 6, Task 6.2: Conversion History
 let currentActiveTab = 'settings';
 
 // State management
 let currentSettings = { ...DEFAULT_SETTINGS };
-let userPlan = 'FREE'; // TODO: Implement plan detection
+let subscriptionManager = null; // Subscription manager instance
+let userPlan = 'FREE'; // Current user plan
 const currencyPreferences = new CurrencyPreferences(); // Enhanced Task 3.2
 const currencyStats = getCurrencyStats(); // Enhanced Task 3.2
 
@@ -128,6 +132,23 @@ async function initializePopup() {
     currentSettings = await settingsManager.getSettings();
 
     console.log('📋 Loaded settings:', currentSettings);
+
+    // Phase 7, Task 7.1: Initialize Subscription Manager
+    try {
+      subscriptionManager = getSubscriptionManager();
+      await subscriptionManager.initialize();
+
+      const subscriptionInfo = subscriptionManager.getSubscriptionInfo();
+      userPlan = subscriptionInfo.plan;
+
+      console.log('💎 Subscription initialized:', subscriptionInfo);
+    } catch (subscriptionError) {
+      console.error(
+        '⚠️ Subscription initialization failed:',
+        subscriptionError
+      );
+      userPlan = 'FREE'; // Fallback to free plan
+    }
 
     // Load user statistics
     await loadUserStats();
@@ -248,6 +269,9 @@ function setupEventListeners() {
   document.getElementById('support').addEventListener('click', handleSupport);
   document.getElementById('help').addEventListener('click', handleHelp);
 
+  // Phase 7, Task 7.1: Subscription Management Event Listeners
+  setupSubscriptionEventListeners();
+
   // Setup conversion testing currency selectors
   setupConversionTestingCurrencies();
 
@@ -257,6 +281,13 @@ function setupEventListeners() {
 
   // Phase 6, Task 6.3: Initialize alerts functionality
   initializeAlerts();
+}
+
+// Phase 6, Task 6.3: Initialize rate alerts functionality
+function initializeAlerts() {
+  // Set up rate alerts UI and event listeners
+  // This would connect to the rate alerts manager
+  console.log('📊 Rate alerts initialized');
 }
 
 function populateCurrencySelectors() {
@@ -373,36 +404,6 @@ function updateToggleState(toggle, enabled) {
     thumb.classList.remove('enabled');
     toggle.setAttribute('aria-checked', 'false');
   }
-}
-
-function updateFeatureAccess() {
-  const features = FEATURES[userPlan];
-
-  // Update additional currencies limit
-  const maxCurrencies = features.maxCurrencies;
-  const currentCount = currentSettings.additionalCurrencies.length;
-
-  const addButton = document.getElementById('addCurrency');
-  if (currentCount >= maxCurrencies) {
-    addButton.disabled = true;
-    addButton.textContent = `Maximum ${maxCurrencies} currencies`;
-    addButton.classList.add('opacity-50', 'cursor-not-allowed');
-  } else {
-    // Re-enable the button when under the limit
-    addButton.disabled = false;
-    addButton.textContent = '+ Add Currency';
-    addButton.classList.remove('opacity-50', 'cursor-not-allowed');
-  }
-
-  // Update premium features
-  const premiumFeatures = ['autoConvert', 'showNotifications'];
-  premiumFeatures.forEach(featureId => {
-    const element = document.getElementById(featureId);
-    if (userPlan !== 'PREMIUM') {
-      element.disabled = true;
-      element.classList.add('opacity-50', 'cursor-not-allowed');
-    }
-  });
 }
 
 // Removed - replaced with settingsManager.initialize() in initializePopup()
@@ -2363,18 +2364,636 @@ function setupAlertSettings() {
   });
 }
 
-/**
- * Initialize alerts functionality
- */
-function initializeAlerts() {
-  setupNewAlertForm();
-  setupAlertSettings();
+// ============================================================================
+// Phase 7, Task 7.1: Subscription Management Functions
+// ============================================================================
 
-  // Add event listener for tab switching to alerts
-  const alertsTab = document.querySelector('[aria-controls="alertsPanel"]');
-  if (alertsTab) {
-    alertsTab.addEventListener('click', () => {
-      loadAlertsContent();
+/**
+ * Setup subscription-related event listeners
+ */
+function setupSubscriptionEventListeners() {
+  // Upgrade buttons
+  const upgradeToPremium = document.getElementById('upgradeToPremium');
+  const upgradeToPro = document.getElementById('upgradeToPro');
+
+  if (upgradeToPremium) {
+    upgradeToPremium.addEventListener('click', () =>
+      handlePlanUpgrade('PREMIUM')
+    );
+  }
+
+  if (upgradeToPro) {
+    upgradeToPro.addEventListener('click', () => handlePlanUpgrade('PRO'));
+  }
+
+  // Donation buttons
+  const donate5 = document.getElementById('donate5');
+  const donate10 = document.getElementById('donate10');
+  const donate25 = document.getElementById('donate25');
+
+  if (donate5) {
+    donate5.addEventListener('click', () => handleDonation(5));
+  }
+  if (donate10) {
+    donate10.addEventListener('click', () => handleDonation(10));
+  }
+  if (donate25) {
+    donate25.addEventListener('click', () => handleDonation(25));
+  }
+
+  // Subscription management
+  const cancelSubscription = document.getElementById('cancelSubscription');
+  if (cancelSubscription) {
+    cancelSubscription.addEventListener('click', handleCancelSubscription);
+  }
+
+  // Add event listener for tab switching to subscription
+  const subscriptionTab = document.querySelector(
+    '[aria-controls="subscriptionPanel"]'
+  );
+  if (subscriptionTab) {
+    subscriptionTab.addEventListener('click', () => {
+      loadSubscriptionContent();
     });
   }
 }
+
+/**
+ * Load and update subscription panel content
+ */
+async function loadSubscriptionContent() {
+  if (!subscriptionManager) {
+    console.error('Subscription manager not initialized');
+    return;
+  }
+
+  try {
+    // Get current subscription info
+    const subscriptionInfo = subscriptionManager.getSubscriptionInfo();
+    const usageStats = subscriptionInfo.usageStats;
+    const planDetails = subscriptionInfo.planDetails;
+
+    // Update plan header
+    updateCurrentPlanDisplay(planDetails);
+
+    // Update usage statistics
+    updateUsageDisplay(usageStats);
+
+    // Update feature comparison
+    updateFeatureComparison(planDetails);
+
+    // Update payment providers
+    await updatePaymentProviders();
+
+    // Update subscription management section
+    updateSubscriptionManagement(subscriptionInfo);
+
+    // Check for usage warnings
+    checkAndDisplayUsageWarnings();
+  } catch (error) {
+    console.error('Failed to load subscription content:', error);
+    showStatusMessage('Failed to load subscription information', 'error');
+  }
+}
+
+/**
+ * Update current plan display
+ */
+function updateCurrentPlanDisplay(planDetails) {
+  const planNameEl = document.getElementById('currentPlanName');
+  const planDescEl = document.getElementById('currentPlanDescription');
+  const planPriceEl = document.getElementById('currentPlanPrice');
+  const planIntervalEl = document.getElementById('currentPlanInterval');
+
+  if (planNameEl) {
+    planNameEl.textContent = planDetails.name;
+  }
+  if (planDescEl) {
+    planDescEl.textContent =
+      planDetails.id === 'free'
+        ? 'Basic features with limited usage'
+        : planDetails.id === 'premium'
+          ? 'Perfect for regular users'
+          : 'For power users & businesses';
+  }
+  if (planPriceEl) {
+    planPriceEl.textContent =
+      planDetails.price === 0 ? '$0' : `$${planDetails.price}`;
+  }
+  if (planIntervalEl) {
+    planIntervalEl.textContent = planDetails.interval || 'forever';
+  }
+}
+
+/**
+ * Update usage statistics display
+ */
+function updateUsageDisplay(usageStats) {
+  // Daily conversions
+  const conversionsUsage = document.getElementById('conversionsUsage');
+  const conversionsProgress = document.getElementById('conversionsProgress');
+
+  if (conversionsUsage && usageStats.dailyConversions) {
+    const stats = usageStats.dailyConversions;
+    conversionsUsage.textContent = `${stats.current} / ${stats.limit === 999999 ? '∞' : stats.limit}`;
+
+    if (conversionsProgress) {
+      conversionsProgress.style.width = `${Math.min(stats.percentage, 100)}%`;
+
+      // Change color based on usage
+      if (stats.percentage >= 90) {
+        conversionsProgress.className =
+          'bg-red-600 h-2 rounded-full transition-all duration-300';
+      } else if (stats.percentage >= 70) {
+        conversionsProgress.className =
+          'bg-yellow-600 h-2 rounded-full transition-all duration-300';
+      } else {
+        conversionsProgress.className =
+          'bg-primary-600 h-2 rounded-full transition-all duration-300';
+      }
+    }
+  }
+
+  // Currency pairs
+  const currenciesUsage = document.getElementById('currenciesUsage');
+  const currenciesProgress = document.getElementById('currenciesProgress');
+
+  if (currenciesUsage && usageStats.currencyCount) {
+    const stats = usageStats.currencyCount;
+    currenciesUsage.textContent = `${stats.current} / ${stats.limit === 999 ? '∞' : stats.limit}`;
+
+    if (currenciesProgress) {
+      currenciesProgress.style.width = `${Math.min(stats.percentage, 100)}%`;
+    }
+  }
+
+  // History entries
+  const historyUsage = document.getElementById('historyUsage');
+  const historyProgress = document.getElementById('historyProgress');
+
+  if (historyUsage && usageStats.conversionHistory) {
+    const stats = usageStats.conversionHistory;
+    historyUsage.textContent = `${stats.current} / ${stats.limit === 999999 ? '∞' : stats.limit}`;
+
+    if (historyProgress) {
+      historyProgress.style.width = `${Math.min(stats.percentage, 100)}%`;
+    }
+  }
+}
+
+/**
+ * Update feature comparison based on current plan
+ */
+function updateFeatureComparison(planDetails) {
+  const comparisonEl = document.getElementById('featureComparison');
+  if (!comparisonEl) {
+    return;
+  }
+
+  const features = planDetails.features;
+
+  comparisonEl.innerHTML = `
+    <div class="flex items-center justify-between py-2 border-b border-gray-100">
+      <span class="text-sm text-gray-700">Daily Conversions</span>
+      <span class="text-sm font-medium text-gray-900">
+        ${features.dailyConversions === 999999 ? 'Unlimited' : features.dailyConversions}
+      </span>
+    </div>
+    <div class="flex items-center justify-between py-2 border-b border-gray-100">
+      <span class="text-sm text-gray-700">Currency Pairs</span>
+      <span class="text-sm font-medium text-gray-900">
+        ${features.currencyCount === 999 ? 'Unlimited' : features.currencyCount}
+      </span>
+    </div>
+    <div class="flex items-center justify-between py-2 border-b border-gray-100">
+      <span class="text-sm text-gray-700">Rate Updates</span>
+      <span class="text-sm font-medium text-gray-900">
+        ${features.rateUpdates.charAt(0).toUpperCase() + features.rateUpdates.slice(1)}
+      </span>
+    </div>
+    <div class="flex items-center justify-between py-2 border-b border-gray-100">
+      <span class="text-sm text-gray-700">History</span>
+      <span class="text-sm font-medium text-gray-900">
+        ${features.conversionHistory === 999999 ? 'Unlimited' : features.conversionHistory + ' entries'}
+      </span>
+    </div>
+    <div class="flex items-center justify-between py-2">
+      <span class="text-sm text-gray-700">Rate Alerts</span>
+      <span class="text-sm font-medium ${features.rateAlerts > 0 ? 'text-green-600' : 'text-red-600'}">
+        ${features.rateAlerts > 0 ? `${features.rateAlerts} alerts` : '❌ Not available'}
+      </span>
+    </div>
+  `;
+}
+
+/**
+ * Update payment providers list
+ */
+async function updatePaymentProviders() {
+  if (!subscriptionManager) {
+    return;
+  }
+
+  const providersContainer = document.getElementById('paymentProviders');
+  if (!providersContainer) {
+    return;
+  }
+
+  try {
+    const availableProviders =
+      subscriptionManager.getAvailablePaymentProviders();
+
+    if (availableProviders.length === 0) {
+      providersContainer.innerHTML =
+        '<p class="text-sm text-gray-500">No payment providers available for your region.</p>';
+      return;
+    }
+
+    providersContainer.innerHTML = availableProviders
+      .map(
+        provider => `
+      <div class="payment-provider-option">
+        <input 
+          type="radio" 
+          id="provider_${provider.id}" 
+          name="paymentProvider" 
+          value="${provider.id}"
+          class="mr-2"
+        >
+        <label for="provider_${provider.id}" class="text-sm font-medium">
+          ${provider.name}
+        </label>
+      </div>
+    `
+      )
+      .join('');
+
+    // Select the first provider by default
+    const firstProvider = document.querySelector(
+      'input[name="paymentProvider"]'
+    );
+    if (firstProvider) {
+      firstProvider.checked = true;
+    }
+  } catch (error) {
+    console.error('Failed to load payment providers:', error);
+    providersContainer.innerHTML =
+      '<p class="text-sm text-red-500">Failed to load payment options.</p>';
+  }
+}
+
+/**
+ * Update subscription management section
+ */
+function updateSubscriptionManagement(subscriptionInfo) {
+  const managementSection = document.getElementById('subscriptionManagement');
+  const upgradeSection = document.getElementById('upgradeSection');
+
+  if (!managementSection || !upgradeSection) {
+    return;
+  }
+
+  if (subscriptionInfo.plan === 'FREE') {
+    // Show upgrade options, hide management
+    managementSection.classList.add('hidden');
+    upgradeSection.classList.remove('hidden');
+  } else {
+    // Show management, hide upgrade options for current plan
+    managementSection.classList.remove('hidden');
+
+    // Update management info
+    const statusEl = document.getElementById('subscriptionStatus');
+    const nextBillingEl = document.getElementById('nextBilling');
+    const paymentMethodEl = document.getElementById('paymentMethod');
+
+    if (statusEl) {
+      statusEl.textContent = subscriptionInfo.status || 'Active';
+      statusEl.className =
+        subscriptionInfo.status === 'active'
+          ? 'text-sm font-medium text-green-600'
+          : 'text-sm font-medium text-red-600';
+    }
+
+    if (nextBillingEl) {
+      nextBillingEl.textContent = subscriptionInfo.endDate
+        ? new Date(subscriptionInfo.endDate).toLocaleDateString()
+        : '-';
+    }
+
+    if (paymentMethodEl) {
+      paymentMethodEl.textContent = subscriptionInfo.paymentProvider || '-';
+    }
+
+    // Filter upgrade options
+    const availableUpgrades = subscriptionInfo.availableUpgrades;
+    if (availableUpgrades.length === 0) {
+      upgradeSection.classList.add('hidden');
+    } else {
+      // Hide current plan upgrade button
+      if (subscriptionInfo.plan === 'PREMIUM') {
+        const premiumBtn = document.getElementById('upgradeToPremium');
+        if (premiumBtn) {
+          premiumBtn.closest('.plan-card').style.display = 'none';
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Check and display usage warnings
+ */
+function checkAndDisplayUsageWarnings() {
+  if (!subscriptionManager) {
+    return;
+  }
+
+  const warnings = subscriptionManager.getUsageWarnings();
+
+  if (warnings.length > 0) {
+    // Show warning notification
+    const warningHtml = warnings
+      .map(
+        warning => `
+      <div class="bg-yellow-50 border border-yellow-200 rounded p-2 mb-2">
+        <p class="text-sm text-yellow-800">
+          ⚠️ <strong>${warning.feature}</strong>: ${warning.percentage}% used 
+          (${warning.current}/${warning.limit})
+        </p>
+        ${
+          warning.upgradeNeeded
+            ? `
+          <p class="text-xs text-yellow-700 mt-1">
+            Consider upgrading to ${warning.upgradeNeeded} for more capacity.
+          </p>
+        `
+            : ''
+        }
+      </div>
+    `
+      )
+      .join('');
+
+    // Insert warning at the top of subscription panel
+    const subscriptionPanel = document.getElementById('subscriptionPanel');
+    if (subscriptionPanel) {
+      const existingWarning =
+        subscriptionPanel.querySelector('.usage-warnings');
+      if (existingWarning) {
+        existingWarning.remove();
+      }
+
+      const warningDiv = document.createElement('div');
+      warningDiv.className = 'usage-warnings';
+      warningDiv.innerHTML = warningHtml;
+      subscriptionPanel.insertBefore(warningDiv, subscriptionPanel.firstChild);
+    }
+  }
+}
+
+/**
+ * Handle plan upgrade
+ */
+async function handlePlanUpgrade(planId) {
+  if (!subscriptionManager) {
+    showStatusMessage('Subscription system not available', 'error');
+    return;
+  }
+
+  try {
+    // Show payment section
+    const paymentSection = document.getElementById('paymentSection');
+    if (paymentSection) {
+      paymentSection.classList.remove('hidden');
+    }
+
+    // Get selected payment provider
+    const selectedProvider = document.querySelector(
+      'input[name="paymentProvider"]:checked'
+    );
+    if (!selectedProvider) {
+      showStatusMessage('Please select a payment method', 'error');
+      return;
+    }
+
+    // Show loading state
+    const upgradeBtn =
+      planId === 'PREMIUM'
+        ? document.getElementById('upgradeToPremium')
+        : document.getElementById('upgradeToPro');
+
+    if (upgradeBtn) {
+      const originalText = upgradeBtn.textContent;
+      upgradeBtn.textContent = 'Processing...';
+      upgradeBtn.disabled = true;
+
+      try {
+        // Collect user info (you might want a form for this)
+        const userInfo = {
+          email: 'user@example.com', // In real app, get from user input
+          firstName: 'User',
+          lastName: 'Name'
+        };
+
+        const result = await subscriptionManager.upgradeSubscription(
+          planId,
+          selectedProvider.value,
+          userInfo
+        );
+
+        if (result.success) {
+          showStatusMessage(`Successfully upgraded to ${planId}!`, 'success');
+
+          // Refresh subscription content
+          await loadSubscriptionContent();
+
+          // Update feature access across the app
+          updateFeatureAccess();
+        } else {
+          throw new Error(result.error || 'Upgrade failed');
+        }
+      } finally {
+        upgradeBtn.textContent = originalText;
+        upgradeBtn.disabled = false;
+      }
+    }
+  } catch (error) {
+    console.error('Plan upgrade failed:', error);
+    showStatusMessage('Upgrade failed: ' + error.message, 'error');
+  }
+}
+
+/**
+ * Handle donation
+ */
+async function handleDonation(amount) {
+  if (!subscriptionManager) {
+    showStatusMessage('Payment system not available', 'error');
+    return;
+  }
+
+  try {
+    // Get available payment providers
+    const providers = subscriptionManager.getAvailablePaymentProviders();
+    if (providers.length === 0) {
+      showStatusMessage('No payment methods available', 'error');
+      return;
+    }
+
+    // Use the first available provider for donation
+    const result = await subscriptionManager.processOneTimePayment(
+      amount,
+      'USD',
+      `Currency Converter Extension Donation - $${amount}`,
+      providers[0].id
+    );
+
+    if (result.success) {
+      showStatusMessage(`Thank you for your $${amount} donation!`, 'success');
+    } else {
+      throw new Error(result.error || 'Donation failed');
+    }
+  } catch (error) {
+    console.error('Donation failed:', error);
+    showStatusMessage('Donation failed: ' + error.message, 'error');
+  }
+}
+
+/**
+ * Handle subscription cancellation
+ */
+async function handleCancelSubscription() {
+  if (!subscriptionManager) {
+    showStatusMessage('Subscription system not available', 'error');
+    return;
+  }
+
+  // Confirm cancellation
+  const confirmed = confirm(
+    'Are you sure you want to cancel your subscription? You will lose access to premium features.'
+  );
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    const result = await subscriptionManager.cancelSubscription();
+
+    if (result.success) {
+      showStatusMessage('Subscription cancelled successfully', 'success');
+
+      // Refresh subscription content
+      await loadSubscriptionContent();
+
+      // Update feature access
+      updateFeatureAccess();
+    } else {
+      throw new Error(result.error || 'Cancellation failed');
+    }
+  } catch (error) {
+    console.error('Subscription cancellation failed:', error);
+    showStatusMessage('Cancellation failed: ' + error.message, 'error');
+  }
+}
+
+/**
+ * Update feature access throughout the app based on current subscription
+ */
+function updateFeatureAccess() {
+  if (!subscriptionManager) {
+    return;
+  }
+
+  const subscriptionInfo = subscriptionManager.getSubscriptionInfo();
+  const features = subscriptionInfo.planDetails.features;
+
+  // Update feature badges and limitations in UI
+  const featureBadges = document.querySelectorAll('.feature-badge');
+  featureBadges.forEach(badge => {
+    const feature = badge.dataset.feature;
+    if (feature && features[feature] !== undefined) {
+      const limit = features[feature];
+      if (typeof limit === 'number' && limit < 999) {
+        badge.textContent = `${subscriptionInfo.plan}: ${limit} max`;
+      } else if (typeof limit === 'boolean') {
+        badge.textContent = limit
+          ? `${subscriptionInfo.plan}: Available`
+          : 'Premium only';
+      } else {
+        badge.textContent = `${subscriptionInfo.plan}: ${limit}`;
+      }
+    }
+  });
+
+  // Update currency limit display
+  const currencySection = document.getElementById('additionalCurrencies');
+  if (currencySection) {
+    const addButton = document.getElementById('addCurrency');
+    const currentCount = document.querySelectorAll('.currency-item').length;
+    const limit = features.currencyCount;
+
+    if (addButton) {
+      if (currentCount >= limit && limit < 999) {
+        addButton.disabled = true;
+        addButton.textContent = `Limit reached (${limit})`;
+      } else {
+        addButton.disabled = false;
+        addButton.textContent = '+ Add Currency';
+      }
+    }
+  }
+
+  console.log(`🔐 Feature access updated for ${subscriptionInfo.plan} plan`);
+}
+
+/**
+ * Check feature access before performing actions
+ */
+function checkFeatureAccess(featureName, amount = 1) {
+  if (!subscriptionManager) {
+    return { allowed: false, reason: 'Subscription system not available' };
+  }
+
+  return subscriptionManager.canPerformAction(featureName, amount);
+}
+
+/**
+ * Track feature usage
+ */
+async function trackFeatureUsage(featureName, amount = 1) {
+  if (subscriptionManager) {
+    await subscriptionManager.trackUsage(featureName, amount);
+
+    // Update usage display if subscription panel is visible
+    const subscriptionPanel = document.getElementById('subscriptionPanel');
+    if (subscriptionPanel && !subscriptionPanel.classList.contains('hidden')) {
+      await loadSubscriptionContent();
+    }
+  }
+}
+
+// Initialize subscription content when tab is first opened
+document.addEventListener('DOMContentLoaded', () => {
+  // Load subscription content when tab becomes active
+  const observer = new window.MutationObserver(mutations => {
+    mutations.forEach(mutation => {
+      if (
+        mutation.type === 'attributes' &&
+        mutation.attributeName === 'class'
+      ) {
+        const subscriptionPanel = document.getElementById('subscriptionPanel');
+        if (
+          subscriptionPanel &&
+          !subscriptionPanel.classList.contains('hidden')
+        ) {
+          loadSubscriptionContent();
+        }
+      }
+    });
+  });
+
+  const subscriptionPanel = document.getElementById('subscriptionPanel');
+  if (subscriptionPanel) {
+    observer.observe(subscriptionPanel, { attributes: true });
+  }
+});

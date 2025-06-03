@@ -1,4 +1,3 @@
-/* eslint-disable quotes */
 // Content Script for Currency Converter Extension
 // Detects currency amounts in selected text and communicates with background script
 // Phase 5, Task 5.2: Enhanced with lazy loading for performance optimization

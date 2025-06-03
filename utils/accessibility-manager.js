@@ -1,4 +1,3 @@
-/* eslint-disable indent */
 // Accessibility Manager for Currency Converter Extension
 // Phase 5, Task 5.3: Accessibility Features Implementation
 

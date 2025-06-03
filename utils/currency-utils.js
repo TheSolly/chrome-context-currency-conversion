@@ -560,7 +560,6 @@ function parseEnhancedMatch(match, pattern, originalText) {
       amount = parseFloat(match[1].replace(/,/g, ''));
       currency = enhancedSymbolToCurrencyCode(match[2]);
     }
-    // eslint-disable-next-line quotes
   } else if (patternStr.includes("(?:'d{3})*")) {
     // Swiss format: 1'234.56
     currency = match[1];

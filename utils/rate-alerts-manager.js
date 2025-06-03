@@ -1,4 +1,3 @@
-/* eslint-disable indent */
 // Phase 6, Task 6.3: Rate Alerts & Notifications
 // Comprehensive system for exchange rate monitoring, alerts, and trend analysis
 
