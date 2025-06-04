@@ -1,6 +1,7 @@
 /**
  * Main Popup Script - Modularized version
  * Handles initialization and coordination between different tab modules
+ * Phase 9, Task 9.1: Enhanced with security features
  */
 
 // Import utilities and modules
@@ -10,6 +11,9 @@ import { initializeDefaultConfig } from '/utils/default-config.js';
 import { accessibilityManager } from '/utils/accessibility-manager.js';
 import { getSubscriptionManager } from '/utils/subscription-manager-v2.js';
 import { initializeAds, showInterstitialIfEligible } from './ad-integration.js';
+// Phase 9, Task 9.1: Import security managers
+import { securityManager } from '/utils/security-manager.js';
+import { secureApiKeyManager } from '/utils/secure-api-key-manager.js';
 
 // Import tab manager
 import { TabManager } from './tabs/tab-manager.js';
@@ -192,6 +196,26 @@ async function initializeCoreServices() {
         stack: error.stack || 'No stack trace available'
       }
     });
+  }
+
+  // Phase 9, Task 9.1: Initialize security features
+  try {
+    console.log('🔒 Initializing security manager...');
+    await securityManager.initialize();
+    console.log('✅ Security manager initialized');
+  } catch (error) {
+    console.error('❌ Security manager failed:', error);
+    errors.push({ service: 'security', error });
+  }
+
+  // Initialize secure API key manager
+  try {
+    console.log('🔐 Initializing secure API key manager...');
+    await secureApiKeyManager.initialize();
+    console.log('✅ Secure API key manager initialized');
+  } catch (error) {
+    console.error('❌ Secure API key manager failed:', error);
+    errors.push({ service: 'secureApiKeys', error });
   }
 
   if (errors.length > 0) {

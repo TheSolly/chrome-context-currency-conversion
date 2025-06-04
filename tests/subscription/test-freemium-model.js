@@ -79,7 +79,7 @@ function testFeatureGating() {
   console.log('🔒 Testing feature gating...');
 
   // Simulate usage tracking
-  let currentUsage = { conversions: 0, currencyCount: 5 };
+  const currentUsage = { conversions: 0, currencyCount: 5 };
   const freeLimits = mockSubscriptionPlans.FREE.features;
 
   // Test within limits
@@ -121,7 +121,7 @@ function testSubscriptionWorkflow() {
 
   // Simulate subscription state
   let userPlan = 'FREE';
-  let usage = { conversions: 0 };
+  const usage = { conversions: 0 };
 
   // Test upgrade
   function upgradeSubscription(planId) {

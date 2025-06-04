@@ -2,8 +2,25 @@
 // Detects currency amounts in selected text and communicates with background script
 // Phase 5, Task 5.2: Enhanced with lazy loading for performance optimization
 // Phase 5, Task 5.3: Enhanced with accessibility features
+// Phase 9, Task 9.1: Enhanced with security features
 
 console.log('Currency Converter content script loaded');
+
+// Phase 9, Task 9.1: Security manager for content script
+let securityManager = null;
+
+// Load security manager for content script
+(async () => {
+  try {
+    const securityModule = await import(
+      chrome.runtime.getURL('utils/security-manager.js')
+    );
+    securityManager = securityModule.securityManager;
+    console.log('Content script security features initialized');
+  } catch (error) {
+    console.warn('Failed to load security manager:', error);
+  }
+})();
 
 // Phase 5, Task 5.3: Accessibility Manager for content script
 let accessibilityManager = null;

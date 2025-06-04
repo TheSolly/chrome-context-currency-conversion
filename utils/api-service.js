@@ -2,20 +2,41 @@
  * Currency API Service
  * Handles currency conversion with multiple API providers and fallback mechanisms
  * Phase 5, Task 5.2: Enhanced with conversion caching for performance optimization
+ * Phase 9, Task 9.1: Enhanced with security features
  */
 
 // Import local API keys at the top level
 import { LOCAL_API_KEYS } from './api-keys.local.js';
 // Phase 5, Task 5.2: Import conversion cache
 import { conversionCache } from './conversion-cache.js';
+// Phase 9, Task 9.1: Import security managers
+import { securityManager } from './security-manager.js';
+import { secureApiKeyManager } from './secure-api-key-manager.js';
 
 /**
- * Fetch wrapper for Chrome extension environment
+ * Secure fetch wrapper for Chrome extension environment with security validation
  * @param {string} url - URL to fetch
  * @param {Object} options - Fetch options
  * @returns {Promise<Response>} Fetch response
  */
 async function safeFetch(url, options = {}) {
+  // Phase 9, Task 9.1: Validate URL before making request
+  if (!securityManager.validateApiUrl(url)) {
+    throw new Error('Invalid or potentially unsafe API URL');
+  }
+
+  // Check rate limiting
+  const rateLimit = securityManager.checkRateLimit('API_CALLS');
+  if (!rateLimit.allowed) {
+    throw new Error('API rate limit exceeded. Please try again later.');
+  }
+
+  // Log API request for security monitoring
+  securityManager.logSecurityEvent('api_request', {
+    url: url.replace(/([?&]access_key=)[^&]*/, '$1***'),
+    method: options.method || 'GET'
+  });
+
   if (typeof globalThis.fetch !== 'undefined') {
     return globalThis.fetch(url, options);
   } else if (typeof window !== 'undefined' && window.fetch) {

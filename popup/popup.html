@@ -564,6 +564,108 @@
               </button>
             </div>
           </section>
+
+          <!-- Security Settings Section -->
+          <section
+            class="setting-card security-section"
+            role="region"
+            aria-labelledby="security-heading"
+          >
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <span class="text-lg" aria-hidden="true">🔒</span>
+                <h2
+                  id="security-heading"
+                  class="text-base font-semibold text-gray-900"
+                >
+                  Security & Privacy
+                </h2>
+              </div>
+              <span
+                class="text-xs text-green-600 font-medium"
+                id="securityStatus"
+                aria-label="Security status"
+                >Secure</span
+              >
+            </div>
+
+            <!-- Security Stats -->
+            <div class="mb-4 p-3 bg-gray-50 rounded-lg">
+              <div class="text-xs text-gray-600 mb-2">Security Overview</div>
+              <div class="grid grid-cols-2 gap-3 text-center">
+                <div>
+                  <div
+                    class="text-lg font-semibold text-blue-600"
+                    id="encryptedDataCount"
+                  >
+                    0
+                  </div>
+                  <div class="text-xs text-gray-500">Encrypted Keys</div>
+                </div>
+                <div>
+                  <div
+                    class="text-lg font-semibold text-green-600"
+                    id="securityEventsCount"
+                  >
+                    0
+                  </div>
+                  <div class="text-xs text-gray-500">Security Events</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- API Key Management -->
+            <div class="mb-4">
+              <div class="text-sm font-medium text-gray-700 mb-2">
+                API Key Management
+              </div>
+              <div id="apiKeyStatus" class="space-y-2">
+                <!-- API key status will be populated by JavaScript -->
+              </div>
+              <button
+                id="manageApiKeys"
+                class="mt-2 w-full text-xs px-3 py-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                title="Manage API keys"
+              >
+                🔑 Manage API Keys
+              </button>
+            </div>
+
+            <!-- Rate Limiting Status -->
+            <div class="mb-4">
+              <div class="text-sm font-medium text-gray-700 mb-2">
+                Rate Limiting
+              </div>
+              <div id="rateLimitStatus" class="text-xs text-gray-600">
+                <div class="flex justify-between">
+                  <span>API Calls:</span>
+                  <span id="apiCallsRemaining">--/--</span>
+                </div>
+                <div class="flex justify-between">
+                  <span>Settings Updates:</span>
+                  <span id="settingsUpdatesRemaining">--/--</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Security Actions -->
+            <div class="flex gap-2">
+              <button
+                id="clearSecurityLogs"
+                class="flex-1 text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200 transition-colors"
+                title="Clear security logs"
+              >
+                🗑️ Clear Logs
+              </button>
+              <button
+                id="exportSecurityData"
+                class="flex-1 text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
+                title="Export security data"
+              >
+                📤 Export
+              </button>
+            </div>
+          </section>
         </div>
         <!-- End Settings Panel -->
 

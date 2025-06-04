@@ -350,6 +350,46 @@ A Chrome extension that provides real-time currency conversion through context m
 - **No Repository Exposure**: Template files contain only placeholders, never actual keys
 - **Easy Key Management**: Update keys anytime through popup interface
 
+### 🛡️ Advanced Security Implementation (Phase 9.1)
+
+The extension implements comprehensive security measures to protect user data and prevent attacks:
+
+**Content Security Policy (CSP)**:
+
+- Strict CSP policy in manifest.json preventing script injection
+- Only allows self-hosted scripts and blocks unsafe inline content
+- Blocks object embeds and enforces HTTPS upgrades
+
+**Secure API Key Management**:
+
+- AES-GCM encryption for sensitive API keys in storage
+- Input validation with provider-specific format checking
+- Automatic key masking for display purposes
+- Secure key rotation and testing capabilities
+
+**Input Validation & Sanitization**:
+
+- Comprehensive input validation for all user data
+- XSS protection through suspicious pattern detection
+- Currency format validation and amount sanitization
+- API URL validation to prevent SSRF attacks
+
+**Rate Limiting Protection**:
+
+- API call rate limiting (100 requests/minute)
+- Settings update limiting (20 requests/minute)
+- Conversion request limiting (50 requests/minute)
+- Context menu action limiting (30 requests/minute)
+
+**Security Monitoring**:
+
+- Real-time security event logging
+- Encrypted storage for sensitive operations
+- Security statistics dashboard in popup
+- Audit trail for all API key operations
+
+**Access the Security Dashboard**: Open the extension popup → Settings tab → Security & Privacy section
+
 ## Currency Data Management
 
 ### Comprehensive Currency Database
