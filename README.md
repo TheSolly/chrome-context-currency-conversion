@@ -390,6 +390,40 @@ The extension implements comprehensive security measures to protect user data an
 
 **Access the Security Dashboard**: Open the extension popup → Settings tab → Security & Privacy section
 
+### 🔐 Privacy & GDPR Compliance (Phase 9.2)
+
+The extension implements comprehensive privacy protection and GDPR compliance:
+
+**Privacy Policy & Transparency**:
+
+- Complete privacy policy available in-app and online
+- Clear data collection disclosure and usage explanation
+- Transparent data retention and deletion policies
+- User consent management for optional data collection
+
+**GDPR Rights Implementation**:
+
+- **Right to Access**: Export all personal data in JSON or CSV format
+- **Right to be Forgotten**: Complete data deletion with confirmation
+- **Right to Rectification**: Modify stored personal information
+- **Right to Data Portability**: Export data in standard formats
+
+**Data Minimization**:
+
+- Privacy mode to minimize data collection
+- Optional data collection with granular consent
+- Automatic data cleanup and retention management
+- Only essential data stored by default
+
+**Privacy Dashboard**:
+
+- Real-time privacy status monitoring
+- Consent preferences management
+- Data category overview and statistics
+- Recent privacy activity tracking
+
+**Access the Privacy Dashboard**: Open the extension popup → Settings tab → Privacy & Data section
+
 ## Currency Data Management
 
 ### Comprehensive Currency Database

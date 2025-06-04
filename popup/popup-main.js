@@ -14,6 +14,8 @@ import { initializeAds, showInterstitialIfEligible } from './ad-integration.js';
 // Phase 9, Task 9.1: Import security managers
 import { securityManager } from '/utils/security-manager.js';
 import { secureApiKeyManager } from '/utils/secure-api-key-manager.js';
+// Phase 9, Task 9.2: Import privacy manager
+import { privacyManager } from '/utils/privacy-manager.js';
 
 // Import tab manager
 import { TabManager } from './tabs/tab-manager.js';
@@ -216,6 +218,16 @@ async function initializeCoreServices() {
   } catch (error) {
     console.error('❌ Secure API key manager failed:', error);
     errors.push({ service: 'secureApiKeys', error });
+  }
+
+  // Phase 9, Task 9.2: Initialize privacy manager
+  try {
+    console.log('🔒 Initializing privacy manager...');
+    await privacyManager.initialize();
+    console.log('✅ Privacy manager initialized');
+  } catch (error) {
+    console.error('❌ Privacy manager failed:', error);
+    errors.push({ service: 'privacy', error });
   }
 
   if (errors.length > 0) {

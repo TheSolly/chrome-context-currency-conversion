@@ -307,6 +307,187 @@
             </div>
           </section>
 
+          <!-- Privacy Compliance Section -->
+          <section
+            class="setting-card privacy-section"
+            role="region"
+            aria-labelledby="privacy-heading"
+          >
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <span class="text-lg" aria-hidden="true">🛡️</span>
+                <h2
+                  id="privacy-heading"
+                  class="text-base font-semibold text-gray-900"
+                >
+                  Privacy Compliance
+                </h2>
+              </div>
+              <span
+                class="text-xs text-blue-600 font-medium"
+                id="privacyComplianceStatus"
+                aria-label="Privacy compliance status"
+                >GDPR Ready</span
+              >
+            </div>
+
+            <!-- Privacy Controls -->
+            <div class="space-y-3">
+              <!-- Privacy Mode -->
+              <div class="flex items-center justify-between">
+                <div class="flex-1">
+                  <label for="privacyMode" class="text-sm text-gray-700"
+                    >Privacy Mode</label
+                  >
+                  <div class="text-xs text-gray-500">
+                    Enhanced privacy protection
+                  </div>
+                </div>
+                <button
+                  id="privacyMode"
+                  class="toggle-switch"
+                  role="switch"
+                  aria-checked="false"
+                  aria-describedby="privacy-mode-desc"
+                >
+                  <span class="toggle-thumb"></span>
+                </button>
+                <div id="privacy-mode-desc" class="sr-only">
+                  When enabled, minimizes data collection and disables
+                  non-essential tracking
+                </div>
+              </div>
+
+              <!-- Analytics Consent -->
+              <div class="flex items-center justify-between">
+                <div class="flex-1">
+                  <label for="analyticsConsent" class="text-sm text-gray-700"
+                    >Usage Analytics</label
+                  >
+                  <div class="text-xs text-gray-500">
+                    Help improve the extension
+                  </div>
+                </div>
+                <button
+                  id="analyticsConsent"
+                  class="toggle-switch"
+                  role="switch"
+                  aria-checked="false"
+                  aria-describedby="analytics-consent-desc"
+                >
+                  <span class="toggle-thumb"></span>
+                </button>
+                <div id="analytics-consent-desc" class="sr-only">
+                  Allow collection of anonymous usage statistics to improve the
+                  extension
+                </div>
+              </div>
+
+              <!-- Personalization -->
+              <div class="flex items-center justify-between">
+                <div class="flex-1">
+                  <label
+                    for="personalizationConsent"
+                    class="text-sm text-gray-700"
+                    >Personalization</label
+                  >
+                  <div class="text-xs text-gray-500">
+                    Customize your experience
+                  </div>
+                </div>
+                <button
+                  id="personalizationConsent"
+                  class="toggle-switch"
+                  role="switch"
+                  aria-checked="true"
+                  aria-describedby="personalization-consent-desc"
+                >
+                  <span class="toggle-thumb"></span>
+                </button>
+                <div id="personalization-consent-desc" class="sr-only">
+                  Allow data processing for personalized features and
+                  recommendations
+                </div>
+              </div>
+            </div>
+
+            <!-- Data Management -->
+            <div class="mt-4 pt-3 border-t border-gray-200">
+              <div class="text-sm font-medium text-gray-700 mb-2">
+                Data Management
+              </div>
+
+              <!-- Data Retention -->
+              <div class="mb-3">
+                <label
+                  for="dataRetention"
+                  class="block text-xs text-gray-600 mb-1"
+                >
+                  Data Retention Period
+                </label>
+                <select
+                  id="dataRetention"
+                  class="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                >
+                  <option value="30">30 days</option>
+                  <option value="90">90 days</option>
+                  <option value="180">180 days</option>
+                  <option value="365" selected>1 year</option>
+                  <option value="0">Keep indefinitely</option>
+                </select>
+              </div>
+
+              <!-- Auto Delete -->
+              <div class="flex items-center justify-between mb-3">
+                <label class="text-xs text-gray-700"
+                  >Auto-delete old data</label
+                >
+                <button
+                  id="autoDeleteData"
+                  class="toggle-switch scale-75"
+                  role="switch"
+                  aria-checked="true"
+                >
+                  <span class="toggle-thumb"></span>
+                </button>
+              </div>
+
+              <!-- Privacy Actions -->
+              <div class="grid grid-cols-2 gap-2 mt-3">
+                <button
+                  id="exportUserData"
+                  class="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                  title="Export all your data"
+                >
+                  📥 Export Data
+                </button>
+                <button
+                  id="deleteUserData"
+                  class="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                  title="Delete your data"
+                >
+                  🗑️ Delete Data
+                </button>
+              </div>
+            </div>
+
+            <!-- Consent History -->
+            <div class="mt-4 pt-3 border-t border-gray-200">
+              <div class="text-sm font-medium text-gray-700 mb-2">
+                Consent History
+              </div>
+              <div id="consentHistory" class="text-xs text-gray-600 space-y-1">
+                <!-- Consent records will be populated by JavaScript -->
+              </div>
+              <button
+                id="viewPrivacyPolicy"
+                class="mt-2 text-xs text-blue-600 hover:text-blue-800 underline"
+              >
+                View Privacy Policy
+              </button>
+            </div>
+          </section>
+
           <!-- Action Buttons -->
           <div class="flex gap-2" role="group" aria-label="Settings actions">
             <button
@@ -664,6 +845,234 @@
               >
                 📤 Export
               </button>
+            </div>
+          </section>
+
+          <!-- Privacy & Data Section (Phase 9, Task 9.2) -->
+          <section class="setting-card">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-lg">🔒</span>
+              <h2 class="text-base font-semibold text-gray-900">
+                Privacy & Data
+              </h2>
+            </div>
+
+            <!-- Privacy Dashboard -->
+            <div
+              class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 mb-4"
+            >
+              <h3 class="text-sm font-semibold text-gray-800 mb-2">
+                Privacy Status
+              </h3>
+
+              <!-- Consent Status -->
+              <div class="mb-2">
+                <div class="text-xs text-gray-600 mb-1">Consent Status:</div>
+                <div id="consentStatus" class="text-sm">Loading...</div>
+              </div>
+
+              <!-- Data Categories -->
+              <div class="grid grid-cols-2 gap-2 mb-2">
+                <div class="text-center">
+                  <div
+                    class="text-lg font-semibold text-blue-600"
+                    id="dataCategoriesCount"
+                  >
+                    0
+                  </div>
+                  <div class="text-xs text-gray-600">Data Items</div>
+                </div>
+                <div class="text-center">
+                  <div class="text-lg font-semibold text-green-600">✓</div>
+                  <div class="text-xs text-gray-600">GDPR Compliant</div>
+                </div>
+              </div>
+
+              <!-- Retention Info -->
+              <div class="text-xs">
+                <div class="text-gray-600 mb-1">Data Retention:</div>
+                <div id="retentionInfo">Loading...</div>
+              </div>
+            </div>
+
+            <!-- Privacy Controls -->
+            <div class="space-y-3">
+              <!-- Privacy Mode Toggle -->
+              <div class="flex items-center justify-between">
+                <div class="flex-1">
+                  <div class="text-sm font-medium text-gray-900">
+                    Privacy Mode
+                  </div>
+                  <div class="text-xs text-gray-600">
+                    Minimize data collection
+                  </div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="privacyMode" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+
+              <!-- Consent Management -->
+              <div class="bg-gray-50 rounded-lg p-3">
+                <h4 class="text-sm font-semibold text-gray-800 mb-2">
+                  Consent Preferences
+                </h4>
+                <div class="space-y-2">
+                  <label class="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="consentAnalytics"
+                      class="rounded"
+                    />
+                    <span class="text-xs text-gray-700">Usage Analytics</span>
+                  </label>
+                  <label class="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="consentPersonalization"
+                      class="rounded"
+                    />
+                    <span class="text-xs text-gray-700"
+                      >Enhanced Personalization</span
+                    >
+                  </label>
+                  <label class="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="consentMarketing"
+                      class="rounded"
+                    />
+                    <span class="text-xs text-gray-700"
+                      >Marketing Communications</span
+                    >
+                  </label>
+                </div>
+                <button
+                  id="updateConsent"
+                  class="w-full mt-2 text-xs bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition-colors"
+                >
+                  Update Preferences
+                </button>
+              </div>
+            </div>
+
+            <!-- Data Export & Deletion -->
+            <div
+              class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-4"
+            >
+              <h4 class="text-sm font-semibold text-gray-800 mb-2">
+                Your Data Rights
+              </h4>
+
+              <!-- Export Options -->
+              <div class="grid grid-cols-2 gap-2 mb-3">
+                <button
+                  id="exportAllData"
+                  class="text-xs bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 transition-colors"
+                >
+                  📄 Export JSON
+                </button>
+                <button
+                  id="exportDataCSV"
+                  class="text-xs bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 transition-colors"
+                >
+                  📊 Export CSV
+                </button>
+              </div>
+
+              <!-- Selective Data Deletion -->
+              <div class="bg-white rounded p-2 mb-3">
+                <div class="text-xs font-semibold text-gray-700 mb-2">
+                  Delete Selected Data:
+                </div>
+                <div class="grid grid-cols-2 gap-1 text-xs">
+                  <label class="flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      id="deleteHistory"
+                      class="rounded text-xs"
+                    />
+                    <span>History</span>
+                  </label>
+                  <label class="flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      id="deleteFavorites"
+                      class="rounded text-xs"
+                    />
+                    <span>Favorites</span>
+                  </label>
+                  <label class="flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      id="deleteSettings"
+                      class="rounded text-xs"
+                    />
+                    <span>Settings</span>
+                  </label>
+                  <label class="flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      id="deleteAnalytics"
+                      class="rounded text-xs"
+                    />
+                    <span>Analytics</span>
+                  </label>
+                </div>
+                <button
+                  id="deleteSelectedData"
+                  class="w-full mt-2 text-xs bg-orange-500 text-white px-3 py-1 rounded hover:bg-orange-600 transition-colors"
+                >
+                  Delete Selected
+                </button>
+              </div>
+
+              <!-- Complete Data Deletion -->
+              <div class="border-t border-yellow-300 pt-2">
+                <button
+                  id="deleteAllData"
+                  class="w-full text-xs bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition-colors font-medium"
+                >
+                  🗑️ Delete All Data (Right to be Forgotten)
+                </button>
+              </div>
+            </div>
+
+            <!-- Privacy Actions -->
+            <div class="grid grid-cols-2 gap-2 mt-4">
+              <button
+                id="viewPrivacyPolicy"
+                class="text-xs bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600 transition-colors"
+              >
+                📋 Privacy Policy
+              </button>
+              <button
+                id="showGdprRights"
+                class="text-xs bg-purple-500 text-white px-3 py-1 rounded hover:bg-purple-600 transition-colors"
+              >
+                ⚖️ Your Rights
+              </button>
+            </div>
+
+            <!-- Data Cleanup -->
+            <div class="mt-3">
+              <button
+                id="runDataCleanup"
+                class="w-full text-xs bg-indigo-500 text-white px-3 py-1 rounded hover:bg-indigo-600 transition-colors"
+              >
+                🧹 Run Data Cleanup
+              </button>
+            </div>
+
+            <!-- Recent Privacy Activity -->
+            <div class="mt-4 bg-gray-50 rounded-lg p-2">
+              <div class="text-xs font-semibold text-gray-700 mb-1">
+                Recent Activity:
+              </div>
+              <div id="recentPrivacyActivity" class="text-xs text-gray-600">
+                Loading...
+              </div>
             </div>
           </section>
         </div>

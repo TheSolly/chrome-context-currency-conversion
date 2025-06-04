@@ -18,6 +18,8 @@ import { AdSettingsComponent } from './ad-settings-component.js';
 // Phase 9, Task 9.1: Import security managers
 import { securityManager } from '/utils/security-manager.js';
 import { secureApiKeyManager } from '/utils/secure-api-key-manager.js';
+// Phase 9, Task 9.2: Import privacy manager
+import { privacyManager } from '/utils/privacy-manager.js';
 
 export class SettingsTab {
   constructor() {
@@ -142,6 +144,35 @@ export class SettingsTab {
     document
       .getElementById('exportSecurityData')
       ?.addEventListener('click', this.exportSecurityData.bind(this));
+
+    // Phase 9, Task 9.2: Privacy-related event listeners
+    document
+      .getElementById('privacyMode')
+      ?.addEventListener('change', this.togglePrivacyMode.bind(this));
+    document
+      .getElementById('updateConsent')
+      ?.addEventListener('click', this.updateConsentPreferences.bind(this));
+    document
+      .getElementById('exportAllData')
+      ?.addEventListener('click', this.exportAllData.bind(this));
+    document
+      .getElementById('exportDataCSV')
+      ?.addEventListener('click', this.exportDataAsCSV.bind(this));
+    document
+      .getElementById('deleteSelectedData')
+      ?.addEventListener('click', this.deleteSelectedData.bind(this));
+    document
+      .getElementById('deleteAllData')
+      ?.addEventListener('click', this.deleteAllData.bind(this));
+    document
+      .getElementById('viewPrivacyPolicy')
+      ?.addEventListener('click', this.viewPrivacyPolicy.bind(this));
+    document
+      .getElementById('showGdprRights')
+      ?.addEventListener('click', this.showGdprRights.bind(this));
+    document
+      .getElementById('runDataCleanup')
+      ?.addEventListener('click', this.runDataCleanup.bind(this));
 
     // Setup conversion testing
     this.setupConversionTestingCurrencies();
@@ -949,5 +980,472 @@ export class SettingsTab {
       this.currentDialog.remove();
       this.currentDialog = null;
     }
+  }
+
+  // ======================
+  // PHASE 9, TASK 9.2: PRIVACY COMPLIANCE METHODS
+  // ======================
+
+  /**
+   * Toggle privacy mode
+   */
+  async togglePrivacyMode(event) {
+    try {
+      const enabled = event.target.checked;
+
+      if (enabled) {
+        // Enable privacy mode - minimize data collection
+        await privacyManager.minimizeDataCollection();
+        this.showStatus(
+          'Privacy mode enabled - data collection minimized',
+          'success'
+        );
+      } else {
+        // Disable privacy mode - restore default settings
+        await privacyManager.loadPrivacySettings();
+        this.showStatus('Privacy mode disabled', 'success');
+      }
+
+      // Update privacy dashboard
+      await this.updatePrivacyDashboard();
+    } catch (error) {
+      console.error('Failed to toggle privacy mode:', error);
+      this.showStatus('Failed to update privacy mode', 'error');
+    }
+  }
+
+  /**
+   * View privacy policy
+   */
+  async viewPrivacyPolicy() {
+    try {
+      const privacyPolicyContent = await this.getPrivacyPolicyContent();
+
+      this.showDialog(`
+        <div class="privacy-policy-dialog">
+          <h3 class="text-lg font-semibold mb-4 text-gray-800">Privacy Policy</h3>
+          <div class="privacy-policy-content max-h-96 overflow-y-auto text-sm text-gray-600 mb-4">
+            ${privacyPolicyContent}
+          </div>
+          <div class="flex justify-end gap-2">
+            <button onclick="this.closest('.fixed').remove()" 
+                    class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
+              Close
+            </button>
+          </div>
+        </div>
+      `);
+    } catch (error) {
+      console.error('Failed to load privacy policy:', error);
+      this.showStatus('Failed to load privacy policy', 'error');
+    }
+  }
+
+  /**
+   * Get privacy policy content (summary for dialog)
+   */
+  async getPrivacyPolicyContent() {
+    return `
+      <h4 class="font-semibold mb-2">Data We Collect</h4>
+      <ul class="list-disc pl-4 mb-4">
+        <li>Currency preferences and settings</li>
+        <li>Conversion history (optional, user controlled)</li>
+        <li>Usage analytics (optional, with consent)</li>
+        <li>Error logs (essential, automatically deleted after 7 days)</li>
+      </ul>
+      
+      <h4 class="font-semibold mb-2">Your Rights (GDPR Compliance)</h4>
+      <ul class="list-disc pl-4 mb-4">
+        <li><strong>Right to Access:</strong> Export all your data</li>
+        <li><strong>Right to Erasure:</strong> Delete your data</li>
+        <li><strong>Right to Rectification:</strong> Modify your data</li>
+        <li><strong>Right to Portability:</strong> Export in multiple formats</li>
+        <li><strong>Right to Object:</strong> Opt out of data collection</li>
+      </ul>
+      
+      <h4 class="font-semibold mb-2">Data Security</h4>
+      <ul class="list-disc pl-4 mb-4">
+        <li>All data stored locally on your device</li>
+        <li>API keys encrypted with industry-standard encryption</li>
+        <li>No personal data shared with third parties</li>
+        <li>Automatic data cleanup based on retention periods</li>
+      </ul>
+      
+      <p class="text-xs text-gray-500 mt-4">
+        For the complete privacy policy, visit the extension settings → Privacy & Data section.
+      </p>
+    `;
+  }
+
+  /**
+   * Update privacy dashboard with current status
+   */
+  async updatePrivacyDashboard() {
+    try {
+      const dashboard = await privacyManager.getPrivacyDashboard();
+
+      // Update consent status
+      const consentStatus = document.getElementById('consentStatus');
+      if (consentStatus) {
+        consentStatus.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full ${dashboard.consentStatus.given ? 'bg-green-500' : 'bg-red-500'}"></span>
+            <span class="text-sm">
+              ${dashboard.consentStatus.given ? 'Consent Given' : 'Consent Required'}
+              ${dashboard.consentStatus.date ? `(${new Date(dashboard.consentStatus.date).toLocaleDateString()})` : ''}
+            </span>
+          </div>
+        `;
+      }
+
+      // Update data categories count
+      const dataCategoriesCount = document.getElementById(
+        'dataCategoriesCount'
+      );
+      if (dataCategoriesCount) {
+        const totalData = Object.values(dashboard.dataCategories).reduce(
+          (sum, count) => sum + count,
+          0
+        );
+        dataCategoriesCount.textContent = totalData;
+      }
+
+      // Update retention status
+      const retentionInfo = document.getElementById('retentionInfo');
+      if (retentionInfo) {
+        retentionInfo.innerHTML = `
+          <div class="text-xs text-gray-600">
+            <div>History: ${dashboard.retentionStatus.conversionHistory} days</div>
+            <div>Analytics: ${dashboard.retentionStatus.usageAnalytics} days</div>
+            <div>Logs: ${dashboard.retentionStatus.errorLogs} days</div>
+          </div>
+        `;
+      }
+
+      // Update recent privacy activity
+      const recentActivity = document.getElementById('recentPrivacyActivity');
+      if (recentActivity && dashboard.recentActivity) {
+        recentActivity.innerHTML = dashboard.recentActivity
+          .slice(0, 3)
+          .map(
+            activity => `
+            <div class="text-xs text-gray-500 mb-1">
+              ${activity.action} - ${new Date(activity.timestamp).toLocaleString()}
+            </div>
+          `
+          )
+          .join('');
+      }
+    } catch (error) {
+      console.error('Failed to update privacy dashboard:', error);
+    }
+  }
+
+  /**
+   * Handle data export request
+   */
+  async exportAllData() {
+    try {
+      this.showStatus('Exporting data...', 'info');
+
+      // Export data using privacy manager
+      const exportData = await privacyManager.exportUserData(null, 'json');
+
+      // Create download
+      const blob = new Blob([exportData], {
+        type: 'application/json'
+      });
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `currency-converter-data-export-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      this.showStatus('Data exported successfully', 'success');
+      await this.updatePrivacyDashboard();
+    } catch (error) {
+      console.error('Failed to export data:', error);
+      this.showStatus('Failed to export data', 'error');
+    }
+  }
+
+  /**
+   * Handle data export in CSV format
+   */
+  async exportDataAsCSV() {
+    try {
+      this.showStatus('Exporting data as CSV...', 'info');
+
+      const exportData = await privacyManager.exportUserData(null, 'csv');
+
+      const blob = new Blob([exportData], {
+        type: 'text/csv'
+      });
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `currency-converter-data-export-${Date.now()}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      this.showStatus('CSV data exported successfully', 'success');
+    } catch (error) {
+      console.error('Failed to export CSV data:', error);
+      this.showStatus('Failed to export CSV data', 'error');
+    }
+  }
+
+  /**
+   * Handle selective data deletion
+   */
+  async deleteSelectedData() {
+    try {
+      const dataTypes = [];
+
+      // Check which data types user wants to delete
+      if (document.getElementById('deleteHistory')?.checked) {
+        dataTypes.push('conversionHistory');
+      }
+      if (document.getElementById('deleteFavorites')?.checked) {
+        dataTypes.push('favorites');
+      }
+      if (document.getElementById('deleteSettings')?.checked) {
+        dataTypes.push('settings');
+      }
+      if (document.getElementById('deleteAnalytics')?.checked) {
+        dataTypes.push('usageStatistics');
+      }
+
+      if (dataTypes.length === 0) {
+        this.showStatus('Please select data types to delete', 'warning');
+        return;
+      }
+
+      // Confirm deletion
+      if (
+        !confirm(
+          `Are you sure you want to delete the selected data types? This action cannot be undone.\n\nData types to delete:\n${dataTypes.join(', ')}`
+        )
+      ) {
+        return;
+      }
+
+      this.showStatus('Deleting selected data...', 'info');
+
+      // Delete data using privacy manager
+      const deletionResult = await privacyManager.deleteUserData(
+        dataTypes,
+        true
+      );
+
+      // Show results
+      const successCount = Object.values(deletionResult).filter(
+        result => result.success
+      ).length;
+      const totalCount = Object.keys(deletionResult).length;
+
+      if (successCount === totalCount) {
+        this.showStatus(
+          `Successfully deleted ${successCount} data types`,
+          'success'
+        );
+      } else {
+        this.showStatus(
+          `Deleted ${successCount}/${totalCount} data types (some failed)`,
+          'warning'
+        );
+      }
+
+      // Update dashboard and reload content
+      await this.updatePrivacyDashboard();
+      await this.loadContent();
+    } catch (error) {
+      console.error('Failed to delete selected data:', error);
+      this.showStatus('Failed to delete selected data', 'error');
+    }
+  }
+
+  /**
+   * Handle complete data deletion (Right to be Forgotten)
+   */
+  async deleteAllData() {
+    try {
+      // Show warning dialog
+      const confirmed = confirm(
+        '⚠️ DELETE ALL DATA WARNING ⚠️\n\n' +
+          'This will permanently delete ALL your data including:\n' +
+          '• All settings and preferences\n' +
+          '• Conversion history and favorites\n' +
+          '• Usage analytics and logs\n' +
+          '• API keys and security data\n\n' +
+          'This action CANNOT be undone!\n\n' +
+          'Are you absolutely sure you want to proceed?'
+      );
+
+      if (!confirmed) {
+        return;
+      }
+
+      // Second confirmation
+      const finalConfirm = confirm(
+        'FINAL CONFIRMATION\n\n' +
+          'Type "DELETE ALL" in the next dialog to confirm complete data deletion.'
+      );
+
+      if (!finalConfirm) {
+        return;
+      }
+
+      const userInput = prompt('Type "DELETE ALL" to confirm:');
+      if (userInput !== 'DELETE ALL') {
+        this.showStatus(
+          'Data deletion cancelled - incorrect confirmation',
+          'info'
+        );
+        return;
+      }
+
+      this.showStatus('Deleting all data...', 'info');
+
+      // Delete all data using privacy manager
+      await privacyManager.deleteUserData(
+        Object.values(privacyManager.DATA_TYPES),
+        true
+      );
+
+      // Also clear extension storage
+      await chrome.storage.local.clear();
+      await chrome.storage.sync.clear();
+
+      this.showStatus('All data deleted successfully', 'success');
+
+      // Show completion message
+      setTimeout(() => {
+        /* global alert */
+        alert(
+          '✅ All data has been permanently deleted.\n\nThe extension will reload with default settings.'
+        );
+        window.location.reload();
+      }, 2000);
+    } catch (error) {
+      console.error('Failed to delete all data:', error);
+      this.showStatus('Failed to delete all data', 'error');
+    }
+  }
+
+  /**
+   * Update consent preferences
+   */
+  async updateConsentPreferences() {
+    try {
+      const preferences = {
+        analytics:
+          document.getElementById('consentAnalytics')?.checked || false,
+        personalization:
+          document.getElementById('consentPersonalization')?.checked || false,
+        marketing: document.getElementById('consentMarketing')?.checked || false
+      };
+
+      await privacyManager.updateConsentPreferences(preferences);
+
+      this.showStatus('Consent preferences updated', 'success');
+      await this.updatePrivacyDashboard();
+    } catch (error) {
+      console.error('Failed to update consent preferences:', error);
+      this.showStatus('Failed to update consent preferences', 'error');
+    }
+  }
+
+  /**
+   * Run data retention cleanup
+   */
+  async runDataCleanup() {
+    try {
+      this.showStatus('Running data cleanup...', 'info');
+
+      const cleanupResult = await privacyManager.enforceDataRetention();
+
+      if (cleanupResult) {
+        const deletedCount = cleanupResult.deletedData.length;
+        const retainedCount = cleanupResult.retainedData.length;
+
+        this.showStatus(
+          `Data cleanup completed - ${deletedCount} items deleted, ${retainedCount} items retained`,
+          'success'
+        );
+      } else {
+        this.showStatus('Data cleanup completed', 'success');
+      }
+
+      await this.updatePrivacyDashboard();
+    } catch (error) {
+      console.error('Failed to run data cleanup:', error);
+      this.showStatus('Failed to run data cleanup', 'error');
+    }
+  }
+
+  /**
+   * Show GDPR rights information
+   */
+  showGdprRights() {
+    this.showDialog(`
+      <div class="gdpr-rights-dialog">
+        <h3 class="text-lg font-semibold mb-4 text-gray-800">Your Privacy Rights (GDPR)</h3>
+        
+        <div class="space-y-4 max-h-96 overflow-y-auto">
+          <div class="border-l-4 border-blue-500 pl-4">
+            <h4 class="font-semibold text-blue-800">Right to Access</h4>
+            <p class="text-sm text-gray-600 mt-1">
+              You can view and export all data we have about you.
+            </p>
+          </div>
+          
+          <div class="border-l-4 border-green-500 pl-4">
+            <h4 class="font-semibold text-green-800">Right to Rectification</h4>
+            <p class="text-sm text-gray-600 mt-1">
+              You can modify or correct your personal data at any time.
+            </p>
+          </div>
+          
+          <div class="border-l-4 border-red-500 pl-4">
+            <h4 class="font-semibold text-red-800">Right to Erasure ("Right to be Forgotten")</h4>
+            <p class="text-sm text-gray-600 mt-1">
+              You can request deletion of your personal data.
+            </p>
+          </div>
+          
+          <div class="border-l-4 border-purple-500 pl-4">
+            <h4 class="font-semibold text-purple-800">Right to Data Portability</h4>
+            <p class="text-sm text-gray-600 mt-1">
+              You can export your data in standard formats (JSON, CSV, XML).
+            </p>
+          </div>
+          
+          <div class="border-l-4 border-yellow-500 pl-4">
+            <h4 class="font-semibold text-yellow-800">Right to Restrict Processing</h4>
+            <p class="text-sm text-gray-600 mt-1">
+              You can limit how we process your data using privacy mode.
+            </p>
+          </div>
+          
+          <div class="border-l-4 border-gray-500 pl-4">
+            <h4 class="font-semibold text-gray-800">Right to Object</h4>
+            <p class="text-sm text-gray-600 mt-1">
+              You can opt out of data collection for analytics and marketing.
+            </p>
+          </div>
+        </div>
+        
+        <div class="flex justify-end gap-2 mt-6">
+          <button onclick="this.closest('.fixed').remove()" 
+                  class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+            I Understand
+          </button>
+        </div>
+      </div>
+    `);
   }
 }
