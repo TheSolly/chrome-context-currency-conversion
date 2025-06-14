@@ -209,26 +209,30 @@ async function runSpecificSecurityTest(testType) {
 
   try {
     switch (testType.toLowerCase()) {
-      case 'audit':
+      case 'audit': {
         const auditResults = await securityAudit.runFullAudit();
         console.log('Security Audit Results:', auditResults);
         break;
+      }
 
-      case 'penetration':
+      case 'penetration': {
         const penResults = await penetrationTesting.runPenetrationTests();
         console.log('Penetration Test Results:', penResults);
         break;
+      }
 
-      case 'practices':
+      case 'practices': {
         const practicesResults =
           await securityBestPractices.implementBestPractices();
         console.log('Best Practices Results:', practicesResults);
         break;
+      }
 
-      case 'quick':
+      case 'quick': {
         const quickResults = await securityTestRunner.runQuickSecurityCheck();
         console.log('Quick Security Check Results:', quickResults);
         break;
+      }
 
       default:
         console.log(
