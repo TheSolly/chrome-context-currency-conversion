@@ -308,7 +308,8 @@ A Chrome extension that provides real-time currency conversion through context m
 
 ### Task 9.4: Clean Up & Finalization
 
-- [ ] Remove unused code and dependencies
+- [x] Remove unused code and dependencies
+- [ ] Remove any unused features
 - [ ] Make sure all features are working as expected
 - [ ] Optimize final bundle size
 - [ ] Final code review and cleanup

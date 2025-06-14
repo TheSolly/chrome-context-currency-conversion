@@ -233,17 +233,6 @@ export class LazyLoader {
   }
 
   /**
-   * Check if module should be retried based on error count
-   * @param {string} moduleId - Module identifier
-   * @param {number} maxRetries - Maximum number of retries
-   * @returns {boolean}
-   */
-  shouldRetryModule(moduleId, maxRetries = 3) {
-    const errorCount = this.errorCount.get(moduleId) || 0;
-    return errorCount < maxRetries;
-  }
-
-  /**
    * Get module loading statistics
    * @returns {Object} Loading statistics
    */
@@ -275,29 +264,6 @@ export class LazyLoader {
     this.loadTimes.clear();
     this.errorCount.clear();
     console.log('🗑️ Lazy loader cache cleared');
-  }
-
-  /**
-   * Get memory usage information
-   * @returns {Object} Memory usage stats
-   */
-  getMemoryUsage() {
-    const calculateSize = obj => {
-      return JSON.stringify(obj).length * 2; // Rough estimate in bytes
-    };
-
-    return {
-      loadedModulesSize: calculateSize(
-        Array.from(this.loadedModules.entries())
-      ),
-      loadTimesSize: calculateSize(Array.from(this.loadTimes.entries())),
-      errorCountSize: calculateSize(Array.from(this.errorCount.entries())),
-      totalEstimatedSize: calculateSize({
-        loadedModules: Array.from(this.loadedModules.entries()),
-        loadTimes: Array.from(this.loadTimes.entries()),
-        errorCount: Array.from(this.errorCount.entries())
-      })
-    };
   }
 }
 
