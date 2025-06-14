@@ -14,17 +14,17 @@ if (typeof window === 'undefined' && typeof global !== 'undefined') {
 }
 const contextMenuTestCases = [
   {
-    name: 'Basic USD Detection',
-    text: '$100.50',
-    expectedTitle: 'Convert 100.50 USD',
-    expectedTargets: ['EUR', 'GBP', 'JPY', 'CAD'],
+    name: 'Basic CAD Detection',
+    text: 'C$100.50',
+    expectedTitle: 'Convert 100.50 CAD',
+    expectedTargets: ['USD', 'EUR', 'GBP', 'JPY'],
     confidence: 0.9
   },
   {
-    name: 'EUR Amount with Formatting',
-    text: '€1.234,56',
-    expectedTitle: 'Convert 1234.56 EUR',
-    expectedTargets: ['USD', 'GBP', 'JPY', 'CAD'],
+    name: 'AUD Amount with Formatting',
+    text: 'A$1,234.56',
+    expectedTitle: 'Convert 1234.56 AUD',
+    expectedTargets: ['USD', 'EUR', 'GBP', 'JPY'],
     confidence: 0.85
   },
   {
@@ -43,10 +43,52 @@ const contextMenuTestCases = [
   },
   {
     name: 'Low Confidence Detection',
-    text: 'dollars 50',
-    expectedTitle: 'Convert 50 USD (?)',
-    expectedTargets: ['EUR', 'GBP', 'JPY', 'CAD'],
+    text: 'pounds 50',
+    expectedTitle: 'Convert 50 GBP (?)',
+    expectedTargets: ['USD', 'EUR', 'JPY', 'CAD'],
     confidence: 0.6
+  },
+  {
+    name: 'Direct Conversion - Base Currency USD',
+    text: '$2000.00',
+    expectedTitle: '$2,000.00 → EGP 99,511.00', // Example with base USD to secondary EGP
+    expectedTargets: ['GBP', 'JPY', 'EUR', 'CAD'], // Quick Convert currencies in submenu
+    confidence: 0.9,
+    isDirectConversion: true,
+    userSettings: {
+      baseCurrency: 'USD',
+      secondaryCurrency: 'EGP',
+      additionalCurrencies: ['GBP', 'JPY'],
+      showConfidence: true
+    }
+  },
+  {
+    name: 'Direct Conversion - Secondary Currency EGP',
+    text: '99511 EGP',
+    expectedTitle: 'EGP 99,511.00 → $2,000.00', // Example with secondary EGP to base USD
+    expectedTargets: ['GBP', 'JPY', 'EUR', 'CAD'], // Quick Convert currencies in submenu
+    confidence: 0.85,
+    isDirectConversion: true,
+    userSettings: {
+      baseCurrency: 'USD',
+      secondaryCurrency: 'EGP',
+      additionalCurrencies: ['GBP', 'JPY'],
+      showConfidence: true
+    }
+  },
+  {
+    name: 'Regular Conversion - Non-Base/Secondary Currency',
+    text: '500 GBP',
+    expectedTitle: 'Convert 500 GBP',
+    expectedTargets: ['USD', 'EGP', 'JPY', 'CAD'], // Shows submenu for non-base/secondary
+    confidence: 0.8,
+    isDirectConversion: false,
+    userSettings: {
+      baseCurrency: 'USD',
+      secondaryCurrency: 'EGP',
+      additionalCurrencies: ['GBP', 'JPY'],
+      showConfidence: true
+    }
   }
 ];
 
@@ -59,7 +101,7 @@ function simulateContextMenuLogic(testCase, userSettings = null) {
     showConfidence: true
   };
 
-  const settings = userSettings || defaultSettings;
+  const settings = userSettings || testCase.userSettings || defaultSettings;
   const popularCurrencies = [
     'USD',
     'EUR',
@@ -99,46 +141,164 @@ function simulateContextMenuLogic(testCase, userSettings = null) {
 
   amount = parseFloat(amount);
   const currencyMatch = testCase.text.match(
-    /USD|EUR|GBP|JPY|CAD|AUD|CHF|CNY|\$|€|£|¥/
+    /USD|EUR|GBP|JPY|CAD|AUD|CHF|CNY|EGP|\$|€|£|¥|C\$|A\$/
   );
   let currency = 'USD'; // Default
 
   if (currencyMatch) {
     const symbol = currencyMatch[0];
-    const symbolMap = { $: 'USD', '€': 'EUR', '£': 'GBP', '¥': 'JPY' };
+    const symbolMap = {
+      $: 'USD',
+      '€': 'EUR',
+      '£': 'GBP',
+      '¥': 'JPY',
+      C$: 'CAD',
+      A$: 'AUD'
+    };
     currency = symbolMap[symbol] || symbol;
   }
 
-  // Generate context menu title
-  const formattedAmount =
-    amount % 1 === 0 ? amount.toString() : amount.toFixed(2);
-  let title = `Convert ${formattedAmount} ${currency}`;
+  // Check if detected currency is base or secondary currency for direct conversion
+  const isBaseCurrency = currency === settings.baseCurrency;
+  const isSecondaryCurrency = currency === settings.secondaryCurrency;
 
-  // Add confidence indicator for low confidence
-  if (settings.showConfidence && testCase.confidence < 0.7) {
-    title += ' (?)';
+  if (isBaseCurrency || isSecondaryCurrency) {
+    // Direct conversion case - simulate the direct conversion title format
+    const targetCurrency = isBaseCurrency
+      ? settings.secondaryCurrency
+      : settings.baseCurrency;
+
+    // For testing purposes, simulate formatted display
+    // In real implementation, this would call the API for conversion
+    const sourceFormatted = formatAmountForTesting(amount, currency);
+    const targetFormatted = formatAmountForTesting(
+      amount * getSimulatedExchangeRate(currency, targetCurrency),
+      targetCurrency
+    );
+
+    // Generate submenu currencies (Quick Convert options) for base/secondary currencies
+    const targetCurrencies = [];
+
+    // Add additional configured currencies
+    if (
+      settings.additionalCurrencies &&
+      Array.isArray(settings.additionalCurrencies)
+    ) {
+      settings.additionalCurrencies.forEach(curr => {
+        if (curr !== currency) {
+          targetCurrencies.push(curr);
+        }
+      });
+    }
+
+    // Add popular currencies for Quick Convert
+    popularCurrencies.forEach(curr => {
+      if (
+        curr !== currency &&
+        curr !== targetCurrency &&
+        targetCurrencies.length < 6
+      ) {
+        if (!targetCurrencies.includes(curr)) {
+          targetCurrencies.push(curr);
+        }
+      }
+    });
+
+    return {
+      title: `${sourceFormatted} → ${targetFormatted}`,
+      targetCurrencies: targetCurrencies.slice(0, 5), // Show submenu with Quick Convert options
+      detectedCurrency: currency,
+      detectedAmount: amount,
+      confidence: testCase.confidence,
+      isDirectConversion: true,
+      directConversionTarget: targetCurrency
+    };
+  } else {
+    // Regular conversion with submenu
+    const formattedAmount =
+      amount % 1 === 0 ? amount.toString() : amount.toFixed(2);
+    let title = `Convert ${formattedAmount} ${currency}`;
+
+    // Add confidence indicator for low confidence
+    if (settings.showConfidence && testCase.confidence < 0.7) {
+      title += ' (?)';
+    }
+
+    // Generate target currencies (exclude detected currency)
+    let targetCurrencies = popularCurrencies
+      .filter(c => c !== currency)
+      .slice(0, 5); // Limit to 5 options
+
+    // Prioritize user's secondary currency
+    if (
+      settings.secondaryCurrency !== currency &&
+      !targetCurrencies.includes(settings.secondaryCurrency)
+    ) {
+      targetCurrencies[0] = settings.secondaryCurrency;
+    }
+
+    // Add user's additional currencies
+    if (
+      settings.additionalCurrencies &&
+      Array.isArray(settings.additionalCurrencies)
+    ) {
+      settings.additionalCurrencies.forEach(curr => {
+        if (curr !== currency && !targetCurrencies.includes(curr)) {
+          targetCurrencies.push(curr);
+        }
+      });
+    }
+
+    // Limit to reasonable number of options
+    targetCurrencies = targetCurrencies.slice(0, 5);
+
+    return {
+      title,
+      targetCurrencies,
+      detectedCurrency: currency,
+      detectedAmount: amount,
+      confidence: testCase.confidence,
+      isDirectConversion: false
+    };
   }
+}
 
-  // Generate target currencies (exclude detected currency)
-  const targetCurrencies = popularCurrencies
-    .filter(c => c !== currency)
-    .slice(0, 5); // Limit to 5 options
+// Helper functions for testing
+function formatAmountForTesting(amount, currency) {
+  const formatted = amount.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
 
-  // Prioritize user's secondary currency
-  if (
-    settings.secondaryCurrency !== currency &&
-    !targetCurrencies.includes(settings.secondaryCurrency)
-  ) {
-    targetCurrencies[0] = settings.secondaryCurrency;
-  }
-
-  return {
-    title,
-    targetCurrencies,
-    detectedCurrency: currency,
-    detectedAmount: amount,
-    confidence: testCase.confidence
+  const currencySymbols = {
+    USD: '$',
+    EUR: '€',
+    GBP: '£',
+    JPY: '¥',
+    EGP: 'EGP'
   };
+
+  const symbol = currencySymbols[currency] || currency;
+
+  if (currency === 'EGP') {
+    return `${symbol} ${formatted}`;
+  } else {
+    return `${symbol}${formatted}`;
+  }
+}
+
+function getSimulatedExchangeRate(fromCurrency, toCurrency) {
+  // Simplified exchange rates for testing
+  const rates = {
+    USD_EGP: 49.7556,
+    EGP_USD: 0.0201,
+    USD_EUR: 0.85,
+    EUR_USD: 1.18,
+    USD_GBP: 0.73,
+    GBP_USD: 1.37
+  };
+
+  return rates[`${fromCurrency}_${toCurrency}`] || 1;
 }
 
 // Test settings scenarios

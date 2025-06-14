@@ -77,6 +77,27 @@ A Chrome extension that provides real-time currency conversion through context m
 - [x] Enhanced error handling and logging for menu operations
 - [x] Support for opening extension settings from context menu
 
+### Task 2.4: Direct Conversion Feature ✅ COMPLETED
+
+- [x] **Smart Context Menu Behavior**: Detect when highlighted currency is base or secondary currency
+- [x] **Direct Conversion Display**: Show formatted conversion result directly in menu title
+  - [x] Base → Secondary: `$2,000.00 → EGP 99,511.00`
+  - [x] Secondary → Base: `EGP 99,511.00 → $2,000.00`
+- [x] **Real-time Exchange Rate Integration**: Fetch live rates for menu display
+- [x] **Fallback Handling**: Graceful degradation when rate fetching fails
+- [x] **Bidirectional Support**: Works both ways (base ↔ secondary)
+- [x] **Preserve Existing Behavior**: Other currencies still show traditional submenu
+- [x] **Click Handler Enhancement**: Handle direct conversion clicks without submenu
+- [x] **Test Coverage**: Comprehensive test cases for new functionality
+- [x] **User Experience**: Reduce clicks and provide immediate conversion preview
+
+**Feature Benefits:**
+
+- **Improved UX**: One-click conversion for primary currency pairs
+- **Visual Feedback**: See conversion result before clicking
+- **Reduced Complexity**: No submenu navigation for common conversions
+- **Maintained Flexibility**: Full submenu for non-primary currencies
+
 ---
 
 ## Phase 3: Settings & Configuration ✅ COMPLETED

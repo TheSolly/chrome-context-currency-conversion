@@ -4,7 +4,7 @@
 // Phase 3, Task 3.3: Import Settings Manager
 import { settingsManager } from '/utils/settings-manager.js';
 // Import API services
-import { ApiKeyManager, ExchangeRateService } from '/utils/api-service.js';
+import { apiKeyManager, exchangeRateService } from '/utils/api-service.js';
 import {
   formatConvertedAmount,
   formatExchangeRate,
@@ -60,7 +60,6 @@ chrome.runtime.onInstalled.addListener(async () => {
 
   // Initialize API keys first
   try {
-    const apiKeyManager = new ApiKeyManager();
     await apiKeyManager.initializeLocalApiKeys();
     console.log('🔑 API keys initialized in background');
   } catch (error) {
@@ -101,7 +100,6 @@ async function initializeExtension() {
 
   // Initialize API keys
   try {
-    const apiKeyManager = new ApiKeyManager();
     await apiKeyManager.initializeLocalApiKeys();
     console.log('🔑 API keys initialized on startup');
   } catch (error) {
@@ -185,6 +183,37 @@ async function loadUserSettings() {
   }
 }
 
+// Build direct conversion title with estimated amount
+async function buildDirectConversionTitle(
+  amount,
+  sourceCurrency,
+  targetCurrency,
+  formattedAmount
+) {
+  try {
+    // Try to get a quick conversion estimate for the menu title
+    const conversionResult = await exchangeRateService.convertCurrency(
+      amount,
+      sourceCurrency,
+      targetCurrency
+    );
+
+    // Format the source amount with currency symbol
+    const sourceFormatted = formatConvertedAmount(amount, sourceCurrency);
+    // Format the target amount with currency symbol
+    const targetFormatted = formatConvertedAmount(
+      conversionResult.convertedAmount,
+      targetCurrency
+    );
+
+    return `${sourceFormatted} → ${targetFormatted}`;
+  } catch (error) {
+    console.warn('Failed to get conversion estimate for menu title:', error);
+    // Fallback to basic format without conversion estimate
+    return `Convert ${formattedAmount} ${sourceCurrency} → ${targetCurrency}`;
+  }
+}
+
 // Enhanced context menu click handler with dynamic conversion options
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   try {
@@ -211,8 +240,30 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         url: chrome.runtime.getURL('popup/popup.html')
       });
     } else if (info.menuItemId === 'currencyConverter') {
-      // Handle main menu click (fallback)
-      await handleCurrencyConversion(info, tab);
+      // Handle main menu click
+      // Check if this is a direct conversion (base/secondary currency)
+      if (currentCurrencyInfo?.directConversionTarget) {
+        // Direct conversion case
+        const targetCurrency = currentCurrencyInfo.directConversionTarget;
+
+        // Phase 5, Task 5.1: Show immediate loading feedback
+        if (tab?.id) {
+          try {
+            await chrome.tabs.sendMessage(tab.id, {
+              action: 'showLoadingFeedback',
+              targetCurrency,
+              originalText: info.selectionText
+            });
+          } catch (error) {
+            console.warn('Failed to show loading feedback:', error);
+          }
+        }
+
+        await handleCurrencyConversion(info, tab, targetCurrency);
+      } else {
+        // Fallback for other currencies
+        await handleCurrencyConversion(info, tab);
+      }
     }
   } catch (error) {
     logError(error, 'contextMenuClick', {
@@ -537,21 +588,53 @@ async function updateContextMenu(hasCurrency, currencyInfo) {
       amount % 1 === 0 ? amount.toString() : amount.toFixed(2);
     const sourceCurrency = currencyInfo.currency;
 
-    // Build base title with confidence indicator
-    let baseTitle = `Convert ${formattedAmount} ${sourceCurrency}`;
-    if (currentSettings.showConfidence && currencyInfo.confidence < 0.8) {
-      const confidencePercent = Math.round(currencyInfo.confidence * 100);
-      baseTitle += ` (${confidencePercent}%)`;
+    // Check if detected currency is base or secondary currency
+    const isBaseCurrency = sourceCurrency === currentSettings.baseCurrency;
+    const isSecondaryCurrency =
+      sourceCurrency === currentSettings.secondaryCurrency;
+
+    if (isBaseCurrency || isSecondaryCurrency) {
+      // Show direct conversion with formatted display
+      const targetCurrency = isBaseCurrency
+        ? currentSettings.secondaryCurrency
+        : currentSettings.baseCurrency;
+
+      // Get estimated conversion for display (we'll use a cached/estimated rate)
+      const displayTitle = await buildDirectConversionTitle(
+        amount,
+        sourceCurrency,
+        targetCurrency,
+        formattedAmount
+      );
+
+      // Update main menu item with direct conversion
+      await chrome.contextMenus.update('currencyConverter', {
+        visible: true,
+        title: displayTitle
+      });
+
+      // Store the target currency for the direct conversion
+      currentCurrencyInfo.directConversionTarget = targetCurrency;
+
+      // Still create conversion options submenu for Quick Convert currencies and settings
+      await createConversionOptions(sourceCurrency, formattedAmount);
+    } else {
+      // Build base title with confidence indicator for non-base/secondary currencies
+      let baseTitle = `Convert ${formattedAmount} ${sourceCurrency}`;
+      if (currentSettings.showConfidence && currencyInfo.confidence < 0.8) {
+        const confidencePercent = Math.round(currencyInfo.confidence * 100);
+        baseTitle += ` (${confidencePercent}%)`;
+      }
+
+      // Update main menu item
+      await chrome.contextMenus.update('currencyConverter', {
+        visible: true,
+        title: baseTitle
+      });
+
+      // Create conversion options for different target currencies
+      await createConversionOptions(sourceCurrency, formattedAmount);
     }
-
-    // Update main menu item
-    await chrome.contextMenus.update('currencyConverter', {
-      visible: true,
-      title: baseTitle
-    });
-
-    // Create conversion options for different target currencies
-    await createConversionOptions(sourceCurrency, formattedAmount);
   } catch (error) {
     console.error('Error updating context menu:', error);
     logError(error, 'updateContextMenu', { hasCurrency, currencyInfo });
@@ -567,32 +650,68 @@ async function createConversionOptions(sourceCurrency, formattedAmount) {
     );
     const targetCurrencies = new Set();
 
-    // Add user's preferred currencies
-    if (currentSettings.secondaryCurrency !== sourceCurrency) {
-      targetCurrencies.add(currentSettings.secondaryCurrency);
-      console.log(
-        `➕ Added secondary currency: ${currentSettings.secondaryCurrency}`
-      );
-    }
-    if (currentSettings.baseCurrency !== sourceCurrency) {
-      targetCurrencies.add(currentSettings.baseCurrency);
-      console.log(`➕ Added base currency: ${currentSettings.baseCurrency}`);
-    }
+    // Check if this is a base or secondary currency
+    const isBaseCurrency = sourceCurrency === currentSettings.baseCurrency;
+    const isSecondaryCurrency =
+      sourceCurrency === currentSettings.secondaryCurrency;
 
-    // Add additional configured currencies
-    currentSettings.additionalCurrencies.forEach(currency => {
-      if (currency !== sourceCurrency) {
-        targetCurrencies.add(currency);
-      }
-    });
+    if (isBaseCurrency || isSecondaryCurrency) {
+      // For base/secondary currencies, show additional quick convert options
+      // Add the complementary primary currency first (already handled by direct conversion)
+      const primaryTarget = isBaseCurrency
+        ? currentSettings.secondaryCurrency
+        : currentSettings.baseCurrency;
 
-    // Add popular currencies if we have less than 4 options
-    if (targetCurrencies.size < 4) {
-      POPULAR_CURRENCIES.forEach(currency => {
-        if (currency !== sourceCurrency && targetCurrencies.size < 4) {
+      // Add all additional configured currencies
+      currentSettings.additionalCurrencies.forEach(currency => {
+        if (currency !== sourceCurrency) {
           targetCurrencies.add(currency);
         }
       });
+
+      // Add popular currencies to fill out Quick Convert options
+      POPULAR_CURRENCIES.forEach(currency => {
+        if (
+          currency !== sourceCurrency &&
+          currency !== primaryTarget &&
+          targetCurrencies.size < 6
+        ) {
+          targetCurrencies.add(currency);
+        }
+      });
+
+      console.log(
+        `🎯 Base/Secondary currency detected. Added ${targetCurrencies.size} quick convert options`
+      );
+    } else {
+      // For other currencies, use the original logic
+      // Add user's preferred currencies
+      if (currentSettings.secondaryCurrency !== sourceCurrency) {
+        targetCurrencies.add(currentSettings.secondaryCurrency);
+        console.log(
+          `➕ Added secondary currency: ${currentSettings.secondaryCurrency}`
+        );
+      }
+      if (currentSettings.baseCurrency !== sourceCurrency) {
+        targetCurrencies.add(currentSettings.baseCurrency);
+        console.log(`➕ Added base currency: ${currentSettings.baseCurrency}`);
+      }
+
+      // Add additional configured currencies
+      currentSettings.additionalCurrencies.forEach(currency => {
+        if (currency !== sourceCurrency) {
+          targetCurrencies.add(currency);
+        }
+      });
+
+      // Add popular currencies if we have less than 4 options
+      if (targetCurrencies.size < 4) {
+        POPULAR_CURRENCIES.forEach(currency => {
+          if (currency !== sourceCurrency && targetCurrencies.size < 4) {
+            targetCurrencies.add(currency);
+          }
+        });
+      }
     }
 
     // Create menu items for each target currency
@@ -699,11 +818,8 @@ async function performCurrencyConversion(currencyData, targetCurrency = null) {
 
     console.log('Using target currency:', finalTargetCurrency);
 
-    // Initialize the ExchangeRateService (using static import)
-    const exchangeService = new ExchangeRateService();
-
-    // Perform the actual conversion
-    const conversionResult = await exchangeService.convertCurrency(
+    // Use the singleton ExchangeRateService instance
+    const conversionResult = await exchangeRateService.convertCurrency(
       currencyData.amount,
       currencyData.currency,
       finalTargetCurrency

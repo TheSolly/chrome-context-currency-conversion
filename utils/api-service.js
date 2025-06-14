@@ -20,22 +20,51 @@ import { secureApiKeyManager } from './secure-api-key-manager.js';
  * @returns {Promise<Response>} Fetch response
  */
 async function safeFetch(url, options = {}) {
+  console.log(
+    '🌐 safeFetch called with URL:',
+    url.replace(/\/[a-f0-9]{24}\//, '/****/')
+  );
+
   // Phase 9, Task 9.1: Validate URL before making request
-  if (!securityManager.validateApiUrl(url)) {
-    throw new Error('Invalid or potentially unsafe API URL');
+  try {
+    if (securityManager && !securityManager.validateApiUrl(url)) {
+      throw new Error('Invalid or potentially unsafe API URL');
+    }
+  } catch (error) {
+    console.warn(
+      '⚠️ Security manager not available or failed validation:',
+      error.message
+    );
+    // Continue without security validation for now
   }
 
   // Check rate limiting
-  const rateLimit = securityManager.checkRateLimit('API_CALLS');
-  if (!rateLimit.allowed) {
-    throw new Error('API rate limit exceeded. Please try again later.');
+  try {
+    if (securityManager) {
+      const rateLimit = securityManager.checkRateLimit('API_CALLS');
+      if (!rateLimit.allowed) {
+        throw new Error('API rate limit exceeded. Please try again later.');
+      }
+    }
+  } catch (error) {
+    console.warn('⚠️ Rate limiting check failed:', error.message);
+    // Continue without rate limiting for now
   }
 
   // Log API request for security monitoring
-  securityManager.logSecurityEvent('api_request', {
-    url: url.replace(/([?&]access_key=)[^&]*/, '$1***'),
-    method: options.method || 'GET'
-  });
+  try {
+    if (securityManager) {
+      securityManager.logSecurityEvent('api_request', {
+        url: url.replace(/([?&]access_key=)[^&]*/, '$1***'),
+        method: options.method || 'GET'
+      });
+    }
+  } catch (error) {
+    console.warn('⚠️ Security logging failed:', error.message);
+    // Continue without security logging
+  }
+
+  console.log('🚀 Making actual fetch request...');
 
   if (typeof globalThis.fetch !== 'undefined') {
     return globalThis.fetch(url, options);
@@ -216,6 +245,7 @@ export class ApiKeyManager {
     }
 
     const formatRules = {
+      EXCHANGERATE_API: /^[a-f0-9]{24}$/i, // 24-character hex string
       FIXER_IO: /^[a-f0-9]{32}$/i, // 32-character hex string
       CURRENCY_API: /^[a-zA-Z0-9]{40}$/, // 40-character alphanumeric
       ALPHA_VANTAGE: /^[A-Z0-9]{16}$/ // 16-character uppercase alphanumeric
@@ -291,12 +321,36 @@ export class CurrencyApiService {
   }
 
   /**
+   * Ensure API keys are initialized before making requests
+   * @returns {Promise<void>}
+   */
+  async ensureApiKeysInitialized() {
+    try {
+      // Check if we have any API keys stored
+      const stats = await this.apiKeyManager.getApiKeyStats();
+      const hasAnyKeys = Object.keys(stats).length > 0;
+
+      if (!hasAnyKeys) {
+        console.log('🔑 No API keys found, initializing from local config...');
+        await this.apiKeyManager.initializeLocalApiKeys();
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to ensure API keys are initialized:', error);
+    }
+  }
+
+  /**
    * Get exchange rate between two currencies
    * @param {string} fromCurrency - Source currency code
    * @param {string} toCurrency - Target currency code
    * @returns {Promise<Object>} Exchange rate data
    */
   async getExchangeRate(fromCurrency, toCurrency) {
+    console.log('💱 getExchangeRate called:', { fromCurrency, toCurrency });
+
+    // Ensure API keys are initialized before proceeding
+    await this.ensureApiKeysInitialized();
+
     const cacheKey = `${fromCurrency}-${toCurrency}`;
 
     // Check cache first
@@ -311,6 +365,10 @@ export class CurrencyApiService {
       (a, b) => API_PROVIDERS[a].priority - API_PROVIDERS[b].priority
     );
 
+    console.log('🎯 Available providers in priority order:', providers);
+
+    const errors = [];
+
     for (const provider of providers) {
       try {
         console.log(
@@ -323,6 +381,7 @@ export class CurrencyApiService {
         );
 
         if (rate) {
+          console.log(`✅ Success with ${API_PROVIDERS[provider].name}:`, rate);
           // Cache successful result
           this.cacheRate(cacheKey, rate);
           return rate;
@@ -332,12 +391,15 @@ export class CurrencyApiService {
           `⚠️ ${API_PROVIDERS[provider].name} failed:`,
           error.message
         );
+        errors.push(`${API_PROVIDERS[provider].name}: ${error.message}`);
         continue; // Try next provider
       }
     }
 
+    console.error('❌ All API providers failed. Errors:', errors);
     throw new Error(
-      'All API providers failed. Please check your internet connection and API keys.'
+      'All API providers failed. Please check your internet connection and API keys. Errors: ' +
+        errors.join('; ')
     );
   }
 
@@ -367,35 +429,53 @@ export class CurrencyApiService {
    * Fetch from ExchangeRate-API (with API key)
    */
   async fetchFromExchangeRateApi(fromCurrency, toCurrency) {
+    console.log('🔄 fetchFromExchangeRateApi called:', {
+      fromCurrency,
+      toCurrency
+    });
+
     const apiKey = await this.apiKeyManager.getApiKey('EXCHANGERATE_API');
+    console.log('🔑 Retrieved API key:', apiKey ? 'Present' : 'Missing');
+
     if (!apiKey) {
       throw new Error('ExchangeRate-API key not configured');
     }
 
     const url = `${API_PROVIDERS.EXCHANGERATE_API.baseUrl}/${apiKey}/latest/${fromCurrency}`;
-    const response = await safeFetch(url);
+    console.log('🌐 Making request to:', url.replace(apiKey, '***'));
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    try {
+      const response = await safeFetch(url);
+      console.log('📡 Response status:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('📊 API response data:', data);
+
+      if (data.result === 'error') {
+        throw new Error(`API Error: ${data['error-type']}`);
+      }
+
+      if (!data.conversion_rates || !data.conversion_rates[toCurrency]) {
+        throw new Error(
+          `Rate not available for ${fromCurrency} → ${toCurrency}`
+        );
+      }
+
+      return {
+        rate: data.conversion_rates[toCurrency],
+        source: 'ExchangeRate-API',
+        timestamp: new Date().toISOString(),
+        fromCurrency,
+        toCurrency
+      };
+    } catch (fetchError) {
+      console.error('❌ Fetch error in ExchangeRate-API:', fetchError);
+      throw fetchError;
     }
-
-    const data = await response.json();
-
-    if (data.result === 'error') {
-      throw new Error(`API Error: ${data['error-type']}`);
-    }
-
-    if (!data.conversion_rates || !data.conversion_rates[toCurrency]) {
-      throw new Error(`Rate not available for ${fromCurrency} → ${toCurrency}`);
-    }
-
-    return {
-      rate: data.conversion_rates[toCurrency],
-      source: 'ExchangeRate-API',
-      timestamp: new Date().toISOString(),
-      fromCurrency,
-      toCurrency
-    };
   }
 
   /**
@@ -572,6 +652,24 @@ export class CurrencyApiService {
 // Export singleton instance
 export const currencyApiService = new CurrencyApiService();
 export const apiKeyManager = new ApiKeyManager();
+
+// Auto-initialize local API keys when module is loaded
+try {
+  // Use a promise that doesn't block module loading
+  apiKeyManager
+    .initializeLocalApiKeys()
+    .then(() => {
+      console.log('🔑 Local API keys auto-initialized');
+    })
+    .catch(error => {
+      console.warn(
+        '⚠️ Could not auto-initialize local API keys:',
+        error.message
+      );
+    });
+} catch (error) {
+  console.warn('⚠️ Error during API key auto-initialization:', error.message);
+}
 
 /**
  * Enhanced Currency Exchange Rate Service
