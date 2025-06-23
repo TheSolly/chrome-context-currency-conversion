@@ -1,6 +1,8 @@
 /**
  * Ad Settings Component - Settings tab add-on for managing advertisement settings
- * This file provides UI and logic for ad preference configuration
+ *
+ * Phase 9, Task 9.4: DISABLED - Remove unused features
+ * This component is temporarily disabled as part of feature cleanup.
  */
 
 import { initializeAbTesting, updateAdPreferences } from '../ad-integration.js';
@@ -8,6 +10,8 @@ import { getSubscriptionManager } from '/utils/subscription-manager-v2.js';
 
 export class AdSettingsComponent {
   constructor() {
+    // Component disabled for Phase 9, Task 9.4 cleanup
+    this.disabled = true;
     this.subscriptionManager = null;
     this.userPlan = 'FREE';
     this.adSettings = {
@@ -22,8 +26,13 @@ export class AdSettingsComponent {
 
   /**
    * Initialize the component
+   * DISABLED: Always returns false
    */
   async initialize() {
+    if (this.disabled) {
+      console.log('🚫 Ad Settings Component disabled for Phase 9 cleanup');
+      return false;
+    }
     try {
       // Get subscription manager instance
       this.subscriptionManager = getSubscriptionManager();
@@ -50,36 +59,33 @@ export class AdSettingsComponent {
       this.initialized = true;
       this.visible = true;
 
-      console.log('✅ Ad settings component initialized');
+      return true;
     } catch (error) {
-      console.error('❌ Failed to initialize ad settings component:', error);
-      this.visible = false;
+      console.error('Failed to initialize ad settings:', error);
+      return false;
     }
   }
 
   /**
-   * Load ad settings from storage
+   * Check if component should be visible
+   * DISABLED: Always returns false
    */
-  async loadAdSettings() {
-    try {
-      const result = await new Promise(resolve => {
-        chrome.storage.local.get(['adSettings'], resolve);
-      });
-
-      if (result.adSettings) {
-        this.adSettings = result.adSettings;
-      }
-
-      console.log('📋 Ad settings loaded:', this.adSettings);
-    } catch (error) {
-      console.error('❌ Failed to load ad settings:', error);
+  isVisible() {
+    if (this.disabled) {
+      return false;
     }
+    return this.visible && this.userPlan === 'FREE';
   }
 
   /**
-   * Create the UI for ad settings
+   * Show the ad settings component
+   * DISABLED: Does nothing
    */
-  createAdSettingsUI() {
+  show() {
+    if (this.disabled) {
+      console.log('🚫 Ad Settings Component disabled');
+      return;
+    }
     // Find the settings panel to insert ad settings
     const settingsPanel = document.querySelector('#settingsPanel');
     if (!settingsPanel) {
@@ -159,6 +165,17 @@ export class AdSettingsComponent {
   }
 
   /**
+   * Hide the ad settings component
+   * DISABLED: Does nothing
+   */
+  hide() {
+    if (this.disabled) {
+      return;
+    }
+    this.visible = false;
+  }
+
+  /**
    * Setup event listeners for ad settings controls
    */
   setupEventListeners() {
@@ -228,14 +245,6 @@ export class AdSettingsComponent {
     } catch (error) {
       console.error('❌ Failed to update ad region:', error);
     }
-  }
-
-  /**
-   * Check if the component should be visible
-   * @returns {boolean} Whether the component should be visible
-   */
-  isVisible() {
-    return this.visible;
   }
 }
 
