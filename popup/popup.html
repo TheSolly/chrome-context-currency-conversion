@@ -196,6 +196,68 @@
             </button>
           </section>
 
+          <!-- Test Conversion Section -->
+          <section class="setting-card">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-lg">🧪</span>
+              <h2 class="text-base font-semibold text-gray-900">
+                Test Conversion
+              </h2>
+            </div>
+
+            <div class="space-y-3">
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 mb-1">
+                    From Currency
+                  </label>
+                  <select
+                    id="testFromCurrency"
+                    class="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  >
+                    <!-- Populated by JavaScript -->
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-gray-700 mb-1">
+                    To Currency
+                  </label>
+                  <select
+                    id="testToCurrency"
+                    class="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  >
+                    <!-- Populated by JavaScript -->
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">
+                  Amount
+                </label>
+                <input
+                  type="number"
+                  id="testAmount"
+                  value="100"
+                  min="0.01"
+                  step="0.01"
+                  class="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+              </div>
+
+              <button
+                id="testConversion"
+                class="w-full px-3 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 transition-colors"
+              >
+                Test Conversion
+              </button>
+
+              <div id="testConversionResult" class="mt-3">
+                <!-- Test result will appear here -->
+              </div>
+            </div>
+          </section>
+
           <!-- Settings -->
           <section
             class="setting-card"

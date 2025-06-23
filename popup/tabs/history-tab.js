@@ -8,6 +8,8 @@ export class HistoryTab {
   constructor() {
     this.initialized = false;
     this.conversionHistory = null;
+    // Phase 9, Task 9.4: Add subscription manager for conversion tracking
+    this.subscriptionManager = null;
   }
 
   /**
@@ -24,6 +26,12 @@ export class HistoryTab {
         '/utils/conversion-history.js'
       );
       this.conversionHistory = new ConversionHistory();
+
+      // Phase 9, Task 9.4: Initialize subscription manager for tracking
+      const { getSubscriptionManager } = await import(
+        '/utils/subscription-manager-v2.js'
+      );
+      this.subscriptionManager = await getSubscriptionManager();
 
       // Setup event listeners
       this.setupEventListeners();
@@ -141,30 +149,34 @@ export class HistoryTab {
         this.copyToClipboard(`${amount} ${currency}`);
       });
     });
+
+    // Phase 9, Task 9.4: Add event listeners for repeat conversion buttons
+    historyList.querySelectorAll('.repeat-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const fromCurrency = btn.dataset.from;
+        const toCurrency = btn.dataset.to;
+        const amount = parseFloat(btn.dataset.amount);
+        this.repeatConversion(fromCurrency, toCurrency, amount);
+      });
+    });
   }
 
   /**
    * Create HTML for a history item
    */
   createHistoryItemHTML(item) {
-    const isRecent = Date.now() - item.timestamp < 60 * 60 * 1000; // Less than 1 hour
-    const isToday =
-      new Date(item.timestamp).toDateString() === new Date().toDateString();
+    // Get source icon
     const sourceIcon = this.getSourceIcon(item.source);
-    const confidenceLevel = this.getConfidenceLevel(item.confidence);
 
     return `
-      <div class="history-item ${isRecent ? 'recent' : ''}" data-id="${item.id}">
+      <div class="history-item" data-id="${item.id}">
         <div class="history-item-left">
-          <div class="history-item-conversion">
-            <span class="currency-badge from">${item.fromCurrency}</span>
-            <span class="conversion-arrow">→</span>
-            <span class="currency-badge to">${item.toCurrency}</span>
-            ${confidenceLevel}
-          </div>
-          <div class="history-item-details">
-            <span class="amount-display">
-              ${this.formatAmount(item.originalAmount)} ${item.fromCurrency} = 
+          <div class="conversion-summary">
+            <span class="original-amount">
+              ${this.formatAmount(item.originalAmount)} ${item.fromCurrency}
+            </span>
+            <span class="arrow">→</span>
+            <span class="converted-amount">
               <strong>${this.formatAmount(item.convertedAmount)} ${item.toCurrency}</strong>
             </span>
           </div>
@@ -191,11 +203,19 @@ export class HistoryTab {
             >
               <span class="icon">📋</span>
             </button>
+            <button 
+              class="action-btn repeat-btn"
+              data-from="${item.fromCurrency}"
+              data-to="${item.toCurrency}"
+              data-amount="${item.originalAmount}"
+              title="Repeat this conversion"
+            >
+              <span class="icon">🔄</span>
+            </button>
           </div>
-          <div class="history-item-time ${isToday ? 'today' : ''}">
+          <div class="timestamp">
             ${this.formatTimestamp(item.timestamp)}
           </div>
-          ${item.webpage ? `<div class="source-info" title="From: ${item.webpage}">🌐</div>` : ''}
         </div>
       </div>
     `;
@@ -387,6 +407,74 @@ export class HistoryTab {
   }
 
   /**
+   * Phase 9, Task 9.4: Repeat a conversion from history with tracking
+   */
+  async repeatConversion(fromCurrency, toCurrency, amount) {
+    try {
+      // Check subscription limits before performing repeat conversion
+      if (this.subscriptionManager) {
+        const canConvert = this.subscriptionManager.canPerformAction(
+          'dailyConversions',
+          1
+        );
+        if (!canConvert.allowed) {
+          this.showError(
+            `Cannot repeat conversion: ${canConvert.reason === 'limit_exceeded' ? 'daily limit reached' : 'feature not available'}`
+          );
+          return;
+        }
+      }
+
+      this.showSuccess('Repeating conversion...');
+
+      // Import API service dynamically
+      const { exchangeRateService } = await import('/utils/api-service.js');
+
+      // Get current exchange rate
+      const rateData = await exchangeRateService.getExchangeRate(
+        fromCurrency,
+        toCurrency
+      );
+
+      if (!rateData || !rateData.rate) {
+        throw new Error('Failed to get current exchange rate');
+      }
+
+      const convertedAmount = amount * rateData.rate;
+
+      // Track the repeat conversion
+      if (this.subscriptionManager) {
+        await this.subscriptionManager.trackUsage('dailyConversions', 1);
+        console.log('📊 Repeat conversion tracked for subscription');
+      }
+
+      // Add to conversion history
+      await this.conversionHistory.addConversion({
+        fromCurrency,
+        toCurrency,
+        originalAmount: amount,
+        convertedAmount,
+        exchangeRate: rateData.rate,
+        timestamp: Date.now(),
+        source: 'history-repeat',
+        confidence: 1.0,
+        webpage: null
+      });
+
+      // Show result
+      this.showSuccess(
+        `${amount} ${fromCurrency} = ${convertedAmount.toFixed(2)} ${toCurrency} (Current rate: ${rateData.rate.toFixed(4)})`
+      );
+
+      // Refresh the history display to show the new conversion
+      await this.loadContent();
+    } catch (error) {
+      console.error('❌ Repeat conversion failed:', error);
+      this.showError(`Repeat conversion failed: ${error.message}`);
+    }
+  }
+
+  /**
    * Format amount for display
    */
   formatAmount(amount) {
@@ -434,18 +522,30 @@ export class HistoryTab {
    * Show status message
    */
   showStatusMessage(message, type = 'success', duration = 3000) {
-    const statusDiv = document.getElementById('statusMessage');
-    if (!statusDiv) return;
+    // Create or get status container
+    let statusContainer = document.getElementById('historyStatus');
+    if (!statusContainer) {
+      statusContainer = document.createElement('div');
+      statusContainer.id = 'historyStatus';
+      statusContainer.className = 'fixed top-4 right-4 z-50';
+      document.body.appendChild(statusContainer);
+    }
 
-    statusDiv.textContent = message;
-    statusDiv.className = `fixed top-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg shadow-lg z-50 transition-all duration-300 ${
-      type === 'error' ? 'bg-red-500 text-white' : 'bg-green-500 text-white'
+    // Create message element
+    const messageEl = document.createElement('div');
+    messageEl.className = `px-4 py-2 rounded-lg text-white text-sm font-medium mb-2 transform transition-all duration-300 ${
+      type === 'success' ? 'bg-green-500' : 'bg-red-500'
     }`;
+    messageEl.textContent = message;
 
-    statusDiv.classList.remove('hidden');
+    // Add to container
+    statusContainer.appendChild(messageEl);
 
+    // Auto remove after duration
     setTimeout(() => {
-      statusDiv.classList.add('hidden');
+      if (messageEl.parentNode) {
+        messageEl.remove();
+      }
     }, duration);
   }
 
