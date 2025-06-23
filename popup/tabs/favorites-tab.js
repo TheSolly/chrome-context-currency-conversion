@@ -153,9 +153,12 @@ export class FavoritesTab {
 
     if (!favorites || favorites.length === 0) {
       favoritesList.innerHTML = `
-        <div class="text-center py-8 text-gray-500">
-          <p>No favorites added yet</p>
-          <p class="text-xs mt-2">Click "Add Favorite" to get started</p>
+        <div class="favorites-empty-state">
+          <div class="favorites-empty-icon">⭐</div>
+          <div class="favorites-empty-title">No favorites added yet</div>
+          <div class="favorites-empty-description">
+            Click "Add" to save your frequently used currency conversions for quick access
+          </div>
         </div>
       `;
       return;
@@ -166,14 +169,14 @@ export class FavoritesTab {
       .join('');
 
     // Add event listeners
-    favoritesList.querySelectorAll('.remove-favorite-btn').forEach(btn => {
+    favoritesList.querySelectorAll('.favorite-remove-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const favoriteId = btn.dataset.id;
         this.removeFavorite(favoriteId);
       });
     });
 
-    favoritesList.querySelectorAll('.quick-convert-btn').forEach(btn => {
+    favoritesList.querySelectorAll('.favorite-convert-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const fromCurrency = btn.dataset.from;
         const toCurrency = btn.dataset.to;
@@ -189,31 +192,34 @@ export class FavoritesTab {
   createFavoriteItemHTML(fav) {
     return `
       <div class="favorite-item" data-id="${fav.id}">
-        <div class="flex items-center justify-between">
-          <div class="flex-1">
-            <div class="text-sm font-medium text-gray-900">
-              ${fav.fromCurrency} → ${fav.toCurrency}
-              ${fav.amount ? ` (${this.formatAmount(fav.amount)})` : ''}
-            </div>
-            ${fav.label ? `<div class="text-xs text-gray-500">${fav.label}</div>` : ''}
+        <div class="favorite-item-header">
+          <div class="favorite-pair">
+            <span class="currency-from">${fav.fromCurrency}</span>
+            <span class="arrow">→</span>
+            <span class="currency-to">${fav.toCurrency}</span>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="favorite-item-actions">
             <button 
-              class="quick-convert-btn text-xs px-2 py-1 bg-primary-100 text-primary-700 rounded hover:bg-primary-200 transition-colors"
+              class="favorite-convert-btn"
               data-from="${fav.fromCurrency}"
               data-to="${fav.toCurrency}"
               data-amount="${fav.amount || ''}"
+              title="Convert ${fav.fromCurrency} to ${fav.toCurrency}"
             >
               Convert
             </button>
             <button 
-              class="remove-favorite-btn text-gray-400 hover:text-red-500 transition-colors"
+              class="favorite-remove-btn"
               data-id="${fav.id}"
               title="Remove from favorites"
             >
               ✕
             </button>
           </div>
+        </div>
+        <div class="favorite-item-details">
+          ${fav.amount ? `Default amount: ${this.formatAmount(fav.amount)} ${fav.fromCurrency}` : 'No default amount'}
+          ${fav.label ? ` • ${fav.label}` : ''}
         </div>
       </div>
     `;
@@ -229,8 +235,12 @@ export class FavoritesTab {
     }
 
     if (!favorites || favorites.length === 0) {
-      container.innerHTML =
-        '<p class="text-xs text-gray-500">No favorites available</p>';
+      container.innerHTML = `
+        <div class="text-center py-4 text-gray-500">
+          <p class="text-xs">No favorites available for quick convert</p>
+          <p class="text-xs mt-1">Add some favorites first!</p>
+        </div>
+      `;
       return;
     }
 
@@ -238,12 +248,19 @@ export class FavoritesTab {
       .map(
         fav => `
         <button 
-          class="quick-convert-pair-btn w-full text-left text-xs p-2 border border-gray-200 rounded hover:bg-gray-50 transition-colors"
+          class="quick-convert-pair-btn"
           data-from="${fav.fromCurrency}"
           data-to="${fav.toCurrency}"
+          title="Quick convert using ${fav.fromCurrency} to ${fav.toCurrency}"
         >
-          ${fav.fromCurrency} → ${fav.toCurrency}
-          ${fav.label ? ` (${fav.label})` : ''}
+          <div class="flex justify-between items-center">
+            <span>
+              <span class="currency-from">${fav.fromCurrency}</span>
+              <span class="arrow">→</span>
+              <span class="currency-to">${fav.toCurrency}</span>
+            </span>
+            ${fav.label ? `<span class="text-xs text-gray-500">${fav.label}</span>` : ''}
+          </div>
         </button>
       `
       )
@@ -254,7 +271,18 @@ export class FavoritesTab {
       btn.addEventListener('click', () => {
         const fromCurrency = btn.dataset.from;
         const toCurrency = btn.dataset.to;
-        this.performQuickConvert(fromCurrency, toCurrency);
+
+        // Get the amount from the input field
+        const amountInput = document.getElementById('quickConvertAmount');
+        const amount = amountInput?.value;
+
+        if (!amount || parseFloat(amount) <= 0) {
+          this.showError('Please enter a valid amount first');
+          amountInput?.focus();
+          return;
+        }
+
+        this.performQuickConvert(fromCurrency, toCurrency, amount);
       });
     });
   }
@@ -279,16 +307,12 @@ export class FavoritesTab {
     }
 
     try {
-      const favorite = {
-        id: Date.now().toString(),
+      await this.conversionHistory.addToFavorites(
         fromCurrency,
         toCurrency,
-        amount: amount || null,
-        label: label || null,
-        createdAt: new Date().toISOString()
-      };
-
-      await this.conversionHistory.addFavorite(favorite);
+        amount,
+        label
+      );
 
       // Hide form and clear
       const form = document.getElementById('addFavoriteForm');
@@ -303,7 +327,7 @@ export class FavoritesTab {
       this.showSuccess('Favorite added successfully');
     } catch (error) {
       console.error('❌ Failed to save favorite:', error);
-      this.showError('Failed to save favorite');
+      this.showError(`Failed to save favorite: ${error.message}`);
     }
   }
 
@@ -327,7 +351,7 @@ export class FavoritesTab {
    */
   async removeFavorite(favoriteId) {
     try {
-      await this.conversionHistory.removeFavorite(favoriteId);
+      await this.conversionHistory.removeFromFavorites(favoriteId);
       await this.loadContent();
       this.showSuccess('Favorite removed successfully');
     } catch (error) {
@@ -341,26 +365,183 @@ export class FavoritesTab {
    */
   async performQuickConvert(fromCurrency, toCurrency, amount) {
     if (!amount) {
-      amount = prompt(`Enter amount in ${fromCurrency}:`);
-      if (!amount) return;
+      // Check if there's an amount in the quick convert input
+      const quickConvertAmount =
+        document.getElementById('quickConvertAmount')?.value;
+      if (quickConvertAmount) {
+        amount = quickConvertAmount;
+      } else {
+        amount = prompt(`Enter amount in ${fromCurrency}:`);
+        if (!amount) return;
+      }
     }
 
     try {
-      // This would trigger a conversion
+      const numAmount = parseFloat(amount);
+      if (isNaN(numAmount) || numAmount <= 0) {
+        this.showError('Please enter a valid amount');
+        return;
+      }
+
+      // Show loading state
       this.showSuccess(
-        `Converting ${amount} ${fromCurrency} to ${toCurrency}...`
+        `Converting ${numAmount} ${fromCurrency} to ${toCurrency}...`
       );
 
-      // Emit event to notify other components
-      this.emitGlobalEvent('conversionRequested', {
+      // Import and use the API service
+      const { ApiService } = await import('/utils/api-service.js');
+      const apiService = new ApiService();
+
+      // Perform the actual conversion
+      const result = await apiService.convertCurrency(
+        numAmount,
         fromCurrency,
-        toCurrency,
-        amount: parseFloat(amount)
-      });
+        toCurrency
+      );
+
+      if (result && result.success) {
+        // Show the conversion result
+        this.showConversionResult(
+          numAmount,
+          fromCurrency,
+          result.convertedAmount,
+          toCurrency,
+          result.rate
+        );
+
+        // Add to history
+        const { ConversionHistory } = await import(
+          '/utils/conversion-history.js'
+        );
+        const history = new ConversionHistory();
+        await history.addConversion({
+          fromCurrency,
+          toCurrency,
+          originalAmount: numAmount,
+          convertedAmount: result.convertedAmount,
+          rate: result.rate,
+          source: result.source || 'favorites'
+        });
+
+        // Clear the quick convert input
+        const quickConvertInput = document.getElementById('quickConvertAmount');
+        if (quickConvertInput) {
+          quickConvertInput.value = '';
+        }
+      } else {
+        this.showError(result?.error || 'Conversion failed. Please try again.');
+      }
     } catch (error) {
       console.error('❌ Failed to perform quick convert:', error);
-      this.showError('Failed to perform conversion');
+      this.showError(
+        'Conversion failed. Please check your internet connection and try again.'
+      );
     }
+  }
+
+  /**
+   * Show conversion result with formatted display
+   */
+  showConversionResult(
+    originalAmount,
+    fromCurrency,
+    convertedAmount,
+    toCurrency,
+    rate
+  ) {
+    // Import formatting utilities
+    import('/utils/conversion-utils.js')
+      .then(({ formatConvertedAmount, formatExchangeRate }) => {
+        const formattedOriginal = new Intl.NumberFormat('en-US', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 4
+        }).format(originalAmount);
+
+        const formattedConverted = formatConvertedAmount(
+          convertedAmount,
+          toCurrency
+        );
+        const formattedRate = formatExchangeRate(
+          rate,
+          fromCurrency,
+          toCurrency
+        );
+
+        const resultMessage = `${formattedOriginal} ${fromCurrency} = ${formattedConverted}\n(${formattedRate})`;
+
+        // Show success message with conversion result
+        this.showStatusMessage(resultMessage, 'success', 5000);
+
+        // Also show a more detailed result in a custom popup
+        this.showConversionPopup(
+          originalAmount,
+          fromCurrency,
+          convertedAmount,
+          toCurrency,
+          rate
+        );
+      })
+      .catch(() => {
+        // Fallback formatting
+        const resultMessage = `${originalAmount} ${fromCurrency} = ${convertedAmount.toFixed(2)} ${toCurrency}\n(Rate: ${rate.toFixed(4)})`;
+        this.showStatusMessage(resultMessage, 'success', 5000);
+      });
+  }
+
+  /**
+   * Show detailed conversion result in a popup
+   */
+  showConversionPopup(
+    originalAmount,
+    fromCurrency,
+    convertedAmount,
+    toCurrency,
+    rate
+  ) {
+    // Create a temporary popup div
+    const popup = document.createElement('div');
+    popup.className =
+      'conversion-result-popup fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 max-w-sm';
+    popup.innerHTML = `
+      <div class="conversion-result-content">
+        <div class="conversion-result-title">Conversion Result</div>
+        <div class="conversion-result-display">
+          <div class="conversion-result-from">${originalAmount} ${fromCurrency}</div>
+          <div class="conversion-result-equals">=</div>
+          <div class="conversion-result-to">${convertedAmount.toFixed(2)} ${toCurrency}</div>
+        </div>
+        <div class="conversion-result-rate">
+          Exchange Rate: 1 ${fromCurrency} = ${rate.toFixed(4)} ${toCurrency}
+        </div>
+        <button id="closeConversionPopup" class="conversion-result-close">
+          Close
+        </button>
+      </div>
+    `;
+
+    // Add to document
+    document.body.appendChild(popup);
+
+    // Close button functionality
+    document
+      .getElementById('closeConversionPopup')
+      .addEventListener('click', () => {
+        document.body.removeChild(popup);
+      });
+
+    // Close on click outside
+    popup.addEventListener('click', e => {
+      if (e.target === popup) {
+        document.body.removeChild(popup);
+      }
+    });
+
+    // Auto-close after 15 seconds
+    setTimeout(() => {
+      if (document.body.contains(popup)) {
+        document.body.removeChild(popup);
+      }
+    }, 15000);
   }
 
   /**

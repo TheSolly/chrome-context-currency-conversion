@@ -693,7 +693,7 @@ export const DEFAULT_SETTINGS = {
   additionalCurrencies: ['GBP', 'JPY', 'CAD'],
   showConfidence: true,
   autoConvert: false,
-  showNotifications: true,
+  showNotifications: false, // Premium feature - disabled by default
   theme: 'light',
   precision: 2,
   enableKeyboardShortcuts: true,

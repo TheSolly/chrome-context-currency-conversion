@@ -43,10 +43,13 @@ export class HistoryTab {
     try {
       console.log('📋 Loading history content...');
 
+      // Initialize history manager if not already done
+      await this.conversionHistory.initialize();
+
       // Load history data
-      const historyData = await this.conversionHistory.getHistory();
-      const stats = await this.conversionHistory.getStats();
-      const popularPairs = await this.conversionHistory.getPopularPairs();
+      const historyData = this.conversionHistory.getHistory({ limit: 50 });
+      const stats = this.conversionHistory.getStats();
+      const popularPairs = this.conversionHistory.getPopularPairs(5);
 
       // Display content
       this.displayHistoryItems(historyData);
@@ -121,12 +124,21 @@ export class HistoryTab {
       .map(item => this.createHistoryItemHTML(item))
       .join('');
 
-    // Add event listeners for favorite buttons
-    historyList.querySelectorAll('.add-to-favorites-btn').forEach(btn => {
+    // Add event listeners for action buttons
+    historyList.querySelectorAll('.favorite-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const fromCurrency = btn.dataset.from;
         const toCurrency = btn.dataset.to;
         this.addToFavoritesFromHistory(fromCurrency, toCurrency);
+      });
+    });
+
+    // Add event listeners for copy buttons
+    historyList.querySelectorAll('.copy-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const amount = btn.dataset.amount;
+        const currency = btn.dataset.currency;
+        this.copyToClipboard(`${amount} ${currency}`);
       });
     });
   }
@@ -135,33 +147,89 @@ export class HistoryTab {
    * Create HTML for a history item
    */
   createHistoryItemHTML(item) {
+    const isRecent = Date.now() - item.timestamp < 60 * 60 * 1000; // Less than 1 hour
+    const isToday =
+      new Date(item.timestamp).toDateString() === new Date().toDateString();
+    const sourceIcon = this.getSourceIcon(item.source);
+    const confidenceLevel = this.getConfidenceLevel(item.confidence);
+
     return `
-      <div class="history-item" data-id="${item.id}">
-        <div class="flex items-center justify-between">
-          <div class="flex-1">
-            <div class="text-sm font-medium text-gray-900">
-              ${this.formatAmount(item.fromAmount)} ${item.fromCurrency} → ${this.formatAmount(item.toAmount)} ${item.toCurrency}
-            </div>
-            <div class="text-xs text-gray-500">
-              Rate: 1 ${item.fromCurrency} = ${this.formatAmount(item.rate)} ${item.toCurrency}
-            </div>
+      <div class="history-item ${isRecent ? 'recent' : ''}" data-id="${item.id}">
+        <div class="history-item-left">
+          <div class="history-item-conversion">
+            <span class="currency-badge from">${item.fromCurrency}</span>
+            <span class="conversion-arrow">→</span>
+            <span class="currency-badge to">${item.toCurrency}</span>
+            ${confidenceLevel}
           </div>
-          <div class="flex items-center gap-2">
-            <span class="text-xs text-gray-500">
-              ${this.formatTimestamp(item.timestamp)}
+          <div class="history-item-details">
+            <span class="amount-display">
+              ${this.formatAmount(item.originalAmount)} ${item.fromCurrency} = 
+              <strong>${this.formatAmount(item.convertedAmount)} ${item.toCurrency}</strong>
             </span>
+          </div>
+          <div class="rate-info">
+            <span class="rate-text">Rate: 1 ${item.fromCurrency} = ${this.formatAmount(item.exchangeRate)} ${item.toCurrency}</span>
+            ${sourceIcon}
+          </div>
+        </div>
+        <div class="history-item-right">
+          <div class="history-actions">
             <button 
-              class="add-to-favorites-btn text-gray-400 hover:text-yellow-500 transition-colors"
+              class="action-btn favorite-btn"
               data-from="${item.fromCurrency}"
               data-to="${item.toCurrency}"
               title="Add to favorites"
             >
-              ⭐
+              <span class="icon">⭐</span>
+            </button>
+            <button 
+              class="action-btn copy-btn"
+              data-amount="${item.convertedAmount}"
+              data-currency="${item.toCurrency}"
+              title="Copy result"
+            >
+              <span class="icon">📋</span>
             </button>
           </div>
+          <div class="history-item-time ${isToday ? 'today' : ''}">
+            ${this.formatTimestamp(item.timestamp)}
+          </div>
+          ${item.webpage ? `<div class="source-info" title="From: ${item.webpage}">🌐</div>` : ''}
         </div>
       </div>
     `;
+  }
+
+  /**
+   * Get source icon for history item
+   */
+  getSourceIcon(source) {
+    const icons = {
+      'context-menu':
+        '<span class="source-icon" title="Context Menu">🖱️</span>',
+      manual: '<span class="source-icon" title="Manual Entry">✏️</span>',
+      api: '<span class="source-icon" title="API Call">🔗</span>',
+      popup: '<span class="source-icon" title="Popup">🎚️</span>'
+    };
+    return (
+      icons[source] || '<span class="source-icon" title="Unknown">❓</span>'
+    );
+  }
+
+  /**
+   * Get confidence level badge
+   */
+  getConfidenceLevel(confidence) {
+    if (!confidence) return '';
+
+    if (confidence >= 0.9) {
+      return '<span class="confidence-badge high" title="High Confidence">🟢</span>';
+    } else if (confidence >= 0.7) {
+      return '<span class="confidence-badge medium" title="Medium Confidence">🟡</span>';
+    } else {
+      return '<span class="confidence-badge low" title="Low Confidence">🔴</span>';
+    }
   }
 
   /**
@@ -172,9 +240,21 @@ export class HistoryTab {
     const weekElement = document.getElementById('weekConversions');
     const countElement = document.getElementById('conversionCount');
 
-    if (totalElement) totalElement.textContent = stats.total || 0;
-    if (weekElement) weekElement.textContent = stats.thisWeek || 0;
-    if (countElement) countElement.textContent = stats.total || 0;
+    // Calculate this week's conversions
+    const thisWeekStart = new Date();
+    thisWeekStart.setDate(thisWeekStart.getDate() - thisWeekStart.getDay());
+    thisWeekStart.setHours(0, 0, 0, 0);
+
+    const thisWeekCount = Object.entries(stats.dailyStats || {})
+      .filter(([dateStr]) => {
+        const date = new Date(dateStr);
+        return date >= thisWeekStart;
+      })
+      .reduce((sum, [, dayStats]) => sum + (dayStats.count || 0), 0);
+
+    if (totalElement) totalElement.textContent = stats.totalConversions || 0;
+    if (weekElement) weekElement.textContent = thisWeekCount || 0;
+    if (countElement) countElement.textContent = stats.totalConversions || 0;
   }
 
   /**
@@ -195,7 +275,7 @@ export class HistoryTab {
       .map(
         pair => `
         <div class="flex items-center justify-between text-xs p-2 bg-gray-50 rounded">
-          <span>${pair.fromCurrency} → ${pair.toCurrency}</span>
+          <span>${pair.from} → ${pair.to}</span>
           <span class="text-gray-500">${pair.count} times</span>
         </div>
       `
@@ -212,19 +292,26 @@ export class HistoryTab {
 
       switch (filter) {
         case 'today':
-          filteredHistory =
-            await this.conversionHistory.getHistoryByDate('today');
+          filteredHistory = this.conversionHistory.getTodayConversions();
           break;
-        case 'week':
-          filteredHistory =
-            await this.conversionHistory.getHistoryByDate('week');
+        case 'week': {
+          const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+          filteredHistory = this.conversionHistory.getHistory({
+            dateFrom: weekAgo,
+            limit: 50
+          });
           break;
-        case 'month':
-          filteredHistory =
-            await this.conversionHistory.getHistoryByDate('month');
+        }
+        case 'month': {
+          const monthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+          filteredHistory = this.conversionHistory.getHistory({
+            dateFrom: monthAgo,
+            limit: 50
+          });
           break;
-        default:
-          filteredHistory = await this.conversionHistory.getHistory();
+        }
+        default: // 'all'
+          filteredHistory = this.conversionHistory.getHistory({ limit: 50 });
       }
 
       this.displayHistoryItems(filteredHistory);
@@ -238,8 +325,8 @@ export class HistoryTab {
    */
   async exportHistory() {
     try {
-      const history = await this.conversionHistory.getHistory();
-      const blob = new Blob([JSON.stringify(history, null, 2)], {
+      const historyData = this.conversionHistory.exportHistory();
+      const blob = new Blob([historyData], {
         type: 'application/json'
       });
       const url = URL.createObjectURL(blob);
@@ -270,7 +357,7 @@ export class HistoryTab {
     if (!confirmed) return;
 
     try {
-      await this.conversionHistory.clearHistory();
+      await this.conversionHistory.clearHistory('history');
       await this.loadContent();
       this.showSuccess('History cleared successfully');
     } catch (error) {
@@ -284,15 +371,18 @@ export class HistoryTab {
    */
   async addToFavoritesFromHistory(fromCurrency, toCurrency) {
     try {
-      // This would interact with the favorites system
-      // For now, just show a success message
+      await this.conversionHistory.addToFavorites(fromCurrency, toCurrency);
       this.showSuccess(`Added ${fromCurrency} → ${toCurrency} to favorites`);
 
       // Emit event to notify other tabs
       this.emitGlobalEvent('favoriteAdded', { fromCurrency, toCurrency });
     } catch (error) {
       console.error('❌ Failed to add to favorites:', error);
-      this.showError('Failed to add to favorites');
+      // Show specific error message if it's a duplicate
+      const errorMessage = error.message.includes('already in favorites')
+        ? `${fromCurrency} → ${toCurrency} is already in favorites`
+        : 'Failed to add to favorites';
+      this.showError(errorMessage);
     }
   }
 
@@ -389,5 +479,37 @@ export class HistoryTab {
    */
   async refresh() {
     await this.loadContent();
+  }
+
+  /**
+   * Copy text to clipboard
+   */
+  async copyToClipboard(text) {
+    try {
+      if (
+        typeof window !== 'undefined' &&
+        window.navigator &&
+        window.navigator.clipboard &&
+        window.isSecureContext
+      ) {
+        await window.navigator.clipboard.writeText(text);
+      } else {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        textArea.remove();
+      }
+      this.showSuccess(`Copied ${text} to clipboard`);
+    } catch (error) {
+      console.error('❌ Failed to copy to clipboard:', error);
+      this.showError('Failed to copy to clipboard');
+    }
   }
 }

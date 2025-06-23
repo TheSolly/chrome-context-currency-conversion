@@ -6,6 +6,7 @@ export class AlertsTab {
   constructor() {
     this.initialized = false;
     this.alertsManager = null;
+    this.subscriptionManager = null;
   }
 
   /**
@@ -22,6 +23,12 @@ export class AlertsTab {
         '/utils/rate-alerts-manager.js'
       );
       this.alertsManager = new RateAlertsManager();
+
+      // Import subscription manager
+      const { getSubscriptionManager } = await import(
+        '/utils/subscription-manager-v2.js'
+      );
+      this.subscriptionManager = await getSubscriptionManager();
 
       // Setup event listeners
       this.setupEventListeners();
@@ -41,10 +48,35 @@ export class AlertsTab {
     try {
       console.log('📋 Loading alerts content...');
 
-      // Initialize alerts manager if not done already
+      // Ensure managers are initialized
+      if (!this.alertsManager) {
+        const { RateAlertsManager } = await import(
+          '/utils/rate-alerts-manager.js'
+        );
+        this.alertsManager = new RateAlertsManager();
+      }
+
+      if (!this.subscriptionManager) {
+        const { getSubscriptionManager } = await import(
+          '/utils/subscription-manager-v2.js'
+        );
+        this.subscriptionManager = await getSubscriptionManager();
+      }
+
+      // Initialize alerts manager
       await this.alertsManager.initialize();
 
-      // Load alerts data
+      // Check subscription and feature access
+      const hasAlertsFeature = this.checkAlertsFeatureAccess();
+      const subscription = this.subscriptionManager.getSubscriptionInfo();
+
+      if (!hasAlertsFeature) {
+        // Show upgrade prompt but keep the tab accessible
+        this.showUpgradePrompt(subscription);
+        return;
+      }
+
+      // Load alerts data for premium users
       const alerts = this.alertsManager.alerts || [];
       const alertSettings = this.alertsManager.alertSettings;
       const alertHistory = this.alertsManager.alertHistory || [];
@@ -53,6 +85,9 @@ export class AlertsTab {
       this.displayAlerts(alerts);
       this.loadAlertSettings(alertSettings);
       this.displayAlertHistory(alertHistory);
+
+      // Update UI based on subscription
+      this.updateUIForSubscription(subscription);
 
       console.log('📋 Alerts content loaded');
     } catch (error) {
@@ -65,32 +100,315 @@ export class AlertsTab {
    * Setup event listeners for alerts functionality
    */
   setupEventListeners() {
+    // Main alert buttons
+    this.setupMainAlertButtons();
+
     // New alert form
     this.setupNewAlertForm();
 
     // Alert settings
     this.setupAlertSettings();
 
-    // Alert action listeners
-    this.setupAlertActionListeners();
+    // Alert action listeners (will be set up when alerts are displayed)
+  }
+
+  /**
+   * Setup main alert buttons (Check Now, Add Alert)
+   */
+  setupMainAlertButtons() {
+    // Remove existing listeners to prevent duplicates
+    const triggerRateCheckBtn = document.getElementById('triggerRateCheck');
+    const addAlertBtn = document.getElementById('addAlert');
+
+    if (triggerRateCheckBtn) {
+      // Clone to remove existing listeners
+      const newTriggerBtn = triggerRateCheckBtn.cloneNode(true);
+      triggerRateCheckBtn.parentNode.replaceChild(
+        newTriggerBtn,
+        triggerRateCheckBtn
+      );
+
+      newTriggerBtn.addEventListener('click', async e => {
+        e.preventDefault();
+        console.log('🔄 Check Now button clicked');
+        await this.handleCheckNow();
+      });
+    }
+
+    if (addAlertBtn) {
+      // Clone to remove existing listeners
+      const newAddBtn = addAlertBtn.cloneNode(true);
+      addAlertBtn.parentNode.replaceChild(newAddBtn, addAlertBtn);
+
+      newAddBtn.addEventListener('click', async e => {
+        e.preventDefault();
+        console.log('➕ Add Alert button clicked');
+        await this.handleAddAlert();
+      });
+    }
+
+    console.log('✅ Alert buttons setup completed');
+  }
+
+  /**
+   * Check if user has access to alerts feature
+   */
+  checkAlertsFeatureAccess() {
+    if (!this.subscriptionManager) {
+      return false;
+    }
+    return this.subscriptionManager.hasFeature('rateAlerts');
+  }
+
+  /**
+   * Handle Check Now button click
+   */
+  async handleCheckNow() {
+    try {
+      console.log('🔄 Handling Check Now click...');
+
+      if (!this.checkAlertsFeatureAccess()) {
+        console.log('❌ No alerts feature access - showing upgrade prompt');
+        this.showUpgradePrompt();
+        return;
+      }
+
+      // Show loading state
+      const btn = document.getElementById('triggerRateCheck');
+      if (btn) {
+        btn.textContent = '⏳ Checking...';
+        btn.disabled = true;
+      }
+
+      // Check rates for all alerts
+      await this.alertsManager.checkRates();
+
+      // Reload content to show updated data
+      await this.loadContent();
+
+      this.showSuccess('Rate check completed! 📊');
+    } catch (error) {
+      console.error('❌ Failed to check rates:', error);
+      this.showError('Failed to check rates. Please try again.');
+    } finally {
+      // Restore button state
+      const btn = document.getElementById('triggerRateCheck');
+      if (btn) {
+        btn.textContent = '📊 Check Now';
+        btn.disabled = false;
+      }
+    }
+  }
+
+  /**
+   * Handle Add Alert button click
+   */
+  async handleAddAlert() {
+    try {
+      console.log('➕ Handling Add Alert click...');
+
+      if (!this.checkAlertsFeatureAccess()) {
+        console.log('❌ No alerts feature access - showing upgrade prompt');
+        this.showUpgradePrompt();
+        return;
+      }
+
+      // Check if user has reached alert limit
+      const currentAlerts = this.alertsManager.alerts.length;
+      const alertLimit = this.subscriptionManager.getFeatureLimit('rateAlerts');
+
+      if (currentAlerts >= alertLimit) {
+        this.showAlertLimitReached(currentAlerts, alertLimit);
+        return;
+      }
+
+      // Show the new alert form
+      const newAlertForm = document.getElementById('addAlertForm');
+      if (newAlertForm) {
+        newAlertForm.classList.remove('hidden');
+        this.showSuccess('Alert form opened! Configure your rate alert below.');
+      } else {
+        console.warn('⚠️ Alert form not found in DOM');
+        this.showError('Alert form not available');
+      }
+    } catch (error) {
+      console.error('❌ Failed to handle add alert:', error);
+      this.showError('Failed to open alert form. Please try again.');
+    }
+  }
+
+  /**
+   * Show upgrade prompt for free users
+   */
+  showUpgradePrompt(subscription = null) {
+    const alertsPanel = document.getElementById('alertsPanel');
+    if (!alertsPanel) return;
+
+    const currentPlan = subscription?.plan || 'FREE';
+
+    alertsPanel.innerHTML = `
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2">
+          <span class="text-lg" aria-hidden="true">🔔</span>
+          <h2 class="text-base font-semibold text-gray-900">Rate Alerts</h2>
+        </div>
+        <div class="text-xs px-2 py-1 bg-orange-100 text-orange-700 rounded">Premium Feature</div>
+      </div>
+
+      <div class="text-center py-8 px-4">
+        <div class="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-6 mb-4">
+          <div class="text-4xl mb-3">🚀</div>
+          <h3 class="text-lg font-semibold text-gray-900 mb-2">Upgrade to Premium</h3>
+          <p class="text-gray-600 text-sm mb-4">
+            Get notified when exchange rates hit your target levels with real-time rate alerts.
+          </p>
+          
+          <div class="bg-white rounded-lg p-4 mb-4 text-left">
+            <h4 class="font-semibold text-gray-900 mb-2">Premium Features:</h4>
+            <ul class="text-sm text-gray-600 space-y-1">
+              <li>• <strong>5 Rate Alerts</strong> - Set up to 5 custom rate alerts</li>
+              <li>• <strong>Real-time Notifications</strong> - Get instant notifications</li>
+              <li>• <strong>Advanced Conditions</strong> - Above, below, or percentage change alerts</li>
+              <li>• <strong>Alert History</strong> - Track all triggered alerts</li>
+              <li>• <strong>Daily/Weekly Summaries</strong> - Get rate summary reports</li>
+            </ul>
+          </div>
+
+          <button 
+            id="upgradeFromAlertsBtn"
+            class="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3 px-4 rounded-lg font-medium hover:from-amber-600 hover:to-orange-600 transition-all duration-200 transform hover:scale-105 mb-3"
+          >
+            Upgrade to Premium - $4.99/month
+          </button>
+          
+          <button 
+            id="upgradeToProFromAlertsBtn"
+            class="w-full bg-gradient-to-r from-purple-500 to-indigo-500 text-white py-2 px-4 rounded-lg font-medium hover:from-purple-600 hover:to-indigo-600 transition-all duration-200 text-sm"
+          >
+            Upgrade to Pro - $14.99/month (50 Alerts)
+          </button>
+          
+          <p class="text-xs text-gray-500 mt-3">
+            Current plan: <strong>${currentPlan}</strong> (0 alerts included)
+          </p>
+        </div>
+      </div>
+    `;
+
+    // Add click handlers for upgrade buttons
+    const premiumBtn = document.getElementById('upgradeFromAlertsBtn');
+    const proBtn = document.getElementById('upgradeToProFromAlertsBtn');
+
+    if (premiumBtn) {
+      premiumBtn.addEventListener('click', () => {
+        console.log('🚀 Navigating to Premium upgrade from Alerts tab');
+        // Switch to subscription tab
+        const subscriptionTabBtn = document.getElementById('subscriptionTab');
+        if (subscriptionTabBtn) {
+          subscriptionTabBtn.click();
+        }
+      });
+    }
+
+    if (proBtn) {
+      proBtn.addEventListener('click', () => {
+        console.log('🚀 Navigating to Pro upgrade from Alerts tab');
+        // Switch to subscription tab
+        const subscriptionTabBtn = document.getElementById('subscriptionTab');
+        if (subscriptionTabBtn) {
+          subscriptionTabBtn.click();
+        }
+      });
+    }
+  }
+
+  /**
+   * Show alert limit reached message
+   */
+  showAlertLimitReached(current, limit) {
+    const subscription = this.subscriptionManager.getSubscriptionInfo();
+    const currentPlan = subscription.plan;
+    const nextPlan = currentPlan === 'PREMIUM' ? 'PRO' : 'PREMIUM';
+    const nextPlanLimit = nextPlan === 'PRO' ? 50 : 5;
+
+    const upgradeBtn = document.createElement('button');
+    upgradeBtn.className =
+      'mt-2 bg-primary-600 text-white px-3 py-1 rounded text-sm hover:bg-primary-700';
+    upgradeBtn.textContent = 'Upgrade Now';
+    upgradeBtn.addEventListener('click', () => {
+      document.querySelector('[data-tab="subscription"]')?.click();
+    });
+
+    const errorDiv = document.createElement('div');
+    errorDiv.innerHTML = `
+      Alert limit reached! You have ${current}/${limit} alerts.
+      <br><br>
+      <strong>Upgrade to ${nextPlan}</strong> for ${nextPlanLimit} alerts.
+    `;
+    errorDiv.appendChild(upgradeBtn);
+
+    this.showError(errorDiv.outerHTML);
+  }
+
+  /**
+   * Update UI based on subscription plan
+   */
+  updateUIForSubscription(subscription) {
+    const alertLimit = this.subscriptionManager.getFeatureLimit('rateAlerts');
+    const currentAlerts = this.alertsManager.alerts.length;
+
+    // Update active alerts count
+    const activeAlertsCount = document.getElementById('activeAlertsCount');
+    if (activeAlertsCount) {
+      activeAlertsCount.textContent = `${currentAlerts}/${alertLimit}`;
+    }
+
+    // Show usage info
+    const alertsPanel = document.querySelector('#alertsPanel');
+    if (alertsPanel && alertLimit > 0) {
+      // Add usage info after header
+      const header = alertsPanel.querySelector(
+        '.flex.items-center.justify-between'
+      );
+      if (
+        header &&
+        !header.nextElementSibling?.classList.contains('usage-info')
+      ) {
+        const usageInfo = document.createElement('div');
+        usageInfo.className =
+          'usage-info bg-blue-50 rounded-lg p-3 mb-4 text-sm';
+
+        const limitWarning =
+          currentAlerts >= alertLimit
+            ? '<div class="text-orange-600 mt-1">⚠️ Alert limit reached. Upgrade for more alerts.</div>'
+            : '';
+
+        usageInfo.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="text-gray-600">Alerts Used: <strong>${currentAlerts}/${alertLimit}</strong></span>
+            <span class="text-blue-600">${subscription.plan} Plan</span>
+          </div>
+          ${limitWarning}
+        `;
+        header.insertAdjacentElement('afterend', usageInfo);
+      }
+    }
   }
 
   /**
    * Setup new alert form
    */
   setupNewAlertForm() {
-    const showFormBtn = document.getElementById('showNewAlertForm');
     const newAlertForm = document.getElementById('newAlertForm');
-    const createAlertBtn = document.getElementById('createAlert');
     const cancelAlertBtn = document.getElementById('cancelAlert');
 
     // Populate currency selectors
     this.populateAlertCurrencySelectors();
 
-    showFormBtn?.addEventListener('click', () => {
-      if (newAlertForm) {
-        newAlertForm.classList.remove('hidden');
-      }
+    // Handle form submission
+    newAlertForm?.addEventListener('submit', async e => {
+      e.preventDefault();
+      await this.createNewAlert();
     });
 
     cancelAlertBtn?.addEventListener('click', () => {
@@ -98,10 +416,6 @@ export class AlertsTab {
         newAlertForm.classList.add('hidden');
       }
       this.clearNewAlertForm();
-    });
-
-    createAlertBtn?.addEventListener('click', async () => {
-      await this.createNewAlert();
     });
 
     // Update target input based on alert type
@@ -167,8 +481,8 @@ export class AlertsTab {
    */
   updateAlertTargetInput() {
     const alertType = document.getElementById('alertType')?.value;
-    const targetRateInput = document.getElementById('targetRate');
-    const targetLabel = document.querySelector('label[for="targetRate"]');
+    const targetRateInput = document.getElementById('alertTargetRate');
+    const targetLabel = document.getElementById('alertTargetLabel');
 
     if (!targetRateInput || !targetLabel) {
       return;
@@ -197,10 +511,25 @@ export class AlertsTab {
    * Create a new alert
    */
   async createNewAlert() {
+    // Check feature access first
+    if (!this.checkAlertsFeatureAccess()) {
+      this.showUpgradePrompt();
+      return;
+    }
+
+    // Check alert limit
+    const currentAlerts = this.alertsManager.alerts.length;
+    const alertLimit = this.subscriptionManager.getFeatureLimit('rateAlerts');
+
+    if (currentAlerts >= alertLimit) {
+      this.showAlertLimitReached(currentAlerts, alertLimit);
+      return;
+    }
+
     const fromCurrency = document.getElementById('alertFromCurrency')?.value;
     const toCurrency = document.getElementById('alertToCurrency')?.value;
     const alertType = document.getElementById('alertType')?.value;
-    const targetRate = document.getElementById('targetRate')?.value;
+    const targetRate = document.getElementById('alertTargetRate')?.value;
     const alertLabel = document.getElementById('alertLabel')?.value;
 
     if (!fromCurrency || !toCurrency || !alertType || !targetRate) {
@@ -214,18 +543,22 @@ export class AlertsTab {
     }
 
     try {
-      const alert = {
-        id: Date.now().toString(),
+      // Create alert using the correct parameters for RateAlertsManager
+      const alertParams = {
         fromCurrency,
         toCurrency,
-        type: alertType,
         targetRate: parseFloat(targetRate),
-        label: alertLabel || null,
-        active: true,
-        createdAt: new Date().toISOString()
+        condition: alertType, // 'above', 'below', 'change'
+        threshold: alertType === 'change' ? parseFloat(targetRate) : null,
+        enabled: true,
+        name: alertLabel || `${fromCurrency}/${toCurrency} Alert`,
+        description: null
       };
 
-      await this.alertsManager.createAlert(alert);
+      await this.alertsManager.createAlert(alertParams);
+
+      // Track usage
+      await this.subscriptionManager.trackUsage('rateAlerts', 1);
 
       // Hide form and clear
       const form = document.getElementById('newAlertForm');
@@ -237,10 +570,10 @@ export class AlertsTab {
       // Reload content
       await this.loadContent();
 
-      this.showSuccess('Alert created successfully');
+      this.showSuccess('Alert created successfully! 🔔');
     } catch (error) {
       console.error('❌ Failed to create alert:', error);
-      this.showError('Failed to create alert');
+      this.showError('Failed to create alert. Please try again.');
     }
   }
 
@@ -542,18 +875,25 @@ export class AlertsTab {
   showStatusMessage(message, type = 'success', duration = 3000) {
     const statusDiv = document.getElementById('statusMessage');
     if (!statusDiv) {
-      return;
+      // Create status message if it doesn't exist
+      const newStatusDiv = document.createElement('div');
+      newStatusDiv.id = 'statusMessage';
+      newStatusDiv.className = 'hidden';
+      document.body.appendChild(newStatusDiv);
     }
 
-    statusDiv.textContent = message;
-    statusDiv.className = `fixed top-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg shadow-lg z-50 transition-all duration-300 ${
+    const statusElement = document.getElementById('statusMessage');
+    if (!statusElement) return;
+
+    statusElement.textContent = message;
+    statusElement.className = `fixed top-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg shadow-lg z-50 transition-all duration-300 ${
       type === 'error' ? 'bg-red-500 text-white' : 'bg-green-500 text-white'
     }`;
 
-    statusDiv.classList.remove('hidden');
+    statusElement.classList.remove('hidden');
 
     setTimeout(() => {
-      statusDiv.classList.add('hidden');
+      statusElement.classList.add('hidden');
     }, duration);
   }
 

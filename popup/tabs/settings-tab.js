@@ -11,7 +11,8 @@ import {
   getCurrencyByCode,
   DEFAULT_SETTINGS,
   getCurrencyStats,
-  CurrencyPreferences
+  CurrencyPreferences,
+  FEATURES
 } from '/utils/currency-data.js';
 import { settingsManager } from '/utils/settings-manager.js';
 import { AdSettingsComponent } from './ad-settings-component.js';
@@ -20,6 +21,8 @@ import { securityManager } from '/utils/security-manager.js';
 import { secureApiKeyManager } from '/utils/secure-api-key-manager.js';
 // Phase 9, Task 9.2: Import privacy manager
 import { privacyManager } from '/utils/privacy-manager.js';
+// Phase 9, Task 9.4: Import subscription manager for conversion tracking
+import { getSubscriptionManager } from '/utils/subscription-manager-v2.js';
 
 export class SettingsTab {
   constructor() {
@@ -29,6 +32,8 @@ export class SettingsTab {
     this.pendingSettingsOperations = new Set();
     this.adSettingsComponent = new AdSettingsComponent();
     this.initialized = false;
+    // Phase 9, Task 9.4: Initialize subscription manager for tracking
+    this.subscriptionManager = null;
   }
 
   /**
@@ -42,6 +47,9 @@ export class SettingsTab {
     try {
       // Load current settings
       this.currentSettings = await settingsManager.getSettings();
+
+      // Phase 9, Task 9.4: Initialize subscription manager for conversion tracking
+      this.subscriptionManager = await getSubscriptionManager();
 
       // Setup event listeners
       this.setupEventListeners();
@@ -61,12 +69,24 @@ export class SettingsTab {
    * Load content for the settings tab
    */
   async loadContent() {
+    console.log('📋 Loading settings tab content...');
     try {
       // Ensure we have the latest settings
       this.currentSettings = await settingsManager.getSettings();
 
       // Update UI with current settings
       await this.updateUIWithCurrentSettings();
+
+      // Initialize toggle switches with current settings
+      this.initializeToggleSwitches();
+
+      // Update currency stats and regions
+      this.updateCurrencyStats();
+      this.updateRegionalCurrencies();
+      this.updateSettingsInformation();
+
+      // Setup regional button event listeners after DOM is ready
+      await this.setupRegionalButtonListeners();
 
       // Update ad settings component visibility
       const adSettingsSection = document.getElementById('adSettingsSection');
@@ -80,6 +100,27 @@ export class SettingsTab {
     } catch (error) {
       console.error('❌ Failed to load settings content:', error);
     }
+  }
+
+  /**
+   * Initialize toggle switches with current settings
+   */
+  initializeToggleSwitches() {
+    console.log('🔄 Initializing toggle switches...');
+    console.log('Current settings:', this.currentSettings);
+
+    ['showConfidence', 'autoConvert', 'showNotifications'].forEach(toggleId => {
+      const toggle = document.getElementById(toggleId);
+      if (toggle) {
+        const currentValue = this.currentSettings[toggleId];
+        console.log(`Initializing ${toggleId}: ${currentValue}`);
+        this.updateToggleState(toggle, currentValue);
+      } else {
+        console.warn(
+          `⚠️ Toggle element not found during initialization: ${toggleId}`
+        );
+      }
+    });
   }
 
   /**
@@ -119,6 +160,9 @@ export class SettingsTab {
     document
       .getElementById('addCurrency')
       ?.addEventListener('click', this.showAddCurrencyDialog.bind(this));
+
+    // Regional currency buttons are set up in setupRegionalButtonListeners()
+    // after the DOM is ready in loadContent()
 
     // Enhanced Settings Management
     document
@@ -164,15 +208,19 @@ export class SettingsTab {
     document
       .getElementById('deleteAllData')
       ?.addEventListener('click', this.deleteAllData.bind(this));
-    document
-      .getElementById('viewPrivacyPolicy')
-      ?.addEventListener('click', this.viewPrivacyPolicy.bind(this));
-    document
-      .getElementById('showGdprRights')
-      ?.addEventListener('click', this.showGdprRights.bind(this));
-    document
-      .getElementById('runDataCleanup')
-      ?.addEventListener('click', this.runDataCleanup.bind(this));
+
+    // Add region button listeners directly
+    document.querySelectorAll('.region-button').forEach(button => {
+      const region = button.dataset.region;
+      if (region) {
+        button.addEventListener('click', () => {
+          console.log(
+            `🌍 Region button clicked via event delegation: ${region}`
+          );
+          this.showRegionalCurrencies(region);
+        });
+      }
+    });
 
     // Setup conversion testing
     this.setupConversionTestingCurrencies();
@@ -245,6 +293,16 @@ export class SettingsTab {
     await this.updateSettingWithTracking(id, value);
     this.currentSettings = await settingsManager.getSettings();
 
+    // Phase 9, Task 9.4: Track currency setting changes for subscription usage
+    try {
+      if (this.subscriptionManager) {
+        await this.subscriptionManager.trackUsage('settingsUpdates', 1);
+        console.log('📊 Currency setting change tracked for subscription');
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to track currency setting change:', error);
+    }
+
     // Add selected currency to favorites automatically (if not already there)
     if (
       value &&
@@ -263,43 +321,77 @@ export class SettingsTab {
    */
   setupToggleSwitch(elementId) {
     const toggle = document.getElementById(elementId);
-    if (!toggle) return;
+    if (!toggle) {
+      console.warn(`⚠️ Toggle element not found: ${elementId}`);
+      return;
+    }
+
+    console.log(`🔧 Setting up toggle switch: ${elementId}`);
+
+    // Don't add event listeners to disabled/premium toggles
+    if (
+      toggle.hasAttribute('data-disabled') ||
+      toggle.classList.contains('disabled')
+    ) {
+      console.log(
+        `🔒 Toggle ${elementId} is disabled, skipping event listener`
+      );
+      return;
+    }
 
     toggle.addEventListener('click', async () => {
+      console.log(`🖱️ Toggle clicked: ${elementId}`);
+
       const currentValue = this.currentSettings[elementId];
       const newValue = !currentValue;
+
+      console.log(`Current value: ${currentValue}, New value: ${newValue}`);
 
       await this.updateSettingWithTracking(elementId, newValue);
       this.currentSettings = await settingsManager.getSettings();
       this.updateToggleState(toggle, newValue);
-    });
 
-    // Set initial state
-    const initialValue = this.currentSettings[elementId];
-    this.updateToggleState(toggle, initialValue);
+      console.log(`✅ Toggle ${elementId} processed successfully`);
+    });
   }
 
   /**
    * Update toggle visual state
    */
   updateToggleState(toggle, enabled) {
+    if (!toggle) return;
+
+    console.log(`🔄 Updating toggle state for ${toggle.id}: ${enabled}`);
+
+    // Skip visual update for disabled toggles (premium features)
+    if (toggle.disabled || toggle.getAttribute('aria-disabled') === 'true') {
+      console.log(
+        `⚠️ Skipping visual update for disabled toggle: ${toggle.id}`
+      );
+      return;
+    }
+
+    toggle.setAttribute('aria-checked', enabled.toString());
+
     const thumb = toggle.querySelector('.toggle-thumb');
 
     if (enabled) {
-      toggle.classList.add('bg-primary-600');
-      toggle.classList.remove('bg-gray-200');
+      toggle.classList.add('enabled');
       if (thumb) {
-        thumb.classList.add('translate-x-5');
-        thumb.classList.remove('translate-x-0');
+        thumb.classList.add('enabled');
+        thumb.style.setProperty('--tw-translate-x', '1.25rem');
       }
     } else {
-      toggle.classList.remove('bg-primary-600');
-      toggle.classList.add('bg-gray-200');
+      toggle.classList.remove('enabled');
       if (thumb) {
-        thumb.classList.remove('translate-x-5');
-        thumb.classList.add('translate-x-0');
+        thumb.classList.remove('enabled');
+        thumb.style.setProperty('--tw-translate-x', '0rem');
       }
     }
+
+    console.log(
+      `✅ Toggle ${toggle.id} updated: enabled=${enabled}, classes=${toggle.className}`
+    );
   }
 
   /**
@@ -437,6 +529,15 @@ export class SettingsTab {
    * Show add currency dialog
    */
   showAddCurrencyDialog() {
+    // Enforce free tier limit for additional currencies
+    const maxAdd = FEATURES.FREE.maxCurrencies;
+    if (this.currentSettings.additionalCurrencies.length >= maxAdd) {
+      this.showStatus(
+        `Free plan allows only ${maxAdd} additional currencies`,
+        'info'
+      );
+      return;
+    }
     const availableCurrencies = getAllCurrencies().filter(
       currency =>
         !this.currentSettings.additionalCurrencies.includes(currency.code) &&
@@ -456,9 +557,127 @@ export class SettingsTab {
   }
 
   /**
+   * Show add favorite currency dialog
+   */
+  showAddFavoriteDialog() {
+    const allCurrencies = getAllCurrencies();
+    const currentFavorites = this.currencyPreferences.getFavorites();
+
+    // Filter out currencies that are already in favorites
+    const availableCurrencies = allCurrencies.filter(
+      currency => !currentFavorites.includes(currency.code)
+    );
+
+    if (availableCurrencies.length === 0) {
+      this.showStatus('All currencies are already in favorites', 'info');
+      return;
+    }
+
+    if (currentFavorites.length >= 10) {
+      this.showStatus('Maximum 10 favorites allowed', 'info');
+      return;
+    }
+
+    // Create modal with available currencies
+    const modal = document.createElement('div');
+    modal.className =
+      'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    modal.innerHTML = `
+      <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-96 overflow-y-auto">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold">Add to Favorites</h3>
+          <button class="close-modal text-gray-500 hover:text-gray-700">✕</button>
+        </div>
+        <div class="mb-4">
+          <input
+            type="text"
+            id="favoriteSearchInput"
+            placeholder="Search currencies..."
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+        <div id="favoritesList" class="space-y-2 max-h-60 overflow-y-auto">
+          ${availableCurrencies
+            .map(
+              currency => `
+            <div class="flex items-center justify-between p-2 hover:bg-gray-50 rounded currency-item" data-code="${currency.code}" data-name="${currency.name.toLowerCase()}">
+              <div class="flex items-center gap-2">
+                <span class="text-lg">${currency.flag}</span>
+                <span class="font-medium">${currency.code}</span>
+                <span class="text-sm text-gray-600">${currency.name}</span>
+              </div>
+              <button class="add-to-favorites-btn text-blue-500 hover:text-blue-700 text-sm" data-currency="${currency.code}">
+                Add
+              </button>
+            </div>
+          `
+            )
+            .join('')}
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Add search functionality
+    const searchInput = modal.querySelector('#favoriteSearchInput');
+    const currencyItems = modal.querySelectorAll('.currency-item');
+
+    searchInput.addEventListener('input', e => {
+      const searchTerm = e.target.value.toLowerCase();
+
+      currencyItems.forEach(item => {
+        const code = item.dataset.code.toLowerCase();
+        const name = item.dataset.name;
+        const matches = code.includes(searchTerm) || name.includes(searchTerm);
+        item.style.display = matches ? 'flex' : 'none';
+      });
+    });
+
+    // Add event listeners
+    modal.querySelector('.close-modal').addEventListener('click', () => {
+      document.body.removeChild(modal);
+    });
+
+    modal.addEventListener('click', e => {
+      if (e.target === modal) {
+        document.body.removeChild(modal);
+      }
+    });
+
+    modal.querySelectorAll('.add-to-favorites-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        const currencyCode = e.target.dataset.currency;
+        this.addToFavorites(currencyCode);
+        e.target.textContent = 'Added!';
+        e.target.disabled = true;
+        e.target.classList.add('text-green-500');
+        e.target.classList.remove('text-blue-500');
+
+        // Close modal after a brief delay
+        setTimeout(() => {
+          document.body.removeChild(modal);
+        }, 1000);
+      });
+    });
+
+    // Focus search input
+    searchInput.focus();
+  }
+
+  /**
    * Add currency to additional currencies
    */
   async addCurrency(currencyCode) {
+    // Enforce free tier limit for additional currencies
+    const maxAdd = FEATURES.FREE.maxCurrencies;
+    if (this.currentSettings.additionalCurrencies.length >= maxAdd) {
+      this.showStatus(
+        `Free plan allows only ${maxAdd} additional currencies`,
+        'info'
+      );
+      return;
+    }
     const currency = getCurrencyByCode(currencyCode);
     if (!currency) {
       this.showStatus('Invalid currency code', 'error');
@@ -470,6 +689,25 @@ export class SettingsTab {
       return;
     }
 
+    // Phase 9, Task 9.4: Check subscription limits before adding currency
+    try {
+      if (this.subscriptionManager) {
+        const canAdd = this.subscriptionManager.canPerformAction(
+          'currencyCount',
+          1
+        );
+        if (!canAdd.allowed) {
+          this.showStatus(
+            `Cannot add currency: ${canAdd.reason === 'limit_exceeded' ? 'plan limit reached' : 'feature not available'}`,
+            'error'
+          );
+          return;
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to check subscription limits:', error);
+    }
+
     const newAdditionalCurrencies = [
       ...this.currentSettings.additionalCurrencies,
       currencyCode
@@ -479,6 +717,17 @@ export class SettingsTab {
       newAdditionalCurrencies
     );
     this.currentSettings = await settingsManager.getSettings();
+
+    // Phase 9, Task 9.4: Track currency addition for subscription usage
+    try {
+      if (this.subscriptionManager) {
+        await this.subscriptionManager.trackUsage('currencyCount', 1);
+        console.log('📊 Currency addition tracked for subscription');
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to track currency addition:', error);
+    }
+
     this.populateAdditionalCurrencies();
     this.showStatus(`Added ${currencyCode} successfully`, 'success');
   }
@@ -562,23 +811,6 @@ export class SettingsTab {
   }
 
   /**
-   * Toggle settings stats panel
-   */
-  async toggleSettingsStats() {
-    const panel = document.getElementById('settingsStatsPanel');
-    if (!panel) return;
-
-    const isHidden = panel.classList.contains('hidden');
-
-    if (isHidden) {
-      this.updateCurrencyStats();
-      panel.classList.remove('hidden');
-    } else {
-      panel.classList.add('hidden');
-    }
-  }
-
-  /**
    * Update currency stats display
    */
   updateCurrencyStats() {
@@ -594,6 +826,65 @@ export class SettingsTab {
     if (popularElement) popularElement.textContent = stats.popular;
     if (regionsElement) regionsElement.textContent = stats.regions;
     if (favoriteElement) favoriteElement.textContent = favoritesCount;
+
+    // Update regional stats
+    this.updateRegionStats();
+  }
+
+  /**
+   * Update regional stats display in Currency Database section
+   */
+  updateRegionStats() {
+    const regionStatsElement = document.getElementById('regionStats');
+    if (!regionStatsElement) return;
+
+    // Import CURRENCY_REGIONS to get region data
+    import('/utils/currency-data.js').then(module => {
+      const { CURRENCY_REGIONS } = module;
+
+      // Count currencies by region using CURRENCY_REGIONS data
+      const americasCount = CURRENCY_REGIONS.americas.currencies.length;
+      const europeCount = CURRENCY_REGIONS.europe.currencies.length;
+      const asiaCount = CURRENCY_REGIONS.asia.currencies.length;
+      const africaCount = CURRENCY_REGIONS.africa.currencies.length;
+
+      // Create region stats display
+      regionStatsElement.innerHTML = `
+        <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-full text-xs">
+          <span>🌎</span>
+          <span>${americasCount}</span>
+        </span>
+        <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-full text-xs">
+          <span>🇪🇺</span>
+          <span>${europeCount}</span>
+        </span>
+        <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-full text-xs">
+          <span>🌏</span>
+          <span>${asiaCount}</span>
+        </span>
+        <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-full text-xs">
+          <span>🌍</span>
+          <span>${africaCount}</span>
+        </span>
+      `;
+    });
+  }
+
+  /**
+   * Toggle settings stats panel
+   */
+  toggleSettingsStats() {
+    const statsPanel = document.getElementById('settingsStatsPanel');
+    if (!statsPanel) return;
+
+    const isHidden = statsPanel.classList.contains('hidden');
+
+    if (isHidden) {
+      statsPanel.classList.remove('hidden');
+      this.updateSettingsInformation();
+    } else {
+      statsPanel.classList.add('hidden');
+    }
   }
 
   /**
@@ -639,6 +930,129 @@ export class SettingsTab {
     // Set default values
     fromSelect.value = this.currentSettings.baseCurrency || 'USD';
     toSelect.value = this.currentSettings.secondaryCurrency || 'EUR';
+
+    // Phase 9, Task 9.4: Add test conversion functionality with tracking
+    const testConversionBtn = document.getElementById('testConversion');
+    if (testConversionBtn) {
+      testConversionBtn.addEventListener('click', async () => {
+        await this.performTestConversion();
+      });
+    }
+  }
+
+  /**
+   * Phase 9, Task 9.4: Perform test conversion with subscription tracking
+   */
+  async performTestConversion() {
+    const fromSelect = document.getElementById('testFromCurrency');
+    const toSelect = document.getElementById('testToCurrency');
+    const amountInput = document.getElementById('testAmount');
+
+    if (!fromSelect || !toSelect || !amountInput) {
+      this.showStatus('Test conversion form not found', 'error');
+      return;
+    }
+
+    const fromCurrency = fromSelect.value;
+    const toCurrency = toSelect.value;
+    const amount = parseFloat(amountInput.value) || 100;
+
+    if (fromCurrency === toCurrency) {
+      this.showStatus(
+        'Please select different currencies for testing',
+        'error'
+      );
+      return;
+    }
+
+    // Check subscription limits before performing test conversion
+    try {
+      if (this.subscriptionManager) {
+        const canConvert = this.subscriptionManager.canPerformAction(
+          'dailyConversions',
+          1
+        );
+        if (!canConvert.allowed) {
+          this.showStatus(
+            `Cannot perform test conversion: ${canConvert.reason === 'limit_exceeded' ? 'daily limit reached' : 'feature not available'}`,
+            'error'
+          );
+          return;
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to check conversion limits:', error);
+    }
+
+    try {
+      this.showStatus('Performing test conversion...', 'info');
+
+      // Import API service dynamically
+      const { exchangeRateService } = await import('/utils/api-service.js');
+
+      // Get exchange rate
+      const rateData = await exchangeRateService.getExchangeRate(
+        fromCurrency,
+        toCurrency
+      );
+
+      if (!rateData || !rateData.rate) {
+        throw new Error('Failed to get exchange rate');
+      }
+
+      const convertedAmount = amount * rateData.rate;
+
+      // Display result
+      const resultDiv = document.getElementById('testConversionResult');
+      if (resultDiv) {
+        resultDiv.innerHTML = `
+          <div class="p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div class="text-sm font-medium text-green-800">
+              ${amount} ${fromCurrency} = ${convertedAmount.toFixed(2)} ${toCurrency}
+            </div>
+            <div class="text-xs text-green-600 mt-1">
+              Rate: 1 ${fromCurrency} = ${rateData.rate.toFixed(4)} ${toCurrency}
+            </div>
+          </div>
+        `;
+      }
+
+      // Track the test conversion
+      try {
+        if (this.subscriptionManager) {
+          await this.subscriptionManager.trackUsage('dailyConversions', 1);
+          console.log('📊 Test conversion tracked for subscription');
+        }
+
+        // Also add to conversion history
+        const { ConversionHistory } = await import(
+          '/utils/conversion-history.js'
+        );
+        const conversionHistory = new ConversionHistory();
+        await conversionHistory.initialize();
+
+        await conversionHistory.addConversion({
+          fromCurrency,
+          toCurrency,
+          originalAmount: amount,
+          convertedAmount,
+          exchangeRate: rateData.rate,
+          timestamp: Date.now(),
+          source: 'settings-test',
+          confidence: 1.0,
+          webpage: null
+        });
+
+        console.log('📚 Test conversion added to history');
+      } catch (trackingError) {
+        console.warn('⚠️ Failed to track test conversion:', trackingError);
+      }
+
+      this.showStatus('Test conversion completed successfully', 'success');
+    } catch (error) {
+      console.error('❌ Test conversion failed:', error);
+      this.showStatus(`Test conversion failed: ${error.message}`, 'error');
+    }
   }
 
   /**
@@ -656,7 +1070,7 @@ export class SettingsTab {
 
       if (element.type === 'checkbox') {
         element.checked = this.currentSettings[key];
-      } else if (element.classList?.contains('toggle')) {
+      } else if (element.classList?.contains('toggle-switch')) {
         this.updateToggleState(element, this.currentSettings[key]);
       } else if (element.tagName === 'SELECT') {
         element.value = this.currentSettings[key];
@@ -980,6 +1394,92 @@ export class SettingsTab {
       this.currentDialog.remove();
       this.currentDialog = null;
     }
+  } /**
+   * Setup regional button event listeners - called after DOM is ready
+   */
+  async setupRegionalButtonListeners() {
+    console.log('🌍 Setting up regional button event listeners...');
+
+    // Add a small delay to ensure DOM is fully ready
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    const showRegion = region => this.showRegionalCurrencies(region);
+
+    const regionButtons = [
+      { id: 'regionAmericas', region: 'americas' },
+      { id: 'regionEurope', region: 'europe' },
+      { id: 'regionAsia', region: 'asia' },
+      { id: 'regionAfrica', region: 'africa' }
+    ];
+
+    let listenersAdded = 0;
+
+    regionButtons.forEach(({ id, region }) => {
+      const button = document.getElementById(id);
+      if (button) {
+        console.log(`🔍 Found button: ${id}`, button);
+
+        // Remove any existing listeners first
+        const newHandler = () => {
+          console.log(`🌍 Regional button clicked: ${region}`);
+          showRegion(region);
+        };
+
+        // Add new listener
+        button.addEventListener('click', newHandler);
+
+        console.log(`✅ Event listener added for ${id}`);
+        listenersAdded++;
+
+        // Test the button immediately
+        button.style.border = '2px solid green';
+        setTimeout(() => {
+          button.style.border = '';
+        }, 1000);
+      } else {
+        console.warn(`⚠️ Regional button not found: ${id}`);
+        // Let's check what elements are available
+        console.log(
+          'Available elements with "region" in ID:',
+          Array.from(document.querySelectorAll('[id*="region"]')).map(
+            el => el.id
+          )
+        );
+      }
+    });
+
+    console.log(
+      `🌍 Regional button setup complete: ${listenersAdded}/4 listeners added`
+    );
+  }
+
+  /**
+   * Manual test method for regional buttons - can be called from console
+   */
+  testRegionalButtons() {
+    console.log('🧪 Testing regional buttons manually...');
+
+    const regionButtons = [
+      { id: 'regionAmericas', region: 'americas' },
+      { id: 'regionEurope', region: 'europe' },
+      { id: 'regionAsia', region: 'asia' },
+      { id: 'regionAfrica', region: 'africa' }
+    ];
+
+    regionButtons.forEach(({ id, region }) => {
+      const button = document.getElementById(id);
+      console.log(`Button ${id}:`, button ? '✅ Found' : '❌ Not found');
+      if (button) {
+        console.log(`  - Classes: ${button.className}`);
+        console.log(
+          `  - Event listeners: ${button.onclick ? 'Has onclick' : 'No onclick'}`
+        );
+
+        // Simulate click
+        console.log(`  - Simulating click for ${region}...`);
+        this.showRegionalCurrencies(region);
+      }
+    });
   }
 
   // ======================
@@ -1447,5 +1947,169 @@ export class SettingsTab {
         </div>
       </div>
     `);
+  }
+
+  /**
+   * Update regional currencies display
+   */
+  updateRegionalCurrencies() {
+    // Import CURRENCY_REGIONS to get the correct data structure
+    import('/utils/currency-data.js').then(module => {
+      const { CURRENCY_REGIONS } = module;
+
+      const regionCounts = {
+        americas: CURRENCY_REGIONS.americas.currencies.length,
+        europe: CURRENCY_REGIONS.europe.currencies.length,
+        asia: CURRENCY_REGIONS.asia.currencies.length,
+        africa: CURRENCY_REGIONS.africa.currencies.length
+      };
+
+      // Update counts in the buttons
+      const americasCount = document.getElementById('americasCount');
+      const europeCount = document.getElementById('europeCount');
+      const asiaCount = document.getElementById('asiaCount');
+      const africaCount = document.getElementById('africaCount');
+
+      if (americasCount)
+        americasCount.textContent = `${regionCounts.americas} currencies`;
+      if (europeCount)
+        europeCount.textContent = `${regionCounts.europe} currencies`;
+      if (asiaCount) asiaCount.textContent = `${regionCounts.asia} currencies`;
+      if (africaCount)
+        africaCount.textContent = `${regionCounts.africa} currencies`;
+    });
+  } /**
+   * Show regional currencies
+   */
+  showRegionalCurrencies(region) {
+    console.log(`🌍 Showing regional currencies for: ${region}`);
+
+    // Import CURRENCY_REGIONS to get the correct data structure
+    import('/utils/currency-data.js')
+      .then(module => {
+        console.log(`📦 Module imported successfully for region: ${region}`);
+        const { CURRENCY_REGIONS, getAllCurrencies } = module;
+
+        const regionData = CURRENCY_REGIONS[region];
+        if (!regionData) {
+          console.warn(`Unknown region: ${region}`);
+          return;
+        }
+
+        console.log(`🗺️ Region data found:`, regionData);
+
+        const allCurrencies = getAllCurrencies();
+        // Filter currencies by matching currency codes from the region
+        const regionalCurrencies = allCurrencies.filter(currency =>
+          regionData.currencies.includes(currency.code)
+        );
+
+        console.log(
+          `💰 Found ${regionalCurrencies.length} currencies for ${regionData.name}`
+        );
+
+        // Create modal with regional currencies
+        const modal = document.createElement('div');
+        modal.className =
+          'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        modal.innerHTML = `
+          <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-96 overflow-y-auto">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-lg font-semibold">${regionData.name} Currencies</h3>
+              <button class="close-modal text-gray-500 hover:text-gray-700">✕</button>
+            </div>
+            <div class="space-y-2">
+              ${regionalCurrencies
+                .map(
+                  currency => `
+                <div class="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
+                  <div class="flex items-center gap-2">
+                    <span class="text-lg">${currency.flag}</span>
+                    <span class="font-medium">${currency.code}</span>
+                    <span class="text-sm text-gray-600">${currency.name}</span>
+                  </div>
+                  <button class="add-to-favorites text-blue-500 hover:text-blue-700 text-sm" data-currency="${currency.code}">
+                    Add to Favorites
+                  </button>
+                </div>
+              `
+                )
+                .join('')}
+            </div>
+          </div>
+        `;
+
+        document.body.appendChild(modal);
+        console.log(`✅ Modal created and added to DOM for ${regionData.name}`);
+
+        // Add event listeners
+        modal.querySelector('.close-modal').addEventListener('click', () => {
+          document.body.removeChild(modal);
+          console.log(`🗑️ Modal closed for ${regionData.name}`);
+        });
+
+        modal.addEventListener('click', e => {
+          if (e.target === modal) {
+            document.body.removeChild(modal);
+            console.log(
+              `🗑️ Modal closed by clicking outside for ${regionData.name}`
+            );
+          }
+        });
+
+        // Add to favorites functionality
+        modal.querySelectorAll('.add-to-favorites').forEach(button => {
+          button.addEventListener('click', async e => {
+            const currencyCode = e.target.dataset.currency;
+            console.log(`⭐ Adding ${currencyCode} to favorites`);
+            await this.addToFavorites(currencyCode);
+            document.body.removeChild(modal);
+          });
+        });
+      })
+      .catch(error => {
+        console.error(
+          `❌ Failed to load regional currencies for ${region}:`,
+          error
+        );
+      });
+  }
+
+  /**
+   * Update settings information display
+   */
+  updateSettingsInformation() {
+    const versionEl = document.getElementById('settingsVersion');
+    const installDateEl = document.getElementById('installDate');
+    const lastSyncEl = document.getElementById('lastSync');
+    const storageUsedEl = document.getElementById('storageUsed');
+
+    if (versionEl) versionEl.textContent = '1.0.0';
+
+    if (installDateEl) {
+      const installDate =
+        localStorage.getItem('extensionInstallDate') ||
+        new Date().toISOString();
+      installDateEl.textContent = new Date(installDate).toLocaleDateString();
+    }
+
+    if (lastSyncEl) {
+      const lastSync = localStorage.getItem('lastSettingsSync') || 'Never';
+      lastSyncEl.textContent =
+        lastSync === 'Never' ? lastSync : new Date(lastSync).toLocaleString();
+    }
+
+    if (storageUsedEl) {
+      // Calculate approximate storage usage
+      chrome.storage.local
+        .getBytesInUse()
+        .then(bytes => {
+          const kb = (bytes / 1024).toFixed(1);
+          storageUsedEl.textContent = `${kb} KB`;
+        })
+        .catch(() => {
+          storageUsedEl.textContent = 'Unknown';
+        });
+    }
   }
 }

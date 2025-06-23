@@ -81,10 +81,14 @@ export class SubscriptionTab {
         this.subscriptionManager = await getSubscriptionManager();
       }
 
-      // Get subscription info with fallback
+      // Get subscription info with real usage stats
       let subscriptionInfo;
       try {
         subscriptionInfo = this.subscriptionManager.getSubscriptionInfo();
+        // Get real usage stats instead of cached ones
+        const realUsageStats =
+          await this.subscriptionManager.getRealUsageStats();
+        subscriptionInfo.usageStats = realUsageStats;
       } catch (error) {
         console.warn(
           '⚠️ Could not get subscription info, using defaults:',
@@ -123,7 +127,26 @@ export class SubscriptionTab {
    * Setup event listeners for subscription functionality
    */
   setupEventListeners() {
+    // Remove existing listeners to avoid duplicates
+    this.removeEventListeners();
+
     // Plan upgrade buttons
+    const premiumBtn = document.getElementById('upgradeToPremium');
+    const proBtn = document.getElementById('upgradeToPro');
+
+    if (premiumBtn) {
+      premiumBtn.addEventListener('click', () => {
+        this.handlePlanUpgrade('PREMIUM');
+      });
+    }
+
+    if (proBtn) {
+      proBtn.addEventListener('click', () => {
+        this.handlePlanUpgrade('PRO');
+      });
+    }
+
+    // General upgrade buttons with data attributes
     document.querySelectorAll('.upgrade-plan-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const planId = btn.dataset.plan;
@@ -132,6 +155,21 @@ export class SubscriptionTab {
     });
 
     // Donation buttons
+    const donate5Btn = document.getElementById('donate5');
+    const donate10Btn = document.getElementById('donate10');
+    const donate25Btn = document.getElementById('donate25');
+
+    if (donate5Btn) {
+      donate5Btn.addEventListener('click', () => this.handleDonation('5'));
+    }
+    if (donate10Btn) {
+      donate10Btn.addEventListener('click', () => this.handleDonation('10'));
+    }
+    if (donate25Btn) {
+      donate25Btn.addEventListener('click', () => this.handleDonation('25'));
+    }
+
+    // Legacy donation buttons with data attributes
     document.querySelectorAll('.donate-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const amount = btn.dataset.amount;
@@ -141,14 +179,42 @@ export class SubscriptionTab {
 
     // Cancel subscription
     const cancelBtn = document.getElementById('cancelSubscription');
-    cancelBtn?.addEventListener('click', () => {
-      this.handleCancelSubscription();
-    });
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', () => {
+        this.handleCancelSubscription();
+      });
+    }
 
     // Manage subscription
     const manageBtn = document.getElementById('manageSubscription');
-    manageBtn?.addEventListener('click', () => {
-      this.openSubscriptionManagement();
+    if (manageBtn) {
+      manageBtn.addEventListener('click', () => {
+        this.openSubscriptionManagement();
+      });
+    }
+  }
+
+  /**
+   * Remove existing event listeners to prevent duplicates
+   */
+  removeEventListeners() {
+    // Clone elements to remove all event listeners
+    const elementsToClone = [
+      'upgradeToPremium',
+      'upgradeToPro',
+      'donate5',
+      'donate10',
+      'donate25',
+      'cancelSubscription',
+      'manageSubscription'
+    ];
+
+    elementsToClone.forEach(id => {
+      const element = document.getElementById(id);
+      if (element) {
+        const newElement = element.cloneNode(true);
+        element.parentNode.replaceChild(newElement, element);
+      }
     });
   }
 
@@ -190,26 +256,32 @@ export class SubscriptionTab {
    * Update usage statistics display
    */
   updateUsageDisplay(usageStats = {}) {
-    // Ensure we have default values if usageStats is undefined or incomplete
-    const defaultStats = {
-      conversions: { used: 0, limit: 100 },
-      currencies: { used: 0, limit: 10 },
-      alerts: { used: 0, limit: 5 }
+    // Map the actual feature names from subscription plans to display stats
+    const conversionsData = usageStats.dailyConversions || {
+      current: 0,
+      limit: 50
+    };
+    const currenciesData = usageStats.currencyCount || {
+      current: 2,
+      limit: 2
+    };
+    const historyData = usageStats.conversionHistory || {
+      current: 0,
+      limit: 10
     };
 
-    // Merge with defaults to handle missing properties
     const stats = {
       conversions: {
-        ...defaultStats.conversions,
-        ...(usageStats.conversions || {})
+        used: conversionsData.current,
+        limit: conversionsData.limit
       },
       currencies: {
-        ...defaultStats.currencies,
-        ...(usageStats.currencies || {})
+        used: currenciesData.current,
+        limit: currenciesData.limit
       },
-      alerts: {
-        ...defaultStats.alerts,
-        ...(usageStats.alerts || {})
+      history: {
+        used: historyData.current,
+        limit: historyData.limit
       }
     };
 
@@ -217,12 +289,16 @@ export class SubscriptionTab {
     const conversionsUsed = document.getElementById('conversionsUsed');
     const conversionsLimit = document.getElementById('conversionsLimit');
     const conversionsProgress = document.getElementById('conversionsProgress');
+    const conversionsUsage = document.getElementById('conversionsUsage');
 
     if (conversionsUsed) {
       conversionsUsed.textContent = stats.conversions.used;
     }
     if (conversionsLimit) {
       conversionsLimit.textContent = stats.conversions.limit;
+    }
+    if (conversionsUsage) {
+      conversionsUsage.textContent = `${stats.conversions.used} / ${stats.conversions.limit}`;
     }
     if (conversionsProgress) {
       const percentage =
@@ -244,6 +320,8 @@ export class SubscriptionTab {
     // Update currencies usage
     const currenciesUsed = document.getElementById('currenciesUsed');
     const currenciesLimit = document.getElementById('currenciesLimit');
+    const currenciesUsage = document.getElementById('currenciesUsage');
+    const currenciesProgress = document.getElementById('currenciesProgress');
 
     if (currenciesUsed) {
       currenciesUsed.textContent = stats.currencies.used;
@@ -251,16 +329,32 @@ export class SubscriptionTab {
     if (currenciesLimit) {
       currenciesLimit.textContent = stats.currencies.limit;
     }
-
-    // Update alerts usage
-    const alertsUsed = document.getElementById('alertsUsed');
-    const alertsLimit = document.getElementById('alertsLimit');
-
-    if (alertsUsed) {
-      alertsUsed.textContent = stats.alerts.used;
+    if (currenciesUsage) {
+      currenciesUsage.textContent = `${stats.currencies.used} / ${stats.currencies.limit}`;
     }
-    if (alertsLimit) {
-      alertsLimit.textContent = stats.alerts.limit;
+    if (currenciesProgress) {
+      const percentage = (stats.currencies.used / stats.currencies.limit) * 100;
+      currenciesProgress.style.width = `${Math.min(percentage, 100)}%`;
+    }
+
+    // Update history usage
+    const historyUsed = document.getElementById('historyUsed');
+    const historyLimit = document.getElementById('historyLimit');
+    const historyUsage = document.getElementById('historyUsage');
+    const historyProgress = document.getElementById('historyProgress');
+
+    if (historyUsed) {
+      historyUsed.textContent = stats.history.used;
+    }
+    if (historyLimit) {
+      historyLimit.textContent = stats.history.limit;
+    }
+    if (historyUsage) {
+      historyUsage.textContent = `${stats.history.used} / ${stats.history.limit}`;
+    }
+    if (historyProgress) {
+      const percentage = (stats.history.used / stats.history.limit) * 100;
+      historyProgress.style.width = `${Math.min(percentage, 100)}%`;
     }
   }
 
@@ -368,27 +462,45 @@ export class SubscriptionTab {
 
     const warnings = [];
 
-    // Check conversion usage
-    const conversionsUsed = parseInt(
-      document.getElementById('conversionsUsed')?.textContent || '0',
-      10
-    );
-    const conversionsLimit = parseInt(
-      document.getElementById('conversionsLimit')?.textContent || '0',
-      10
-    );
-    const conversionUsage = conversionsUsed / conversionsLimit;
+    // Check conversion usage from the displayed values
+    const conversionsUsageText =
+      document.getElementById('conversionsUsage')?.textContent || '0 / 50';
+    const conversionsMatch = conversionsUsageText.match(/(\d+)\s*\/\s*(\d+)/);
 
-    if (conversionUsage > 0.9) {
-      warnings.push({
-        type: 'critical',
-        message: `You've used ${Math.round(conversionUsage * 100)}% of your monthly conversions.`
-      });
-    } else if (conversionUsage > 0.75) {
-      warnings.push({
-        type: 'warning',
-        message: `You've used ${Math.round(conversionUsage * 100)}% of your monthly conversions.`
-      });
+    if (conversionsMatch) {
+      const conversionsUsed = parseInt(conversionsMatch[1], 10);
+      const conversionsLimit = parseInt(conversionsMatch[2], 10);
+      const conversionUsage = conversionsUsed / conversionsLimit;
+
+      if (conversionUsage > 0.9) {
+        warnings.push({
+          type: 'critical',
+          message: `You've used ${Math.round(conversionUsage * 100)}% of your daily conversions (${conversionsUsed}/${conversionsLimit}).`
+        });
+      } else if (conversionUsage > 0.75) {
+        warnings.push({
+          type: 'warning',
+          message: `You've used ${Math.round(conversionUsage * 100)}% of your daily conversions (${conversionsUsed}/${conversionsLimit}).`
+        });
+      }
+    }
+
+    // Check currency pair usage
+    const currenciesUsageText =
+      document.getElementById('currenciesUsage')?.textContent || '2 / 2';
+    const currenciesMatch = currenciesUsageText.match(/(\d+)\s*\/\s*(\d+)/);
+
+    if (currenciesMatch) {
+      const currenciesUsed = parseInt(currenciesMatch[1], 10);
+      const currenciesLimit = parseInt(currenciesMatch[2], 10);
+      const currencyUsage = currenciesUsed / currenciesLimit;
+
+      if (currencyUsage >= 1.0 && this.userPlan === 'FREE') {
+        warnings.push({
+          type: 'warning',
+          message: `You've reached your currency pair limit (${currenciesUsed}/${currenciesLimit}). Upgrade for more pairs!`
+        });
+      }
     }
 
     // Display warnings
@@ -399,8 +511,8 @@ export class SubscriptionTab {
       warningsContainer.innerHTML = warnings
         .map(
           warning => `
-          <div class="warning ${warning.type === 'critical' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'} p-3 rounded-lg">
-            <p class="text-sm">${warning.message}</p>
+          <div class="warning ${warning.type === 'critical' ? 'bg-red-100 text-red-800 border border-red-200' : 'bg-yellow-100 text-yellow-800 border border-yellow-200'} p-3 rounded-lg">
+            <p class="text-sm font-medium">${warning.message}</p>
             ${warning.type === 'critical' ? '<p class="text-xs mt-1">Consider upgrading to continue using the service.</p>' : ''}
           </div>
         `
@@ -415,14 +527,36 @@ export class SubscriptionTab {
    */
   async handlePlanUpgrade(planId) {
     try {
-      this.showSuccess('Redirecting to upgrade page...');
+      this.showSuccess(`Preparing upgrade to ${planId}...`);
 
-      // Open upgrade page
-      const upgradeUrl = `https://example.com/upgrade?plan=${planId}`;
-      if (chrome && chrome.tabs) {
-        chrome.tabs.create({ url: upgradeUrl });
-      } else {
-        window.open(upgradeUrl, '_blank');
+      // For demo purposes, simulate upgrade flow
+      // In a real implementation, this would integrate with payment providers
+      const planDetails = {
+        PREMIUM: { name: 'Premium', price: '$4.99/month' },
+        PRO: { name: 'Professional', price: '$14.99/month' }
+      };
+
+      const plan = planDetails[planId];
+      if (!plan) {
+        throw new Error('Invalid plan selected');
+      }
+
+      // Show confirmation dialog
+      const confirmed = confirm(
+        `Upgrade to ${plan.name} plan for ${plan.price}?\n\n` +
+          'This is a demo extension. In a real implementation, ' +
+          'this would redirect to a secure payment page.'
+      );
+
+      if (confirmed) {
+        // Simulate successful upgrade for demo
+        this.showSuccess(`Demo: Upgraded to ${plan.name} plan! 🎉`);
+
+        // In a real implementation, this would:
+        // 1. Redirect to payment provider
+        // 2. Process payment
+        // 3. Update subscription status
+        console.log(`Demo upgrade to ${planId} completed`);
       }
     } catch (error) {
       console.error('❌ Failed to handle plan upgrade:', error);
@@ -435,14 +569,24 @@ export class SubscriptionTab {
    */
   async handleDonation(amount) {
     try {
-      this.showSuccess(`Redirecting to donation page ($${amount})...`);
+      this.showSuccess(`Preparing donation of $${amount}...`);
 
-      // Open donation page
-      const donationUrl = `https://example.com/donate?amount=${amount}`;
-      if (chrome && chrome.tabs) {
-        chrome.tabs.create({ url: donationUrl });
-      } else {
-        window.open(donationUrl, '_blank');
+      // Show confirmation dialog
+      const confirmed = confirm(
+        `Support development with a $${amount} donation?\n\n` +
+          'This is a demo extension. In a real implementation, ' +
+          'this would redirect to a secure donation page.'
+      );
+
+      if (confirmed) {
+        // Simulate successful donation for demo
+        this.showSuccess(`Demo: Thank you for your $${amount} donation! ❤️`);
+
+        // In a real implementation, this would:
+        // 1. Redirect to payment provider (PayPal, Stripe, etc.)
+        // 2. Process payment
+        // 3. Send thank you email
+        console.log(`Demo donation of $${amount} completed`);
       }
     } catch (error) {
       console.error('❌ Failed to handle donation:', error);

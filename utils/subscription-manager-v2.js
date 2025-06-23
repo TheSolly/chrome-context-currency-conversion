@@ -369,6 +369,98 @@ export class SubscriptionManager {
   }
 
   /**
+   * Get real usage statistics from various sources
+   */
+  async getRealUsageStats() {
+    const stats = {};
+    const plan =
+      SUBSCRIPTION_PLANS[this.currentSubscription.plan] ||
+      SUBSCRIPTION_PLANS.FREE;
+
+    try {
+      // Get conversion history to calculate real usage
+      const conversionHistory = await this.getConversionHistoryData();
+      const todayCount = this.getTodayConversionsCount(conversionHistory);
+      const uniqueCurrencies = this.getUniqueCurrenciesUsed(conversionHistory);
+      const historyEntries = conversionHistory.length;
+
+      Object.keys(plan.features).forEach(feature => {
+        let current = 0;
+
+        // Map feature to real usage data
+        switch (feature) {
+          case 'dailyConversions':
+            current = todayCount;
+            break;
+          case 'currencyCount':
+            current = uniqueCurrencies.size;
+            break;
+          case 'conversionHistory':
+            current = historyEntries;
+            break;
+          case 'rateAlerts':
+            current = this.getCurrentUsage('rateAlerts');
+            break;
+          default:
+            current = this.getCurrentUsage(feature);
+        }
+
+        const limit = this.getFeatureLimit(feature);
+        const percentage = limit > 0 ? (current / limit) * 100 : 0;
+
+        stats[feature] = {
+          current,
+          limit,
+          percentage: Math.min(percentage, 100),
+          available: this.hasFeature(feature)
+        };
+      });
+    } catch (error) {
+      console.error('Failed to get real usage stats:', error);
+      // Fallback to basic stats
+      return this.getUsageStats();
+    }
+
+    return stats;
+  }
+
+  /**
+   * Get conversion history data from storage
+   */
+  async getConversionHistoryData() {
+    try {
+      const result = await chrome.storage.local.get(['conversionHistory']);
+      return result.conversionHistory || [];
+    } catch (error) {
+      console.error('Failed to get conversion history:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Count conversions for today
+   */
+  getTodayConversionsCount(history) {
+    const today = new Date().toDateString();
+    return history.filter(entry => {
+      const entryDate = new Date(entry.timestamp).toDateString();
+      return entryDate === today;
+    }).length;
+  }
+
+  /**
+   * Get unique currencies used
+   */
+  getUniqueCurrenciesUsed(history) {
+    const currencies = new Set();
+    history.forEach(entry => {
+      currencies.add(entry.fromCurrency);
+      currencies.add(entry.toCurrency);
+    });
+    return currencies;
+  }
+
+  /**
    * Get available upgrade options
    */
   getAvailableUpgrades() {
@@ -638,12 +730,16 @@ export class SubscriptionManager {
   }
 }
 
-// Create singleton instance
+// Global subscription manager instance
 let subscriptionManagerInstance = null;
 
-export function getSubscriptionManager() {
+/**
+ * Get or create subscription manager singleton
+ */
+export async function getSubscriptionManager() {
   if (!subscriptionManagerInstance) {
     subscriptionManagerInstance = new SubscriptionManager();
+    await subscriptionManagerInstance.initialize();
   }
   return subscriptionManagerInstance;
 }

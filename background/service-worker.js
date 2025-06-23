@@ -884,6 +884,20 @@ async function performCurrencyConversion(currencyData, targetCurrency = null) {
       // Don't fail the conversion if history saving fails
     }
 
+    // Track usage for subscription management
+    try {
+      // Get subscription manager and track daily conversion usage
+      const { getSubscriptionManager } = await import(
+        '/utils/subscription-manager-v2.js'
+      );
+      const subscriptionManager = await getSubscriptionManager();
+      await subscriptionManager.trackUsage('dailyConversions', 1);
+      console.log('📊 Conversion usage tracked for subscription');
+    } catch (usageError) {
+      console.warn('⚠️ Failed to track conversion usage:', usageError);
+      // Don't fail the conversion if usage tracking fails
+    }
+
     return result;
   } catch (conversionError) {
     console.error('❌ Currency conversion failed:', conversionError);
