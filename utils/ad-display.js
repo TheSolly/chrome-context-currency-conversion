@@ -1,6 +1,11 @@
 /**
  * Ad Display Components for Chrome Currency Conversion Extension
  * Handles rendering of ads in different locations and formats
+ *
+ * CHROME WEB STORE COMPLIANCE:
+ * - Renders placeholder ads until a compliant ad network is configured
+ * - All ads are clearly labeled as "Advertisement"
+ * - Ads respect premium user status (no ads for premium)
  */
 
 import { adManager } from './ad-manager.js';
@@ -121,33 +126,28 @@ class AdDisplay {
    * @param {Object} config - Ad configuration
    */
   loadAdContent(container, config) {
-    // In a real implementation, this would integrate with the ad network's API
-    // For now, we'll create a placeholder ad
+    // Placeholder implementation - replace with actual ad network integration
+    // when a compliant ad network is configured
 
     if (config.format === 'banner') {
-      // Simple banner ad
       container.innerHTML = `
         <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: linear-gradient(135deg, #f0f0f0, #e0e0e0);">
           <span style="font-size: 14px; color: #555;">
-            ${config.network} Banner Ad - ${config.variant ? `Variant ${config.variant}` : 'Standard'}
+            Sponsored Content
           </span>
         </div>
       `;
     } else if (config.format === 'native') {
-      // Native ad with more content
       container.innerHTML = `
         <div style="display: flex; flex-direction: column; height: 100%;">
           <div style="font-weight: bold; margin-bottom: 8px; color: #333;">
             Premium Currency Tools
           </div>
           <div style="font-size: 12px; color: #555; margin-bottom: 8px;">
-            Enhance your currency conversion experience with professional tools.
+            Upgrade to Premium for an ad-free experience with advanced features.
           </div>
           <div style="font-size: 12px; color: #007bff; cursor: pointer;">
             Learn More
-          </div>
-          <div style="font-size: 10px; color: #999; margin-top: 8px;">
-            ${config.network} - ${config.variant ? `Variant ${config.variant}` : 'Standard'}
           </div>
         </div>
       `;

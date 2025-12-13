@@ -719,3 +719,74 @@ export const FEATURES = {
     exportData: true
   }
 };
+
+/**
+ * CURRENCIES object - derived from CURRENCY_LIST for lookup by code
+ * Use this for O(1) currency lookups by code
+ * @type {Object.<string, {name: string, symbol: string, flag: string}>}
+ */
+export const CURRENCIES = CURRENCY_LIST.reduce((acc, currency) => {
+  acc[currency.code] = {
+    name: currency.name,
+    symbol: currency.symbol,
+    flag: currency.flag
+  };
+  return acc;
+}, {});
+
+/**
+ * Cryptocurrency definitions for Smart Currency Detection
+ */
+export const CRYPTOCURRENCIES = {
+  BTC: { name: 'Bitcoin', symbol: '₿', flag: '🟠', decimals: 8 },
+  ETH: { name: 'Ethereum', symbol: 'Ξ', flag: '🔷', decimals: 18 },
+  LTC: { name: 'Litecoin', symbol: 'Ł', flag: '⚪', decimals: 8 },
+  ADA: { name: 'Cardano', symbol: 'ADA', flag: '🔵', decimals: 6 },
+  DOT: { name: 'Polkadot', symbol: 'DOT', flag: '🟣', decimals: 10 },
+  XRP: { name: 'Ripple', symbol: 'XRP', flag: '🔵', decimals: 6 },
+  SOL: { name: 'Solana', symbol: 'SOL', flag: '🟣', decimals: 9 },
+  MATIC: { name: 'Polygon', symbol: 'MATIC', flag: '🟣', decimals: 18 }
+};
+
+/**
+ * Combined currencies including cryptocurrencies
+ */
+export const ALL_CURRENCIES = { ...CURRENCIES, ...CRYPTOCURRENCIES };
+
+/**
+ * Popular currency codes for quick access
+ */
+export const POPULAR_CURRENCY_CODES = [
+  'USD',
+  'EUR',
+  'GBP',
+  'JPY',
+  'CAD',
+  'AUD',
+  'CHF',
+  'CNY'
+];
+
+/**
+ * Check if a currency code is valid (fiat or crypto)
+ * @param {string} code - Currency code to validate
+ * @returns {boolean} True if valid
+ */
+export function isValidCurrencyCode(code) {
+  const upperCode = code?.toUpperCase();
+  return (
+    CURRENCIES.hasOwnProperty(upperCode) ||
+    CRYPTOCURRENCIES.hasOwnProperty(upperCode)
+  );
+}
+
+/**
+ * Get currency display name formatted as "CODE - Name"
+ * @param {string} code - Currency code
+ * @returns {string} Formatted display name
+ */
+export function getCurrencyDisplayName(code) {
+  const upperCode = code?.toUpperCase();
+  const currency = CURRENCIES[upperCode] || CRYPTOCURRENCIES[upperCode];
+  return currency ? `${upperCode} - ${currency.name}` : code;
+}

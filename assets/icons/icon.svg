@@ -1,23 +1,29 @@
 <svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
-  <!-- Background Circle -->
-  <circle cx="64" cy="64" r="60" fill="#667eea" stroke="#764ba2" stroke-width="4"/>
-  
-  <!-- Currency Symbol Container -->
+  <defs>
+    <!-- Solid Blue with subtle depth -->
+    <linearGradient id="blueGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2563eb;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Clean circular background -->
+  <circle cx="64" cy="64" r="60" fill="url(#blueGradient)"/>
+
+  <!-- Subtle highlight ring -->
+  <circle cx="64" cy="64" r="56" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="2"/>
+
+  <!-- Simple, bold exchange symbol -->
   <g transform="translate(64, 64)">
-    <!-- Dollar Sign -->
-    <text x="-12" y="-10" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="white">$</text>
-    
-    <!-- Euro Sign -->
-    <text x="8" y="-10" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="white">€</text>
-    
-    <!-- Arrow indicating conversion -->
-    <path d="M -20 8 L 20 8 M 15 3 L 20 8 L 15 13" stroke="white" stroke-width="2" fill="none"/>
-    
-    <!-- Additional Currency Symbols -->
-    <text x="-12" y="25" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="white">¥</text>
-    <text x="8" y="25" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="white">£</text>
+    <!-- Two horizontal arrows (exchange) -->
+    <g stroke="white" stroke-width="6" stroke-linecap="round" fill="none">
+      <!-- Top arrow pointing right -->
+      <path d="M -28 -14 L 22 -14"/>
+      <path d="M 14 -22 L 24 -14 L 14 -6"/>
+
+      <!-- Bottom arrow pointing left -->
+      <path d="M 28 14 L -22 14"/>
+      <path d="M -14 6 L -24 14 L -14 22"/>
+    </g>
   </g>
-  
-  <!-- Highlight effect -->
-  <circle cx="64" cy="64" r="60" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
 </svg>

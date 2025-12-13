@@ -783,7 +783,7 @@ video {
   --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
 }
 .from-primary-500 {
-  --tw-gradient-from: #667eea var(--tw-gradient-from-position);
+  --tw-gradient-from: #2563eb var(--tw-gradient-from-position);
   --tw-gradient-to: rgba(102, 126, 234, 0) var(--tw-gradient-to-position);
   --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
 }
@@ -799,7 +799,7 @@ video {
   --tw-gradient-to: #faf5ff var(--tw-gradient-to-position);
 }
 .to-secondary-500 {
-  --tw-gradient-to: #764ba2 var(--tw-gradient-to-position);
+  --tw-gradient-to: #7c3aed var(--tw-gradient-to-position);
 }
 .p-2 {
   padding: 0.5rem;
@@ -1062,19 +1062,28 @@ video {
 }
 
 .tab-button:hover {
-  background-color: #f3f4f6;
   color: #374151;
 }
 
 .tab-button.tab-active {
-  color: #667eea;
-  border-bottom-color: #667eea;
-  background-color: #f8fafc;
+  color: #7c3aed;
+  border: none;
+  border-bottom: 2px solid #7c3aed;
+  background: transparent;
+  box-shadow: none;
 }
 
-.tab-button:focus {
+.tab-button:focus,
+.tab-button:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px #667eea;
+  box-shadow: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+}
+
+.tab-button.tab-active:focus,
+.tab-button.tab-active:focus-visible {
+  border-bottom: 2px solid #7c3aed;
 }
 
 /* Responsive tab text */
@@ -1295,8 +1304,8 @@ video {
 }
 
 .filter-btn.filter-active {
-  background: #667eea;
-  border-color: #667eea;
+  background: #2563eb;
+  border-color: #2563eb;
   color: white;
 }
 
@@ -1314,7 +1323,7 @@ video {
 
 .favorite-item:hover {
   background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
-  border-color: #667eea;
+  border-color: #2563eb;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
 }
@@ -1326,7 +1335,7 @@ video {
   left: 0;
   width: 4px;
   height: 100%;
-  background: linear-gradient(to bottom, #667eea, #764ba2);
+  background: linear-gradient(to bottom, #2563eb, #7c3aed);
   opacity: 0;
   transition: opacity 0.2s ease;
 }
@@ -1377,7 +1386,7 @@ video {
 }
 
 .favorite-convert-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
   color: white;
   border: none;
   border-radius: 8px;
@@ -1390,7 +1399,7 @@ video {
 }
 
 .favorite-convert-btn:hover {
-  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+  background: linear-gradient(135deg, #1d4ed8 0%, #6d28d9 100%);
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
 }
@@ -1457,7 +1466,7 @@ video {
 
 .quick-convert-input:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
@@ -1477,7 +1486,7 @@ video {
 
 .quick-convert-pair-btn:hover {
   background: #f8fafc;
-  border-color: #667eea;
+  border-color: #2563eb;
   transform: translateX(4px);
 }
 
@@ -1568,7 +1577,7 @@ video {
 /* Conversion result popup styling */
 .conversion-result-popup {
   background: white;
-  border: 2px solid #667eea;
+  border: 2px solid #2563eb;
   border-radius: 16px;
   box-shadow:
     0 20px 25px -5px rgba(0, 0, 0, 0.1),
@@ -1633,7 +1642,7 @@ video {
 }
 
 .conversion-result-close {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
   color: white;
   border: none;
   border-radius: 8px;
@@ -1644,7 +1653,7 @@ video {
 }
 
 .conversion-result-close:hover {
-  background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+  background: linear-gradient(135deg, #1d4ed8 0%, #6d28d9 100%);
   transform: translateY(-1px);
 }
 
@@ -1746,4 +1755,27 @@ body > div:first-child {
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box;
+}
+
+/* Premium Upgrade Card Styles */
+.premium-upgrade-card {
+  transition: all 0.2s ease;
+}
+
+.premium-upgrade-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(124, 58, 237, 0.15);
+}
+
+.premium-icon-wrapper {
+  transition: transform 0.2s ease;
+}
+
+.premium-upgrade-card:hover .premium-icon-wrapper {
+  transform: scale(1.05);
+}
+
+#upgradePremium:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
 }

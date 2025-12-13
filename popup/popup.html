@@ -13,20 +13,29 @@
       role="application"
       aria-label="Currency Converter Settings"
     >
-      <!-- Header -->
+      <!-- Header - Trust Blue Gradient -->
       <header
-        class="bg-gradient-to-r from-primary-500 to-secondary-500 text-white p-4"
+        class="text-white p-4"
+        style="background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)"
         role="banner"
       >
         <div class="flex items-center justify-center gap-3">
-          <span class="text-2xl" aria-hidden="true">💱</span>
+          <img
+            src="../assets/icons/icon-32.png"
+            alt=""
+            width="28"
+            height="28"
+            class="rounded-full"
+            aria-hidden="true"
+          />
           <h1 class="text-lg font-semibold">Currency Converter</h1>
         </div>
       </header>
 
       <!-- Navigation Tabs -->
       <nav
-        class="bg-gray-100 border-b tab-navigation"
+        class="tab-navigation"
+        style="background: white; border-bottom: 1px solid #e5e7eb;"
         role="tablist"
         aria-label="Extension sections"
       >
@@ -90,7 +99,12 @@
       </nav>
 
       <!-- Main Content -->
-      <main class="relative tab-content" role="main" id="main-content">
+      <main
+        class="relative tab-content"
+        role="main"
+        id="main-content"
+        style="background-color: #f8fafc"
+      >
         <!-- Settings Panel -->
         <div
           id="settingsPanel"
@@ -100,11 +114,18 @@
         >
           <!-- Quick Stats -->
           <div
-            class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-3"
+            class="rounded-xl p-3"
+            style="
+              background: linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%);
+              border: 1px solid #dbeafe;
+            "
           >
             <div class="flex items-center justify-between text-sm">
-              <span class="text-gray-600">Conversions Today</span>
-              <span id="conversionCount" class="font-semibold text-primary-600"
+              <span style="color: #4b5563">Conversions Today</span>
+              <span
+                id="conversionCount"
+                class="font-bold text-lg"
+                style="color: #2563eb"
                 >0</span
               >
             </div>
@@ -276,18 +297,24 @@
             </div>
 
             <div
-              class="space-y-3"
+              class="space-y-2"
               role="group"
               aria-labelledby="preferences-heading"
             >
               <!-- Show Confidence -->
-              <div class="flex items-center justify-between">
-                <label for="showConfidence" class="text-sm text-gray-700">
+              <div
+                class="flex items-center justify-between p-2 rounded-lg"
+                style="background-color: #f8fafc"
+              >
+                <label
+                  for="showConfidence"
+                  class="text-sm text-gray-700 flex-1"
+                >
                   Show detection confidence
                 </label>
                 <button
                   id="showConfidence"
-                  class="toggle-switch"
+                  class="toggle-switch flex-shrink-0"
                   role="switch"
                   aria-checked="true"
                   aria-labelledby="showConfidence-label"
@@ -302,8 +329,11 @@
               </div>
 
               <!-- Auto Convert -->
-              <div class="flex items-center justify-between">
-                <div>
+              <div
+                class="flex items-center justify-between p-2 rounded-lg"
+                style="background-color: #f8fafc"
+              >
+                <div class="flex-1">
                   <label for="autoConvert" class="text-sm text-gray-700"
                     >Auto-convert on selection</label
                   >
@@ -313,7 +343,7 @@
                 </div>
                 <button
                   id="autoConvert"
-                  class="toggle-switch"
+                  class="toggle-switch flex-shrink-0"
                   role="switch"
                   aria-checked="false"
                   aria-disabled="true"
@@ -324,8 +354,11 @@
               </div>
 
               <!-- Notifications -->
-              <div class="flex items-center justify-between">
-                <div>
+              <div
+                class="flex items-center justify-between p-2 rounded-lg"
+                style="background-color: #f8fafc"
+              >
+                <div class="flex-1">
                   <label for="showNotifications" class="text-sm text-gray-700"
                     >Rate change notifications</label
                   >
@@ -335,7 +368,7 @@
                 </div>
                 <button
                   id="showNotifications"
-                  class="toggle-switch"
+                  class="toggle-switch flex-shrink-0"
                   role="switch"
                   aria-checked="false"
                   aria-disabled="true"
@@ -368,182 +401,6 @@
               </div>
             </div>
           </section>
-
-          <!-- 
-          Phase 9, Task 9.4: Remove unused features
-          COMMENTED OUT: Privacy Compliance Section
-          -->
-          <!--
-          <section
-            class="setting-card privacy-section"
-            role="region"
-            aria-labelledby="privacy-heading"
-          >
-            <div class="flex items-center justify-between mb-3">
-              <div class="flex items-center gap-2">
-                <span class="text-lg" aria-hidden="true">🛡️</span>
-                <h2
-                  id="privacy-heading"
-                  class="text-base font-semibold text-gray-900"
-                >
-                  Privacy Compliance
-                </h2>
-              </div>
-              <span
-                class="text-xs text-blue-600 font-medium"
-                id="privacyComplianceStatus"
-                aria-label="Privacy compliance status"
-                >GDPR Ready</span
-              >
-            </div>
-
-            <div class="space-y-3">
-              <div class="flex items-center justify-between">
-                <div class="flex-1">
-                  <label for="privacyMode" class="text-sm text-gray-700"
-                    >Privacy Mode</label
-                  >
-                  <div class="text-xs text-gray-500">
-                    Enhanced privacy protection
-                  </div>
-                </div>
-                <button
-                  id="privacyMode"
-                  class="toggle-switch"
-                  role="switch"
-                  aria-checked="false"
-                  aria-describedby="privacy-mode-desc"
-                >
-                  <span class="toggle-thumb"></span>
-                </button>
-                <div id="privacy-mode-desc" class="sr-only">
-                  When enabled, minimizes data collection and disables
-                  non-essential tracking
-                </div>
-              </div>
-
-              <div class="flex items-center justify-between">
-                <div class="flex-1">
-                  <label for="analyticsConsent" class="text-sm text-gray-700"
-                    >Usage Analytics</label
-                  >
-                  <div class="text-xs text-gray-500">
-                    Help improve the extension
-                  </div>
-                </div>
-                <button
-                  id="analyticsConsent"
-                  class="toggle-switch"
-                  role="switch"
-                  aria-checked="false"
-                  aria-describedby="analytics-consent-desc"
-                >
-                  <span class="toggle-thumb"></span>
-                </button>
-                <div id="analytics-consent-desc" class="sr-only">
-                  Allow collection of anonymous usage statistics to improve the
-                  extension
-                </div>
-              </div>
-
-              <div class="flex items-center justify-between">
-                <div class="flex-1">
-                  <label
-                    for="personalizationConsent"
-                    class="text-sm text-gray-700"
-                    >Personalization</label
-                  >
-                  <div class="text-xs text-gray-500">
-                    Customize your experience
-                  </div>
-                </div>
-                <button
-                  id="personalizationConsent"
-                  class="toggle-switch"
-                  role="switch"
-                  aria-checked="true"
-                  aria-describedby="personalization-consent-desc"
-                >
-                  <span class="toggle-thumb"></span>
-                </button>
-                <div id="personalization-consent-desc" class="sr-only">
-                  Allow data processing for personalized features and
-                  recommendations
-                </div>
-              </div>
-            </div>
-
-            <div class="mt-4 pt-3 border-t border-gray-200">
-              <div class="text-sm font-medium text-gray-700 mb-2">
-                Data Management
-              </div>
-
-              <div class="mb-3">
-                <label
-                  for="dataRetention"
-                  class="block text-xs text-gray-600 mb-1"
-                >
-                  Data Retention Period
-                </label>
-                <select
-                  id="dataRetention"
-                  class="w-full px-2 py-1 border border-gray-300 rounded text-xs"
-                >
-                  <option value="30">30 days</option>
-                  <option value="90">90 days</option>
-                  <option value="180">180 days</option>
-                  <option value="365" selected>1 year</option>
-                  <option value="0">Keep indefinitely</option>
-                </select>
-              </div>
-
-              <div class="flex items-center justify-between mb-3">
-                <label class="text-xs text-gray-700"
-                  >Auto-delete old data</label
-                >
-                <button
-                  id="autoDeleteData"
-                  class="toggle-switch scale-75"
-                  role="switch"
-                  aria-checked="true"
-                >
-                  <span class="toggle-thumb"></span>
-                </button>
-              </div>
-
-              <div class="grid grid-cols-2 gap-2 mt-3">
-                <button
-                  id="exportUserData"
-                  class="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
-                  title="Export all your data"
-                >
-                  📥 Export Data
-                </button>
-                <button
-                  id="deleteUserData"
-                  class="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
-                  title="Delete your data"
-                >
-                  🗑️ Delete Data
-                </button>
-              </div>
-            </div>
-
-            <div class="mt-4 pt-3 border-t border-gray-200">
-              <div class="text-sm font-medium text-gray-700 mb-2">
-                Consent History
-              </div>
-              <div id="consentHistory" class="text-xs text-gray-600 space-y-1">
-              </div>
-              <button
-                id="viewPrivacyPolicy"
-                class="mt-2 text-xs text-blue-600 hover:text-blue-800 underline"
-              >
-                View Privacy Policy
-              </button>
-            </div>
-          </section>
-          -->
 
           <!-- Currency Stats Dashboard -->
           <section class="setting-card">
@@ -594,429 +451,107 @@
             </div>
           </section>
 
-          <!-- Regional Currency Filter -->
-          <section class="setting-card">
-            <div class="flex items-center gap-2 mb-3">
-              <span class="text-lg">🌍</span>
-              <h2 class="text-base font-semibold text-gray-900">
-                Browse by Region
-              </h2>
-            </div>
-
-            <div class="grid grid-cols-2 gap-2">
-              <button
-                id="regionAmericas"
-                class="region-button"
-                data-region="americas"
-              >
-                <span class="text-lg">🌎</span>
-                <div class="text-left">
-                  <div class="font-medium text-sm">Americas</div>
-                  <div class="text-xs text-gray-500" id="americasCount">
-                    -- currencies
-                  </div>
-                </div>
-              </button>
-
-              <button
-                id="regionEurope"
-                class="region-button"
-                data-region="europe"
-              >
-                <span class="text-lg">🇪🇺</span>
-                <div class="text-left">
-                  <div class="font-medium text-sm">Europe</div>
-                  <div class="text-xs text-gray-500" id="europeCount">
-                    -- currencies
-                  </div>
-                </div>
-              </button>
-
-              <button id="regionAsia" class="region-button" data-region="asia">
-                <span class="text-lg">🌏</span>
-                <div class="text-left">
-                  <div class="font-medium text-sm">Asia & Pacific</div>
-                  <div class="text-xs text-gray-500" id="asiaCount">
-                    -- currencies
-                  </div>
-                </div>
-              </button>
-
-              <button
-                id="regionAfrica"
-                class="region-button"
-                data-region="africa"
-              >
-                <span class="text-lg">🌍</span>
-                <div class="text-left">
-                  <div class="font-medium text-sm">Africa & ME</div>
-                  <div class="text-xs text-gray-500" id="africaCount">
-                    -- currencies
-                  </div>
-                </div>
-              </button>
-            </div>
-          </section>
-
-          <!-- Security Settings Section -->
-          <!-- 
-          Phase 9, Task 9.4: Remove unused features
-          COMMENTED OUT: Security & Privacy Section
-          -->
-          <!--
-          <section
-            class="setting-card security-section"
-            role="region"
-            aria-labelledby="security-heading"
-          >
-            <div class="flex items-center justify-between mb-3">
-              <div class="flex items-center gap-2">
-                <span class="text-lg" aria-hidden="true">🔒</span>
-                <h2
-                  id="security-heading"
-                  class="text-base font-semibold text-gray-900"
-                >
-                  Security & Privacy
-                </h2>
-              </div>
-              <span
-                class="text-xs text-green-600 font-medium"
-                id="securityStatus"
-                aria-label="Security status"
-                >Secure</span
-              >
-            </div>
-
-            <div class="mb-4 p-3 bg-gray-50 rounded-lg">
-              <div class="text-xs text-gray-600 mb-2">Security Overview</div>
-              <div class="grid grid-cols-2 gap-3 text-center">
-                <div>
-                  <div
-                    class="text-lg font-semibold text-blue-600"
-                    id="encryptedDataCount"
-                  >
-                    0
-                  </div>
-                  <div class="text-xs text-gray-500">Encrypted Keys</div>
-                </div>
-                <div>
-                  <div
-                    class="text-lg font-semibold text-green-600"
-                    id="securityEventsCount"
-                  >
-                    0
-                  </div>
-                  <div class="text-xs text-gray-500">Security Events</div>
-                </div>
-              </div>
-            </div>
-
-            <div class="mb-4">
-              <div class="text-sm font-medium text-gray-700 mb-2">
-                API Key Management
-              </div>
-              <div id="apiKeyStatus" class="space-y-2">
-              </div>
-              <button
-                id="manageApiKeys"
-                class="mt-2 w-full text-xs px-3 py-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
-                title="Manage API keys"
-              >
-                🔑 Manage API Keys
-              </button>
-            </div>
-
-            <div class="mb-4">
-              <div class="text-sm font-medium text-gray-700 mb-2">
-                Rate Limiting
-              </div>
-              <div id="rateLimitStatus" class="text-xs text-gray-600">
-                <div class="flex justify-between">
-                  <span>API Calls:</span>
-                  <span id="apiCallsRemaining">--/--</span>
-                </div>
-                <div class="flex justify-between">
-                  <span>Settings Updates:</span>
-                  <span id="settingsUpdatesRemaining">--/--</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="flex gap-2">
-              <button
-                id="clearSecurityLogs"
-                class="flex-1 text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200 transition-colors"
-                title="Clear security logs"
-              >
-                🗑️ Clear Logs
-              </button>
-              <button
-                id="exportSecurityData"
-                class="flex-1 text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
-                title="Export security data"
-              >
-                📤 Export
-              </button>
-            </div>
-          </section>
-          -->
-
-          <!-- 
-          Phase 9, Task 9.4: Remove unused features
-          COMMENTED OUT: Privacy & Data Section
-          -->
-          <!--
-          <section class="setting-card">
-            <div class="flex items-center gap-2 mb-3">
-              <span class="text-lg">🔒</span>
-              <h2 class="text-base font-semibold text-gray-900">
-                Privacy & Data
-              </h2>
-            </div>
-
-            <div
-              class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 mb-4"
-            >
-              <h3 class="text-sm font-semibold text-gray-800 mb-2">
-                Privacy Status
-              </h3>
-
-              <div class="mb-2">
-                <div class="text-xs text-gray-600 mb-1">Consent Status:</div>
-                <div id="consentStatus" class="text-sm">Loading...</div>
-              </div>
-
-              <div class="grid grid-cols-2 gap-2 mb-2">
-                <div class="text-center">
-                  <div
-                    class="text-lg font-semibold text-blue-600"
-                    id="dataCategoriesCount"
-                  >
-                    0
-                  </div>
-                  <div class="text-xs text-gray-600">Data Items</div>
-                </div>
-                <div class="text-center">
-                  <div class="text-lg font-semibold text-green-600">✓</div>
-                  <div class="text-xs text-gray-600">GDPR Compliant</div>
-                </div>
-              </div>
-
-              <div class="text-xs">
-                <div class="text-gray-600 mb-1">Data Retention:</div>
-                <div id="retentionInfo">Loading...</div>
-              </div>
-            </div>
-
-            <div class="space-y-3">
-              <div class="flex items-center justify-between">
-                <div class="flex-1">
-                  <div class="text-sm font-medium text-gray-900">
-                    Privacy Mode
-                  </div>
-                  <div class="text-xs text-gray-600">
-                    Minimize data collection
-                  </div>
-                </div>
-                <label class="switch">
-                  <input type="checkbox" id="privacyMode" />
-                  <span class="slider"></span>
-                </label>
-              </div>
-
-              <div class="bg-gray-50 rounded-lg p-3">
-                <h4 class="text-sm font-semibold text-gray-800 mb-2">
-                  Consent Preferences
-                </h4>
-                <div class="space-y-2">
-                  <label class="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="consentAnalytics"
-                      class="rounded"
-                    />
-                    <span class="text-xs text-gray-700">Usage Analytics</span>
-                  </label>
-                  <label class="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="consentPersonalization"
-                      class="rounded"
-                    />
-                    <span class="text-xs text-gray-700"
-                      >Enhanced Personalization</span
-                    >
-                  </label>
-                  <label class="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="consentMarketing"
-                      class="rounded"
-                    />
-                    <span class="text-xs text-gray-700"
-                      >Marketing Communications</span
-                    >
-                  </label>
-                </div>
-                <button
-                  id="updateConsent"
-                  class="w-full mt-2 text-xs bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition-colors"
-                >
-                  Update Preferences
-                </button>
-              </div>
-            </div>
-
-            <div
-              class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-4"
-            >
-              <h4 class="text-sm font-semibold text-gray-800 mb-2">
-                Your Data Rights
-              </h4>
-
-              <div class="grid grid-cols-2 gap-2 mb-3">
-                <button
-                  id="exportAllData"
-                  class="text-xs bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 transition-colors"
-                >
-                  📄 Export JSON
-                </button>
-                <button
-                  id="exportDataCSV"
-                  class="text-xs bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 transition-colors"
-                >
-                  📊 Export CSV
-                </button>
-              </div>
-
-              <div class="bg-white rounded p-2 mb-3">
-                <div class="text-xs font-semibold text-gray-700 mb-2">
-                  Delete Selected Data:
-                </div>
-                <div class="grid grid-cols-2 gap-1 text-xs">
-                  <label class="flex items-center gap-1">
-                    <input
-                      type="checkbox"
-                      id="deleteHistory"
-                      class="rounded text-xs"
-                    />
-                    <span>History</span>
-                  </label>
-                  <label class="flex items-center gap-1">
-                    <input
-                      type="checkbox"
-                      id="deleteFavorites"
-                      class="rounded text-xs"
-                    />
-                    <span>Favorites</span>
-                  </label>
-                  <label class="flex items-center gap-1">
-                    <input
-                      type="checkbox"
-                      id="deleteSettings"
-                      class="rounded text-xs"
-                    />
-                    <span>Settings</span>
-                  </label>
-                  <label class="flex items-center gap-1">
-                    <input
-                      type="checkbox"
-                      id="deleteAnalytics"
-                      class="rounded text-xs"
-                    />
-                    <span>Analytics</span>
-                  </label>
-                </div>
-                <button
-                  id="deleteSelectedData"
-                  class="w-full mt-2 text-xs bg-orange-500 text-white px-3 py-1 rounded hover:bg-orange-600 transition-colors"
-                >
-                  Delete Selected
-                </button>
-              </div>
-
-              <div class="border-t border-yellow-300 pt-2">
-                <button
-                  id="deleteAllData"
-                  class="w-full text-xs bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition-colors font-medium"
-                >
-                  🗑️ Delete All Data (Right to be Forgotten)
-                </button>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-2 mt-4">
-              <button
-                id="viewPrivacyPolicy"
-                class="text-xs bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600 transition-colors"
-              >
-                📋 Privacy Policy
-              </button>
-              <button
-                id="showGdprRights"
-                class="text-xs bg-purple-500 text-white px-3 py-1 rounded hover:bg-purple-600 transition-colors"
-              >
-                ⚖️ Your Rights
-              </button>
-            </div>
-
-            <div class="mt-3">
-              <button
-                id="runDataCleanup"
-                class="w-full text-xs bg-indigo-500 text-white px-3 py-1 rounded hover:bg-indigo-600 transition-colors"
-              >
-                🧹 Run Data Cleanup
-              </button>
-            </div>
-
-            <div class="mt-4 bg-gray-50 rounded-lg p-2">
-              <div class="text-xs font-semibold text-gray-700 mb-1">
-                Recent Activity:
-              </div>
-              <div id="recentPrivacyActivity" class="text-xs text-gray-600">
-                Loading...
-              </div>
-            </div>
-          </section>
-          -->
-
           <!-- Settings Actions - Moved to bottom of settings panel -->
 
           <!-- Premium Upgrade - Moved to bottom -->
           <section
-            class="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-3"
+            class="premium-upgrade-card rounded-xl relative overflow-hidden"
+            style="
+              background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%);
+              padding: 1px;
+            "
           >
-            <div class="flex items-start gap-3">
-              <span class="text-lg">⭐</span>
-              <div class="flex-1">
-                <h3 class="text-sm font-semibold text-gray-900 mb-1">
-                  Upgrade to Premium
-                </h3>
-                <p class="text-xs text-gray-600 mb-2">
-                  Unlock unlimited currencies, real-time rates, and more!
-                </p>
-                <button
-                  id="upgradePremium"
-                  class="text-xs bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full font-medium hover:bg-yellow-500 transition-colors"
+            <div
+              class="rounded-xl p-4"
+              style="
+                background: linear-gradient(135deg, #f5f3ff 0%, #eff6ff 100%);
+              "
+            >
+              <div style="display: flex; align-items: center; gap: 14px">
+                <div
+                  style="
+                    flex-shrink: 0;
+                    width: 44px;
+                    height: 44px;
+                    border-radius: 12px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: linear-gradient(
+                      135deg,
+                      #7c3aed 0%,
+                      #2563eb 100%
+                    );
+                    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
+                  "
                 >
-                  Learn More
-                </button>
+                  <span style="font-size: 22px; line-height: 1">💎</span>
+                </div>
+                <div style="flex: 1; min-width: 0">
+                  <h3
+                    style="
+                      font-size: 14px;
+                      font-weight: 700;
+                      color: #5b21b6;
+                      margin: 0 0 2px 0;
+                    "
+                  >
+                    Upgrade to Premium
+                  </h3>
+                  <p
+                    style="font-size: 12px; color: #6b7280; margin: 0 0 10px 0"
+                  >
+                    Unlimited currencies, real-time rates & more
+                  </p>
+                  <button
+                    id="upgradePremium"
+                    class="transition-all duration-200 hover:shadow-lg"
+                    style="
+                      font-size: 12px;
+                      padding: 6px 16px;
+                      border-radius: 8px;
+                      font-weight: 600;
+                      color: white;
+                      background: linear-gradient(
+                        135deg,
+                        #7c3aed 0%,
+                        #2563eb 100%
+                      );
+                      border: none;
+                      cursor: pointer;
+                    "
+                  >
+                    Learn More
+                  </button>
+                </div>
               </div>
             </div>
           </section>
 
           <!-- Action Buttons -->
-          <div class="flex gap-2" role="group" aria-label="Settings actions">
+          <div
+            class="flex gap-2 items-stretch"
+            role="group"
+            aria-label="Settings actions"
+          >
             <button
               id="saveSettings"
-              class="save-button flex-1 bg-primary-500 text-white py-2 px-4 rounded-lg font-medium hover:bg-primary-600 transition-colors"
+              class="flex-1 text-white rounded-lg font-medium transition-all duration-150"
+              style="
+                background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+                padding: 10px 16px;
+              "
               aria-describedby="save-settings-desc"
             >
               Save Settings
             </button>
             <button
               id="resetSettings"
-              class="reset-button px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"
+              class="bg-white border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-all duration-150"
+              style="
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+                padding: 10px 16px;
+              "
               aria-describedby="reset-settings-desc"
             >
               Reset
@@ -1027,28 +562,6 @@
             <div id="reset-settings-desc" class="sr-only">
               Reset all settings to their default values.
             </div>
-          </div>
-
-          <!-- Phase 3, Task 3.3: Settings Management -->
-          <div class="flex gap-2 text-sm">
-            <button
-              id="exportSettings"
-              class="flex-1 bg-blue-500 text-white py-2 px-3 rounded-lg font-medium hover:bg-blue-600 transition-colors"
-            >
-              📤 Export
-            </button>
-            <button
-              id="importSettings"
-              class="flex-1 bg-green-500 text-white py-2 px-3 rounded-lg font-medium hover:bg-green-600 transition-colors"
-            >
-              📥 Import
-            </button>
-            <button
-              id="settingsStats"
-              class="flex-1 bg-gray-500 text-white py-2 px-3 rounded-lg font-medium hover:bg-gray-600 transition-colors"
-            >
-              📊 Stats
-            </button>
           </div>
 
           <!-- Settings Statistics (Hidden by default) -->
@@ -1078,14 +591,6 @@
               </div>
             </div>
           </div>
-
-          <!-- Hidden file input for import -->
-          <input
-            type="file"
-            id="importFileInput"
-            accept=".json"
-            style="display: none"
-          />
         </div>
         <!-- End Settings Panel -->
 
@@ -1096,52 +601,76 @@
           role="tabpanel"
           aria-labelledby="historyTab"
         >
-          <!-- History Header -->
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <span class="text-lg" aria-hidden="true">📚</span>
-              <h2 class="text-base font-semibold text-gray-900">
-                Conversion History
-              </h2>
-            </div>
-            <div class="flex gap-2">
-              <button
-                id="exportHistory"
-                class="text-xs px-2 py-1 bg-primary-100 text-primary-700 rounded hover:bg-primary-200 transition-colors"
-                title="Export history"
-              >
-                Export
-              </button>
-              <button
-                id="clearHistory"
-                class="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
-                title="Clear history"
-              >
-                Clear
-              </button>
+          <!-- History Header Card -->
+          <div class="setting-card">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="text-lg" aria-hidden="true">📚</span>
+                <h2 class="text-base font-semibold text-gray-900">
+                  Conversion History
+                </h2>
+              </div>
+              <div class="flex gap-2">
+                <button
+                  id="exportHistory"
+                  class="text-xs px-3 py-1.5 rounded-lg font-medium transition-all duration-150 hover:opacity-90"
+                  style="
+                    background-color: #2563eb;
+                    color: white;
+                    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+                  "
+                  title="Export history"
+                >
+                  Export
+                </button>
+                <button
+                  id="clearHistory"
+                  class="text-xs px-3 py-1.5 rounded-lg font-medium transition-all duration-150 hover:opacity-90"
+                  style="
+                    background-color: #ef4444;
+                    color: white;
+                    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+                  "
+                  title="Clear history"
+                >
+                  Clear
+                </button>
+              </div>
             </div>
           </div>
 
           <!-- History Stats -->
           <div class="grid grid-cols-2 gap-3">
             <div
-              class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-3"
+              class="rounded-xl p-3"
+              style="
+                background: linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%);
+                border: 1px solid #dbeafe;
+              "
             >
-              <div class="text-xs text-gray-600">Total Conversions</div>
+              <div class="text-xs" style="color: #4b5563">
+                Total Conversions
+              </div>
               <div
                 id="totalConversions"
-                class="text-lg font-semibold text-primary-600"
+                class="text-lg font-semibold"
+                style="color: #2563eb"
               >
                 0
               </div>
             </div>
             <div
-              class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-3"
+              class="rounded-xl p-3"
+              style="
+                background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+                border: 1px solid #a7f3d0;
+              "
             >
-              <div class="text-xs text-gray-600">This Week</div>
+              <div class="text-xs" style="color: #4b5563">This Week</div>
               <div
                 id="weekConversions"
-                class="text-lg font-semibold text-emerald-600"
+                class="text-lg font-semibold"
+                style="color: #10b981"
               >
                 0
               </div>
@@ -1149,23 +678,27 @@
           </div>
 
           <!-- History Filters -->
-          <div class="flex gap-2 text-xs">
-            <button id="filterAll" class="filter-btn filter-active">All</button>
-            <button id="filterToday" class="filter-btn">Today</button>
-            <button id="filterWeek" class="filter-btn">Week</button>
-            <button id="filterMonth" class="filter-btn">Month</button>
-          </div>
+          <div class="setting-card">
+            <div class="flex gap-2 text-xs">
+              <button id="filterAll" class="filter-btn filter-active">
+                All
+              </button>
+              <button id="filterToday" class="filter-btn">Today</button>
+              <button id="filterWeek" class="filter-btn">Week</button>
+              <button id="filterMonth" class="filter-btn">Month</button>
+            </div>
 
-          <!-- History List -->
-          <div id="historyList" class="space-y-2 max-h-64 overflow-y-auto">
-            <!-- History items will be populated by JavaScript -->
-            <div class="text-center text-gray-500 text-sm py-8">
-              No conversions yet
+            <!-- History List -->
+            <div id="historyList" class="space-y-2 max-h-64 overflow-y-auto">
+              <!-- History items will be populated by JavaScript -->
+              <div class="text-center text-gray-500 text-sm py-8">
+                No conversions yet
+              </div>
             </div>
           </div>
 
           <!-- Popular Pairs -->
-          <div class="border-t pt-4">
+          <div class="setting-card">
             <h3 class="text-sm font-medium text-gray-900 mb-2">
               Popular Conversions
             </h3>
@@ -1183,26 +716,39 @@
           role="tabpanel"
           aria-labelledby="favoritesTab"
         >
-          <!-- Favorites Header -->
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <span class="text-lg" aria-hidden="true">⭐</span>
-              <h2 class="text-base font-semibold text-gray-900">
-                Favorite Conversions
-              </h2>
+          <!-- Favorites Header Card -->
+          <div class="setting-card">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="text-lg" aria-hidden="true">⭐</span>
+                <h2 class="text-base font-semibold text-gray-900">
+                  Favorite Conversions
+                </h2>
+              </div>
+              <button
+                id="addFavorite"
+                class="text-xs px-3 py-1.5 rounded-lg font-medium transition-all duration-150 hover:opacity-90"
+                style="
+                  background-color: #10b981;
+                  color: white;
+                  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+                "
+                title="Add favorite"
+              >
+                + Add
+              </button>
             </div>
-            <button
-              id="addFavorite"
-              class="text-xs px-2 py-1 bg-primary-100 text-primary-700 rounded hover:bg-primary-200 transition-colors"
-              title="Add favorite"
-            >
-              + Add
-            </button>
           </div>
 
           <!-- Add Favorite Form (hidden by default) -->
-          <div id="addFavoriteForm" class="hidden add-favorite-form">
-            <h3 class="text-sm font-medium mb-3">⭐ Add New Favorite</h3>
+          <div
+            id="addFavoriteForm"
+            class="hidden setting-card"
+            style="border: 1px solid #dbeafe"
+          >
+            <h3 class="text-sm font-medium mb-3" style="color: #1d4ed8">
+              ⭐ Add New Favorite
+            </h3>
             <div class="space-y-3">
               <div>
                 <label class="block text-xs text-gray-600 mb-1"
@@ -1243,11 +789,24 @@
                   placeholder="e.g. Monthly salary"
                 />
               </div>
-              <div class="form-buttons">
-                <button id="saveFavorite" class="btn-save flex-1">
+              <div class="flex gap-2 mt-3">
+                <button
+                  id="saveFavorite"
+                  class="flex-1 text-white rounded-lg font-medium py-2 transition-colors"
+                  style="
+                    background: linear-gradient(
+                      135deg,
+                      #2563eb 0%,
+                      #7c3aed 100%
+                    );
+                  "
+                >
                   Save Favorite
                 </button>
-                <button id="cancelFavorite" class="btn-cancel flex-1">
+                <button
+                  id="cancelFavorite"
+                  class="flex-1 bg-white border border-gray-200 rounded-lg text-gray-600 py-2 hover:bg-gray-50 transition-colors"
+                >
                   Cancel
                 </button>
               </div>
@@ -1255,33 +814,36 @@
           </div>
 
           <!-- Favorites List -->
-          <div id="favoritesList" class="space-y-2">
-            <!-- Favorites will be populated by JavaScript -->
-            <div class="text-center text-gray-500 text-sm py-8">
-              No favorites yet. Add your frequently used conversions for quick
-              access!
+          <div class="setting-card">
+            <div id="favoritesList" class="space-y-2">
+              <!-- Favorites will be populated by JavaScript -->
+              <div class="text-center text-gray-500 text-sm py-8">
+                No favorites yet. Add your frequently used conversions for quick
+                access!
+              </div>
             </div>
           </div>
 
           <!-- Quick Convert from Favorites -->
-          <div class="quick-convert-section">
-            <div class="quick-convert-header">
-              <span class="quick-convert-icon">⚡</span>
-              <h3 class="quick-convert-title">Quick Convert</h3>
+          <div class="setting-card">
+            <div class="flex items-center gap-2 mb-2">
+              <span style="color: #f59e0b">⚡</span>
+              <h3 class="text-sm font-semibold text-gray-900">Quick Convert</h3>
             </div>
-            <div class="quick-convert-description">
+            <p class="text-xs text-gray-500 mb-3">
               Enter an amount and click a favorite conversion below to get
               instant results
-            </div>
+            </p>
             <input
               type="number"
               id="quickConvertAmount"
-              class="quick-convert-input"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm mb-3"
+              style="outline-color: #2563eb"
               placeholder="Enter amount (e.g. 100)..."
               step="0.01"
               min="0"
             />
-            <div id="quickConvertButtons" class="space-y-1 mt-3">
+            <div id="quickConvertButtons" class="space-y-1">
               <!-- Quick convert buttons will be populated by JavaScript -->
             </div>
           </div>
@@ -1295,43 +857,67 @@
           role="tabpanel"
           aria-labelledby="alertsTab"
         >
-          <!-- Alerts Header -->
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <span class="text-lg" aria-hidden="true">🔔</span>
-              <h2 class="text-base font-semibold text-gray-900">Rate Alerts</h2>
-            </div>
-            <div class="flex gap-2">
-              <button
-                id="triggerRateCheck"
-                class="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
-                title="Check rates now"
-              >
-                📊 Check Now
-              </button>
-              <button
-                id="addAlert"
-                class="text-xs px-2 py-1 bg-primary-100 text-primary-700 rounded hover:bg-primary-200 transition-colors"
-                title="Add alert"
-              >
-                + Add Alert
-              </button>
+          <!-- Alerts Header Card -->
+          <div class="setting-card">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="text-lg" aria-hidden="true">🔔</span>
+                <h2 class="text-base font-semibold text-gray-900">
+                  Rate Alerts
+                </h2>
+              </div>
+              <div class="flex gap-2">
+                <button
+                  id="triggerRateCheck"
+                  class="text-xs px-3 py-1.5 rounded-lg font-medium transition-all duration-150 hover:opacity-90"
+                  style="
+                    background-color: #2563eb;
+                    color: white;
+                    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+                  "
+                  title="Check rates now"
+                >
+                  📊 Check Now
+                </button>
+                <button
+                  id="addAlert"
+                  class="text-xs px-3 py-1.5 rounded-lg font-medium transition-all duration-150 hover:opacity-90"
+                  style="
+                    background-color: #10b981;
+                    color: white;
+                    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+                  "
+                  title="Add alert"
+                >
+                  + Add Alert
+                </button>
+              </div>
             </div>
           </div>
 
           <!-- Alert Settings Summary -->
           <div
-            class="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-3"
+            class="rounded-xl p-3"
+            style="
+              background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+              border: 1px solid #fde68a;
+            "
           >
             <div class="flex items-center justify-between text-sm">
-              <span class="text-gray-600">Active Alerts</span>
-              <span id="activeAlertsCount" class="font-semibold text-yellow-700"
+              <span style="color: #4b5563">Active Alerts</span>
+              <span
+                id="activeAlertsCount"
+                class="font-semibold"
+                style="color: #d97706"
                 >0</span
               >
             </div>
             <div class="flex items-center justify-between text-sm mt-1">
-              <span class="text-gray-600">Notifications</span>
-              <span id="notificationsStatus" class="text-xs text-gray-500"
+              <span style="color: #4b5563">Notifications</span>
+              <span
+                id="notificationsStatus"
+                class="text-xs"
+                style="color: #10b981"
                 >Enabled</span
               >
             </div>
@@ -1417,7 +1003,14 @@
               <div class="flex gap-2">
                 <button
                   type="submit"
-                  class="flex-1 px-3 py-2 bg-primary-600 text-white rounded-lg text-sm hover:bg-primary-700 transition-colors"
+                  class="flex-1 px-3 py-2 text-white rounded-lg text-sm transition-colors"
+                  style="
+                    background: linear-gradient(
+                      135deg,
+                      #2563eb 0%,
+                      #7c3aed 100%
+                    );
+                  "
                 >
                   Create Alert
                 </button>
@@ -1433,19 +1026,21 @@
           </div>
 
           <!-- Alerts List -->
-          <div id="alertsList" class="space-y-2">
-            <!-- Alerts will be populated by JavaScript -->
-            <div
-              id="noAlertsMessage"
-              class="text-center text-gray-500 text-sm py-8"
-            >
-              No rate alerts configured. Create your first alert to get notified
-              of exchange rate changes!
+          <div class="setting-card">
+            <div id="alertsList" class="space-y-2">
+              <!-- Alerts will be populated by JavaScript -->
+              <div
+                id="noAlertsMessage"
+                class="text-center text-gray-500 text-sm py-8"
+              >
+                No rate alerts configured. Create your first alert to get
+                notified of exchange rate changes!
+              </div>
             </div>
           </div>
 
           <!-- Alert Settings -->
-          <div class="border-t pt-4">
+          <div class="setting-card">
             <h3 class="text-sm font-medium text-gray-900 mb-3">
               Alert Settings
             </h3>
@@ -1543,7 +1138,10 @@
 
               <button
                 id="saveAlertSettings"
-                class="w-full px-3 py-2 bg-secondary-600 text-white rounded-lg text-sm hover:bg-secondary-700 transition-colors"
+                class="w-full px-3 py-2 text-white rounded-lg text-sm transition-colors"
+                style="
+                  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+                "
               >
                 Save Alert Settings
               </button>
@@ -1551,12 +1149,13 @@
           </div>
 
           <!-- Trend Analysis -->
-          <div class="border-t pt-4">
+          <div class="setting-card">
             <div class="flex items-center justify-between mb-3">
               <h3 class="text-sm font-medium text-gray-900">Trend Analysis</h3>
               <button
                 id="refreshTrends"
-                class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
+                class="text-xs px-2 py-1 rounded transition-colors"
+                style="background-color: #d1fae5; color: #047857"
               >
                 📈 Refresh
               </button>
@@ -1570,7 +1169,8 @@
           </div>
 
           <!-- Alert History -->
-          <div class="border-t pt-4">
+          <!-- Recent Alerts -->
+          <div class="setting-card">
             <h3 class="text-sm font-medium text-gray-900 mb-3">
               Recent Alerts
             </h3>
@@ -1593,250 +1193,175 @@
           role="tabpanel"
           aria-labelledby="subscriptionTab"
         >
-          <!-- Current Plan Header -->
+          <!-- Current Plan Hero -->
           <div
-            class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-4"
+            class="rounded-xl relative overflow-hidden"
+            style="background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%); padding: 1px;"
           >
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <span class="text-2xl" aria-hidden="true">💎</span>
-                <div>
-                  <h2 class="text-lg font-semibold text-gray-900">
-                    <span id="currentPlanName">Free Plan</span>
-                  </h2>
-                  <p class="text-sm text-gray-600" id="currentPlanDescription">
+            <div class="rounded-xl p-4" style="background: linear-gradient(135deg, #f5f3ff 0%, #eff6ff 100%);">
+              <div style="display: flex; align-items: center; gap: 14px;">
+                <div style="flex-shrink: 0; width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%); box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);">
+                  <span style="font-size: 26px; line-height: 1;">💎</span>
+                </div>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px;">
+                    <h2 style="font-size: 16px; font-weight: 700; color: #1e1b4b; margin: 0;">
+                      <span id="currentPlanName">Free Plan</span>
+                    </h2>
+                    <span style="font-size: 10px; padding: 2px 8px; border-radius: 10px; background: #e0e7ff; color: #4338ca; font-weight: 600;">CURRENT</span>
+                  </div>
+                  <p style="font-size: 12px; color: #6b7280; margin: 0;" id="currentPlanDescription">
                     Basic features with limited usage
                   </p>
                 </div>
-              </div>
-              <div class="text-right">
-                <div
-                  class="text-2xl font-bold text-primary-600"
-                  id="currentPlanPrice"
-                >
-                  $0
-                </div>
-                <div class="text-xs text-gray-500" id="currentPlanInterval">
-                  forever
+                <div style="text-align: right;">
+                  <div style="font-size: 22px; font-weight: 800; color: #7c3aed;" id="currentPlanPrice">$0</div>
+                  <div style="font-size: 11px; color: #6b7280;" id="currentPlanInterval">forever</div>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Usage Statistics -->
-          <div class="setting-card">
-            <div class="flex items-center gap-2 mb-3">
-              <span class="text-lg" aria-hidden="true">📊</span>
-              <h3 class="text-base font-semibold text-gray-900">Usage Stats</h3>
+          <!-- Usage Overview -->
+          <div class="setting-card" style="padding: 14px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+              <h3 style="font-size: 13px; font-weight: 600; color: #1e1b4b; margin: 0;">Usage This Period</h3>
+              <span style="font-size: 11px; color: #6b7280;">Resets daily</span>
             </div>
-
-            <div id="usageStats" class="space-y-3">
-              <!-- Daily Conversions -->
-              <div class="usage-item">
-                <div class="flex justify-between items-center mb-1">
-                  <span class="text-sm text-gray-700">Daily Conversions</span>
-                  <span class="text-sm font-medium" id="conversionsUsage"
-                    >0 / 50</span
-                  >
-                </div>
-                <div class="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    class="bg-primary-600 h-2 rounded-full transition-all duration-300"
-                    id="conversionsProgress"
-                    style="width: 0%"
-                  ></div>
+            <div id="usageStats" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+              <!-- Conversions -->
+              <div style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-radius: 10px; padding: 10px; text-align: center;">
+                <div style="font-size: 18px; font-weight: 700; color: #2563eb;" id="conversionsUsage">0</div>
+                <div style="font-size: 10px; color: #6b7280; margin-top: 2px;">of 50 converts</div>
+                <div style="width: 100%; height: 3px; background: #dbeafe; border-radius: 2px; margin-top: 6px;">
+                  <div id="conversionsProgress" style="height: 100%; width: 0%; background: #2563eb; border-radius: 2px; transition: width 0.3s;"></div>
                 </div>
               </div>
-
               <!-- Currency Pairs -->
-              <div class="usage-item">
-                <div class="flex justify-between items-center mb-1">
-                  <span class="text-sm text-gray-700">Currency Pairs</span>
-                  <span class="text-sm font-medium" id="currenciesUsage"
-                    >2 / 2</span
-                  >
-                </div>
-                <div class="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    class="bg-secondary-600 h-2 rounded-full transition-all duration-300"
-                    id="currenciesProgress"
-                    style="width: 100%"
-                  ></div>
+              <div style="background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%); border-radius: 10px; padding: 10px; text-align: center;">
+                <div style="font-size: 18px; font-weight: 700; color: #7c3aed;" id="currenciesUsage">2</div>
+                <div style="font-size: 10px; color: #6b7280; margin-top: 2px;">of 3 pairs</div>
+                <div style="width: 100%; height: 3px; background: #ede9fe; border-radius: 2px; margin-top: 6px;">
+                  <div id="currenciesProgress" style="height: 100%; width: 100%; background: #7c3aed; border-radius: 2px; transition: width 0.3s;"></div>
                 </div>
               </div>
-
-              <!-- History Entries -->
-              <div class="usage-item">
-                <div class="flex justify-between items-center mb-1">
-                  <span class="text-sm text-gray-700">History Entries</span>
-                  <span class="text-sm font-medium" id="historyUsage"
-                    >0 / 10</span
-                  >
-                </div>
-                <div class="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    class="bg-green-600 h-2 rounded-full transition-all duration-300"
-                    id="historyProgress"
-                    style="width: 0%"
-                  ></div>
+              <!-- History -->
+              <div style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-radius: 10px; padding: 10px; text-align: center;">
+                <div style="font-size: 18px; font-weight: 700; color: #059669;" id="historyUsage">0</div>
+                <div style="font-size: 10px; color: #6b7280; margin-top: 2px;">of 10 history</div>
+                <div style="width: 100%; height: 3px; background: #d1fae5; border-radius: 2px; margin-top: 6px;">
+                  <div id="historyProgress" style="height: 100%; width: 0%; background: #059669; border-radius: 2px; transition: width 0.3s;"></div>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Usage Warnings -->
-          <div id="usageWarnings" class="hidden space-y-2 mb-4">
+          <div id="usageWarnings" class="hidden space-y-2">
             <!-- Warnings will be dynamically populated -->
           </div>
 
-          <!-- Feature Comparison -->
-          <div class="setting-card">
-            <div class="flex items-center gap-2 mb-3">
-              <span class="text-lg" aria-hidden="true">⚡</span>
-              <h3 class="text-base font-semibold text-gray-900">Features</h3>
+          <!-- Upgrade Plans -->
+          <div id="upgradeSection">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+              <span style="font-size: 16px;">🚀</span>
+              <h3 style="font-size: 14px; font-weight: 700; color: #1e1b4b; margin: 0;">Upgrade Your Plan</h3>
             </div>
 
-            <div class="space-y-2" id="featureComparison">
-              <div
-                class="flex items-center justify-between py-2 border-b border-gray-100"
-              >
-                <span class="text-sm text-gray-700">Daily Conversions</span>
-                <span class="text-sm font-medium text-gray-900">50</span>
-              </div>
-              <div
-                class="flex items-center justify-between py-2 border-b border-gray-100"
-              >
-                <span class="text-sm text-gray-700">Currency Pairs</span>
-                <span class="text-sm font-medium text-gray-900">2</span>
-              </div>
-              <div
-                class="flex items-center justify-between py-2 border-b border-gray-100"
-              >
-                <span class="text-sm text-gray-700">Rate Updates</span>
-                <span class="text-sm font-medium text-gray-900">Daily</span>
-              </div>
-              <div
-                class="flex items-center justify-between py-2 border-b border-gray-100"
-              >
-                <span class="text-sm text-gray-700">History</span>
-                <span class="text-sm font-medium text-gray-900"
-                  >10 entries</span
+            <!-- Premium Plan Card -->
+            <div
+              class="plan-card"
+              style="background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%); border-radius: 14px; padding: 1px; margin-bottom: 12px;"
+            >
+              <div style="background: white; border-radius: 13px; padding: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
+                  <div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <span style="font-size: 20px;">⭐</span>
+                      <h4 style="font-size: 15px; font-weight: 700; color: #1e1b4b; margin: 0;">Premium</h4>
+                      <span style="font-size: 9px; padding: 2px 6px; border-radius: 8px; background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%); color: white; font-weight: 600;">POPULAR</span>
+                    </div>
+                    <p style="font-size: 11px; color: #6b7280; margin: 4px 0 0 28px;">Perfect for regular users</p>
+                  </div>
+                  <div style="text-align: right;">
+                    <div style="font-size: 24px; font-weight: 800; background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">$4.99</div>
+                    <div style="font-size: 11px; color: #6b7280;">/month</div>
+                  </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; margin-bottom: 14px;">
+                  <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #374151;">
+                    <span style="color: #10b981;">✓</span> 500 daily conversions
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #374151;">
+                    <span style="color: #10b981;">✓</span> 20 currency pairs
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #374151;">
+                    <span style="color: #10b981;">✓</span> Hourly rate updates
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #374151;">
+                    <span style="color: #10b981;">✓</span> 5 rate alerts
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #374151;">
+                    <span style="color: #10b981;">✓</span> 100 history entries
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #374151;">
+                    <span style="color: #10b981;">✓</span> Ad-free experience
+                  </div>
+                </div>
+
+                <button
+                  id="upgradeToPremium"
+                  style="width: 100%; padding: 10px 16px; border: none; border-radius: 10px; font-size: 13px; font-weight: 600; color: white; background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%); cursor: pointer; transition: all 0.2s;"
                 >
-              </div>
-              <div class="flex items-center justify-between py-2">
-                <span class="text-sm text-gray-700">Rate Alerts</span>
-                <span class="text-sm text-red-600">❌ Not available</span>
+                  Upgrade to Premium
+                </button>
               </div>
             </div>
-          </div>
 
-          <!-- Upgrade Options -->
-          <div id="upgradeSection" class="space-y-3">
-            <!-- Premium Plan -->
+            <!-- Pro Plan Card -->
             <div
-              class="plan-card border-2 border-primary-200 rounded-lg p-4 bg-primary-50"
+              class="plan-card"
+              style="background: #f5f3ff; border: 1px solid #e9d5ff; border-radius: 14px; padding: 16px;"
             >
-              <div class="flex items-center justify-between mb-3">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
                 <div>
-                  <h4 class="font-semibold text-primary-900">Premium Plan</h4>
-                  <p class="text-sm text-primary-700">
-                    Perfect for regular users
-                  </p>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 20px;">💎</span>
+                    <h4 style="font-size: 15px; font-weight: 700; color: #5b21b6; margin: 0;">Professional</h4>
+                  </div>
+                  <p style="font-size: 11px; color: #7c3aed; margin: 4px 0 0 28px;">For power users & businesses</p>
                 </div>
-                <div class="text-right">
-                  <div class="text-xl font-bold text-primary-600">$4.99</div>
-                  <div class="text-xs text-primary-600">/month</div>
-                </div>
-              </div>
-
-              <div class="space-y-1 mb-4">
-                <div class="flex items-center gap-2 text-sm">
-                  <span class="text-green-600">✅</span>
-                  <span>500 daily conversions</span>
-                </div>
-                <div class="flex items-center gap-2 text-sm">
-                  <span class="text-green-600">✅</span>
-                  <span>20 currency pairs</span>
-                </div>
-                <div class="flex items-center gap-2 text-sm">
-                  <span class="text-green-600">✅</span>
-                  <span>Hourly rate updates</span>
-                </div>
-                <div class="flex items-center gap-2 text-sm">
-                  <span class="text-green-600">✅</span>
-                  <span>100 history entries</span>
-                </div>
-                <div class="flex items-center gap-2 text-sm">
-                  <span class="text-green-600">✅</span>
-                  <span>5 rate alerts</span>
-                </div>
-                <div class="flex items-center gap-2 text-sm">
-                  <span class="text-green-600">✅</span>
-                  <span>Ad-free experience</span>
+                <div style="text-align: right;">
+                  <div style="font-size: 24px; font-weight: 800; color: #7c3aed;">$14.99</div>
+                  <div style="font-size: 11px; color: #6b7280;">/month</div>
                 </div>
               </div>
 
-              <button
-                id="upgradeToPremium"
-                class="w-full bg-primary-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-primary-700 transition-colors"
-              >
-                Upgrade to Premium
-              </button>
-            </div>
-
-            <!-- Pro Plan -->
-            <div
-              class="plan-card border-2 border-purple-200 rounded-lg p-4 bg-purple-50"
-            >
-              <div class="flex items-center justify-between mb-3">
-                <div>
-                  <h4 class="font-semibold text-purple-900">
-                    Professional Plan
-                  </h4>
-                  <p class="text-sm text-purple-700">
-                    For power users & businesses
-                  </p>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; margin-bottom: 14px;">
+                <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #374151;">
+                  <span style="color: #7c3aed;">✓</span> Unlimited conversions
                 </div>
-                <div class="text-right">
-                  <div class="text-xl font-bold text-purple-600">$14.99</div>
-                  <div class="text-xs text-purple-600">/month</div>
+                <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #374151;">
+                  <span style="color: #7c3aed;">✓</span> Unlimited pairs
                 </div>
-              </div>
-
-              <div class="space-y-1 mb-4">
-                <div class="flex items-center gap-2 text-sm">
-                  <span class="text-green-600">✅</span>
-                  <span>Unlimited conversions</span>
+                <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #374151;">
+                  <span style="color: #7c3aed;">✓</span> Real-time rates
                 </div>
-                <div class="flex items-center gap-2 text-sm">
-                  <span class="text-green-600">✅</span>
-                  <span>Unlimited currency pairs</span>
+                <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #374151;">
+                  <span style="color: #7c3aed;">✓</span> 50 rate alerts
                 </div>
-                <div class="flex items-center gap-2 text-sm">
-                  <span class="text-green-600">✅</span>
-                  <span>Real-time rate updates</span>
+                <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #374151;">
+                  <span style="color: #7c3aed;">✓</span> Unlimited history
                 </div>
-                <div class="flex items-center gap-2 text-sm">
-                  <span class="text-green-600">✅</span>
-                  <span>Unlimited history</span>
-                </div>
-                <div class="flex items-center gap-2 text-sm">
-                  <span class="text-green-600">✅</span>
-                  <span>50 rate alerts</span>
-                </div>
-                <div class="flex items-center gap-2 text-sm">
-                  <span class="text-green-600">✅</span>
-                  <span>API access</span>
-                </div>
-                <div class="flex items-center gap-2 text-sm">
-                  <span class="text-green-600">✅</span>
-                  <span>Priority support</span>
+                <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #374151;">
+                  <span style="color: #7c3aed;">✓</span> Priority support
                 </div>
               </div>
 
               <button
                 id="upgradeToPro"
-                class="w-full bg-purple-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-purple-700 transition-colors"
+                style="width: 100%; padding: 10px 16px; border: 2px solid #7c3aed; border-radius: 10px; font-size: 13px; font-weight: 600; color: #7c3aed; background: white; cursor: pointer; transition: all 0.2s;"
               >
                 Upgrade to Pro
               </button>
@@ -1844,94 +1369,76 @@
           </div>
 
           <!-- Payment Provider Selection -->
-          <div id="paymentSection" class="hidden setting-card">
-            <div class="flex items-center gap-2 mb-3">
-              <span class="text-lg" aria-hidden="true">💳</span>
-              <h3 class="text-base font-semibold text-gray-900">
-                Payment Method
-              </h3>
+          <div id="paymentSection" class="hidden" style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px; margin-top: 12px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+              <span style="font-size: 16px;">💳</span>
+              <h3 style="font-size: 13px; font-weight: 600; color: #1e1b4b; margin: 0;">Payment Method</h3>
             </div>
-
-            <div class="space-y-2" id="paymentProviders">
+            <div id="paymentProviders" style="display: flex; flex-direction: column; gap: 8px;">
               <!-- Payment providers will be populated by JavaScript -->
             </div>
-
-            <div class="mt-4 p-3 bg-blue-50 rounded-lg">
-              <p class="text-xs text-blue-800">
-                🔒 Secure payment processing. Cancel anytime from your account
-                settings.
+            <div style="margin-top: 12px; padding: 10px; border-radius: 8px; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);">
+              <p style="font-size: 11px; color: #1e40af; margin: 0; display: flex; align-items: center; gap: 6px;">
+                <span>🔒</span> Secure payment processing. Cancel anytime.
               </p>
             </div>
           </div>
 
           <!-- Current Subscription Management -->
-          <div id="subscriptionManagement" class="hidden setting-card">
-            <div class="flex items-center gap-2 mb-3">
-              <span class="text-lg" aria-hidden="true">⚙️</span>
-              <h3 class="text-base font-semibold text-gray-900">
-                Manage Subscription
-              </h3>
+          <div id="subscriptionManagement" class="hidden" style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px; margin-top: 12px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+              <span style="font-size: 16px;">⚙️</span>
+              <h3 style="font-size: 13px; font-weight: 600; color: #1e1b4b; margin: 0;">Manage Subscription</h3>
             </div>
-
-            <div class="space-y-3">
-              <div class="flex justify-between items-center">
-                <span class="text-sm text-gray-700">Status</span>
-                <span
-                  class="text-sm font-medium text-green-600"
-                  id="subscriptionStatus"
-                  >Active</span
-                >
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: #f9fafb; border-radius: 8px;">
+                <span style="font-size: 12px; color: #6b7280;">Status</span>
+                <span style="font-size: 12px; font-weight: 600; color: #059669; display: flex; align-items: center; gap: 4px;" id="subscriptionStatus">
+                  <span style="width: 6px; height: 6px; background: #059669; border-radius: 50%;"></span> Active
+                </span>
               </div>
-              <div class="flex justify-between items-center">
-                <span class="text-sm text-gray-700">Next Billing</span>
-                <span class="text-sm font-medium" id="nextBilling">-</span>
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: #f9fafb; border-radius: 8px;">
+                <span style="font-size: 12px; color: #6b7280;">Next Billing</span>
+                <span style="font-size: 12px; font-weight: 600; color: #374151;" id="nextBilling">-</span>
               </div>
-              <div class="flex justify-between items-center">
-                <span class="text-sm text-gray-700">Payment Method</span>
-                <span class="text-sm font-medium" id="paymentMethod">-</span>
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: #f9fafb; border-radius: 8px;">
+                <span style="font-size: 12px; color: #6b7280;">Payment Method</span>
+                <span style="font-size: 12px; font-weight: 600; color: #374151;" id="paymentMethod">-</span>
               </div>
             </div>
-
-            <div class="mt-4 pt-4 border-t border-gray-200">
-              <button
-                id="cancelSubscription"
-                class="w-full bg-red-100 text-red-700 py-2 px-4 rounded-lg font-medium hover:bg-red-200 transition-colors"
-              >
-                Cancel Subscription
-              </button>
-            </div>
+            <button
+              id="cancelSubscription"
+              style="width: 100%; margin-top: 12px; padding: 10px 16px; border: 1px solid #fecaca; border-radius: 10px; font-size: 12px; font-weight: 500; color: #dc2626; background: #fef2f2; cursor: pointer; transition: all 0.2s;"
+            >
+              Cancel Subscription
+            </button>
           </div>
 
-          <!-- Support Options -->
-          <div class="setting-card">
-            <div class="flex items-center gap-2 mb-3">
-              <span class="text-lg" aria-hidden="true">❤️</span>
-              <h3 class="text-base font-semibold text-gray-900">
-                Support Development
-              </h3>
+          <!-- Support Development -->
+          <div style="background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%); border: 1px solid #fbcfe8; border-radius: 12px; padding: 14px; margin-top: 12px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+              <span style="font-size: 16px;">❤️</span>
+              <h3 style="font-size: 13px; font-weight: 600; color: #9d174d; margin: 0;">Support Development</h3>
             </div>
-
-            <p class="text-sm text-gray-600 mb-3">
-              Love the extension? Support our development with a one-time
-              donation.
+            <p style="font-size: 11px; color: #6b7280; margin: 0 0 12px 0;">
+              Love the extension? Support us with a one-time donation.
             </p>
-
-            <div class="flex gap-2">
+            <div style="display: flex; gap: 8px;">
               <button
                 id="donate5"
-                class="flex-1 bg-green-100 text-green-700 py-2 px-3 rounded-lg text-sm font-medium hover:bg-green-200 transition-colors"
+                style="flex: 1; padding: 8px 12px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; color: #be185d; background: white; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05);"
               >
                 $5
               </button>
               <button
                 id="donate10"
-                class="flex-1 bg-green-100 text-green-700 py-2 px-3 rounded-lg text-sm font-medium hover:bg-green-200 transition-colors"
+                style="flex: 1; padding: 8px 12px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; color: white; background: linear-gradient(135deg, #ec4899 0%, #be185d 100%); cursor: pointer; transition: all 0.2s;"
               >
                 $10
               </button>
               <button
                 id="donate25"
-                class="flex-1 bg-green-100 text-green-700 py-2 px-3 rounded-lg text-sm font-medium hover:bg-green-200 transition-colors"
+                style="flex: 1; padding: 8px 12px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; color: #be185d; background: white; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05);"
               >
                 $25
               </button>
@@ -1965,7 +1472,18 @@
         role="contentinfo"
       >
         <div class="flex items-center justify-between text-xs text-gray-500">
-          <span id="version" aria-label="Extension version">v1.0.0</span>
+          <div class="flex items-center gap-2">
+            <span id="version" aria-label="Extension version">v1.0.0</span>
+            <span aria-hidden="true">•</span>
+            <button
+              id="settingsStats"
+              class="hover:text-primary-600 transition-colors font-medium"
+              style="color: #7c3aed"
+              aria-label="View stats"
+            >
+              Stats
+            </button>
+          </div>
           <nav
             class="flex items-center gap-2"
             role="navigation"
@@ -2009,7 +1527,8 @@
       <!-- Status Message -->
       <div
         id="statusMessage"
-        class="hidden fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 transition-all duration-300"
+        class="hidden fixed top-4 left-1/2 transform -translate-x-1/2 text-white px-4 py-2 rounded-lg shadow-lg z-50 transition-all duration-300"
+        style="background-color: #10b981"
         role="status"
         aria-live="polite"
         aria-atomic="true"

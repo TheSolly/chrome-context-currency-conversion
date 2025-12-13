@@ -14,7 +14,7 @@ export const SUBSCRIPTION_PLANS = {
     features: {
       // Core features
       basicConversion: true,
-      currencyCount: 2,
+      currencyCount: 3,
       dailyConversions: 50,
 
       // Rate updates

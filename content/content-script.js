@@ -1,138 +1,50 @@
-// Content Script for Currency Converter Extension
-// Detects currency amounts in selected text and communicates with background script
-// Phase 5, Task 5.2: Enhanced with lazy loading for performance optimization
-// Phase 5, Task 5.3: Enhanced with accessibility features
-// Phase 9, Task 9.1: Enhanced with security features
+/**
+ * Content Script for Currency Converter Extension
+ * Detects currency amounts in selected text and communicates with background script
+ *
+ * REFACTORED: Uses static imports for Vite bundling (security improvement)
+ * - Removes need for utils/* in web_accessible_resources
+ * - All dependencies bundled at build time
+ */
+
+// Static imports - bundled by Vite
+import { securityManager } from '../utils/security-manager.js';
+import { AccessibilityManager } from '../utils/accessibility-manager.js';
+import { smartCurrencyDetector } from '../utils/smart-currency-detector.js';
 
 console.log('Currency Converter content script loaded');
 
-// Phase 9, Task 9.1: Security manager for content script
-let securityManager = null;
-
-// Load security manager for content script
-(async () => {
-  try {
-    const securityModule = await import(
-      chrome.runtime.getURL('utils/security-manager.js')
-    );
-    securityManager = securityModule.securityManager;
-    console.log('Content script security features initialized');
-  } catch (error) {
-    console.warn('Failed to load security manager:', error);
-  }
-})();
-
-// Phase 5, Task 5.3: Accessibility Manager for content script
+// Initialize modules
 let accessibilityManager = null;
 
-// Load accessibility manager for content script
-(async () => {
+// Initialize all modules synchronously (they're bundled now)
+function initializeModules() {
   try {
-    const accessibilityModule = await import(
-      chrome.runtime.getURL('utils/accessibility-manager.js')
-    );
-    accessibilityManager = new accessibilityModule.AccessibilityManager();
+    // Security manager is a singleton, already initialized
+    if (securityManager) {
+      console.log('Security manager available');
+    }
 
-    // Initialize accessibility features for content script
+    // Initialize accessibility manager
+    accessibilityManager = new AccessibilityManager();
     initializeContentAccessibility();
+    console.log('Accessibility manager initialized');
 
-    console.log('Content script accessibility features initialized');
-  } catch (error) {
-    console.warn('Failed to load accessibility manager:', error);
-  }
-})();
 
-// Phase 5, Task 5.1 & 5.2: Initialize Visual Feedback System with lazy loading
-let visualFeedback = null;
-let lazyLoadFeature = null;
-let initializeLazyLoading = null;
-
-// Phase 5, Task 5.2: Load lazy loading system dynamically
-(async () => {
-  try {
-    const lazyLoaderModule = await import(
-      chrome.runtime.getURL('utils/lazy-loader.js')
-    );
-    lazyLoadFeature = lazyLoaderModule.lazyLoadFeature;
-    initializeLazyLoading = lazyLoaderModule.initializeLazyLoading;
-
-    // Initialize lazy loading system
-    await initializeLazyLoading();
-    console.log('Lazy loading system initialized successfully');
-  } catch (error) {
-    console.warn('Failed to load lazy loading system:', error);
-  }
-})();
-
-// Load visual feedback system dynamically with enhanced lazy loading
-(async () => {
-  try {
-    // Wait a bit for lazy loader to initialize
-    await new Promise(resolve => setTimeout(resolve, 100));
-
-    let visualFeedbackModule;
-    if (lazyLoadFeature) {
-      try {
-        // Use lazy loader if available
-        visualFeedbackModule = await lazyLoadFeature('VISUAL_FEEDBACK');
-        visualFeedback = visualFeedbackModule.visualFeedback;
-        console.log(
-          'Visual feedback system loaded successfully via lazy loader'
-        );
-        return; // Exit if successful
-      } catch (lazyError) {
-        console.warn(
-          'Failed to load via lazy loader, trying direct import:',
-          lazyError
-        );
-      }
-    }
-
-    // Fallback to direct import if lazy loading failed or isn't available
-    visualFeedbackModule = await import(
-      chrome.runtime.getURL('utils/visual-feedback.js')
-    );
-    visualFeedback = visualFeedbackModule.visualFeedback;
-    console.log('Visual feedback system loaded successfully via direct import');
-  } catch (error) {
-    console.warn('All attempts to load visual feedback system failed:', error);
-    // Create a fallback object with no-op methods
-    visualFeedback = {
-      showToast: () => {},
-      showLoading: () => null,
-      hideLoading: () => {},
-      showConversionResult: () => {},
-      showTooltipConversionResult: () => {},
-      showSuccessAnimation: () => {},
-      showErrorAnimation: () => {},
-      copyToClipboard: () => Promise.resolve(false),
-      initializeStyles: () => {},
-      removeExistingTooltip: () => {}
-    };
-  }
-})();
-
-// Phase 6, Task 6.1: Smart Currency Detection - Load smart detector
-let smartCurrencyDetector = null;
-
-// Load smart currency detector dynamically
-(async () => {
-  try {
-    const smartDetectorModule = await import(
-      chrome.runtime.getURL('utils/smart-currency-detector.js')
-    );
-    smartCurrencyDetector = smartDetectorModule.smartCurrencyDetector;
-
-    // Make available globally for currency utils
-    if (typeof window !== 'undefined') {
+    // Smart currency detector is a singleton
+    if (smartCurrencyDetector && typeof window !== 'undefined') {
       window.smartCurrencyDetector = smartCurrencyDetector;
+      console.log('Smart currency detector available');
     }
 
-    console.log('Smart currency detector loaded successfully');
+    console.log('All content script modules initialized');
   } catch (error) {
-    console.warn('Failed to load smart currency detector:', error);
+    console.warn('Error initializing content script modules:', error);
   }
-})();
+}
+
+// Initialize on script load
+initializeModules();
 
 // Currency patterns for detection - Enhanced for Task 2.1
 const CURRENCY_PATTERNS = {
@@ -862,159 +774,35 @@ function detectCurrency(text) {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   try {
     if (request.action === 'showLoadingFeedback') {
-      if (visualFeedback && visualFeedback.showToast) {
-        visualFeedback.showToast(
-          `Converting to ${request.targetCurrency}...`,
-          'info',
-          2000
-        );
-      }
+      // Toast notifications disabled - conversion popup provides sufficient feedback
+      // Keeping this handler for future use if needed
       sendResponse({ success: true });
     }
 
     if (request.action === 'showErrorFeedback') {
-      if (visualFeedback && visualFeedback.showToast) {
-        visualFeedback.showToast(
-          `Conversion failed: ${request.error}`,
-          'error',
-          4000
-        );
-      }
+      // Toast notifications disabled - error will be shown in conversion popup
+      // Keeping this handler for future use if needed
       sendResponse({ success: true });
     }
 
     if (request.action === 'showConversionResult' && request.result) {
       if (request.result.error) {
-        // Show error result
+        // Show error result in popup tooltip only (toast disabled)
         displayConversionTooltip(
           request.originalText,
           request.currencyInfo,
           null,
           request.result.errorMessage
         );
-        if (visualFeedback && visualFeedback.showToast) {
-          visualFeedback.showToast(
-            `Conversion failed: ${request.result.errorMessage}`,
-            'error',
-            4000
-          );
-        }
+        // Toast notification disabled - popup shows the error
       } else {
-        // Show successful conversion result
+        // Show successful conversion result in popup tooltip only
+        // Toast notifications disabled - popup provides sufficient feedback with copy functionality
         displayConversionTooltip(
           request.originalText,
           request.currencyInfo,
           request.result
         );
-
-        // DEBUG: Log the conversion result to see what fields are available
-        console.log('🔍 Conversion result received:', request.result);
-        console.log(
-          '🔍 formattedAmount field:',
-          request.result.formattedAmount
-        );
-        console.log(
-          '🔍 convertedAmount field:',
-          request.result.convertedAmount
-        );
-        console.log('🔍 toCurrency field:', request.result.toCurrency);
-
-        // Use the pre-formatted amount from the conversion result, or format it if not available
-        const formattedAmount =
-          request.result.formattedAmount ||
-          (() => {
-            const formatCurrency = (amount, currency) => {
-              const value = parseFloat(amount);
-              if (isNaN(value)) {
-                return amount;
-              }
-
-              try {
-                return new Intl.NumberFormat('en-US', {
-                  style: 'currency',
-                  currency: currency,
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 4
-                }).format(value);
-              } catch {
-                return `${amount} ${currency}`;
-              }
-            };
-
-            return formatCurrency(
-              String(request.result.convertedAmount).replace(/[^\d.-]/g, ''),
-              request.result.toCurrency
-            );
-          })();
-
-        const toastMessage = `${formattedAmount} (Click to copy)`;
-
-        // Extract numeric value for copying (remove currency symbols and letters)
-        const numericValue = formattedAmount.replace(/[^\d,.-]/g, '').trim();
-
-        if (visualFeedback && visualFeedback.showToast) {
-          const toast = visualFeedback.showToast(toastMessage, 'success', 5000);
-
-          // Make toast clickable to copy result
-          if (toast) {
-            toast.style.cursor = 'pointer';
-            toast.addEventListener('click', () => {
-              visualFeedback.copyToClipboard(
-                numericValue,
-                true,
-                'Number copied!'
-              );
-              visualFeedback.hideToast(toast);
-            });
-          }
-        } else {
-          // Fallback if visual feedback is not loaded
-          console.warn(
-            '⚠️ Visual feedback not loaded, creating fallback toast'
-          );
-          const fallbackToast = document.createElement('div');
-          fallbackToast.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #4CAF50;
-            color: white;
-            padding: 16px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            z-index: 10000;
-            font-family: Arial, sans-serif;
-            font-size: 14px;
-            max-width: 300px;
-            cursor: pointer;
-          `;
-
-          fallbackToast.textContent = toastMessage;
-          fallbackToast.addEventListener('click', () => {
-            if (window.navigator && window.navigator.clipboard) {
-              window.navigator.clipboard
-                .writeText(numericValue)
-                .then(() => {
-                  fallbackToast.textContent = 'Number copied!';
-                  setTimeout(() => fallbackToast.remove(), 1000);
-                })
-                .catch(() => {
-                  console.warn('Failed to copy to clipboard');
-                  fallbackToast.remove();
-                });
-            } else {
-              console.warn('Clipboard API not available');
-              fallbackToast.remove();
-            }
-          });
-
-          document.body.appendChild(fallbackToast);
-          setTimeout(() => {
-            if (fallbackToast.parentNode) {
-              fallbackToast.remove();
-            }
-          }, 5000);
-        }
       }
       sendResponse({ success: true });
     }
@@ -1044,25 +832,7 @@ function displayConversionTooltip(
   // Remove any existing tooltips
   removeExistingTooltip();
 
-  // If we have the visual feedback system available, use its enhanced showTooltipConversionResult
-  if (visualFeedback && visualFeedback.showTooltipConversionResult) {
-    try {
-      visualFeedback.showTooltipConversionResult(
-        originalText,
-        currencyInfo,
-        result,
-        errorMessage
-      );
-      return;
-    } catch (error) {
-      console.warn(
-        'Failed to use visual feedback system, falling back to basic tooltip:',
-        error
-      );
-    }
-  }
-
-  // Fallback to basic tooltip implementation
+  // Show tooltip with conversion result
   createBasicTooltip(originalText, currencyInfo, result, errorMessage);
 }
 
@@ -1257,13 +1027,9 @@ function createBasicTooltip(
         // Extract numeric value for copying (remove currency symbols and letters)
         const numericValue = formattedAmount.replace(/[^\d,.-]/g, '').trim();
 
-        if (visualFeedback && visualFeedback.copyToClipboard) {
-          visualFeedback.copyToClipboard(numericValue);
-        } else {
-          // Fallback copy to clipboard
-          if (window.navigator && window.navigator.clipboard) {
-            window.navigator.clipboard.writeText(numericValue).catch(() => {});
-          }
+        // Copy to clipboard
+        if (window.navigator && window.navigator.clipboard) {
+          window.navigator.clipboard.writeText(numericValue).catch(() => {});
         }
         copyButton.textContent = '✅ Copied!';
         copyButton.style.background = '#10b981';

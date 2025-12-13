@@ -161,12 +161,12 @@ async function initializeCoreServices() {
       console.log('🎯 Initializing ad system...');
       try {
         // Initialize ad systems separately to prevent cascading failures
-        initializeAds();
+        await initializeAds();
         console.log('✅ Ad system initialized');
 
         // Try to show interstitial, but catch any errors
         try {
-          showInterstitialIfEligible('popup_open');
+          await showInterstitialIfEligible('popup_open');
         } catch (interstitialError) {
           console.warn(
             'Non-critical error showing interstitial:',

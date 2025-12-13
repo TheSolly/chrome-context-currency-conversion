@@ -274,7 +274,7 @@ export class HistoryTab {
 
     if (totalElement) totalElement.textContent = stats.totalConversions || 0;
     if (weekElement) weekElement.textContent = thisWeekCount || 0;
-    if (countElement) countElement.textContent = stats.totalConversions || 0;
+    if (countElement) countElement.textContent = stats.todayConversions || 0;
   }
 
   /**

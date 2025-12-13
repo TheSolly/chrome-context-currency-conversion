@@ -1,6 +1,15 @@
 /**
  * Ad Manager for Chrome Currency Conversion Extension
  * Handles non-intrusive ad placements, network integration, and A/B testing
+ *
+ * CHROME WEB STORE COMPLIANCE NOTES:
+ * - AdSense is NOT supported in Chrome extensions (per Chrome Web Store policy)
+ * - All ad networks must be compliant (affiliate, Carbon Ads, direct sponsors, etc.)
+ * - Ads must not interfere with user experience or mimic system notifications
+ * - Interstitials are disabled by default to avoid review issues
+ * - Premium users see no ads
+ *
+ * To enable ads: Configure a compliant ad network in `adNetworks` and set `enabled: true`
  */
 
 import { settingsManager } from './settings-manager.js';
@@ -8,26 +17,24 @@ import { getSubscriptionManager } from './subscription-manager-v2.js';
 
 class AdManager {
   constructor() {
+    // Ad networks configuration
+    // Note: AdSense is NOT supported in Chrome extensions per Chrome Web Store policy
+    // Configure compliant ad networks here (affiliate, direct sponsors, etc.)
     this.adNetworks = {
-      google: {
-        name: 'Google AdSense',
-        enabled: true,
+      // Placeholder for future compliant ad network integration
+      // Examples: Carbon Ads, BuySellAds, direct sponsors, affiliate networks
+      placeholder: {
+        name: 'Ad Placeholder',
+        enabled: false,
         regions: ['global'],
-        testId: 'ca-pub-test-id',
-        productionId: 'ca-pub-production-id',
+        testId: 'placeholder-test-id',
+        productionId: 'placeholder-prod-id',
         formats: ['banner', 'native']
       },
-      adsense: {
-        name: 'Google AdSense',
-        enabled: true,
-        regions: ['global'],
-        testId: 'ca-pub-test-id',
-        productionId: 'ca-pub-production-id',
-        formats: ['banner', 'native']
-      },
-      mena: {
-        name: 'MENA Ad Network',
-        enabled: true,
+      // Regional ad network example (configure with actual compliant network)
+      regional: {
+        name: 'Regional Ad Network',
+        enabled: false,
         regions: [
           'Egypt',
           'UAE',
@@ -37,23 +44,26 @@ class AdManager {
           'Bahrain',
           'Oman'
         ],
-        testId: 'mena-test-id',
-        productionId: 'mena-production-id',
-        formats: ['banner', 'native', 'interstitial']
+        testId: 'regional-test-id',
+        productionId: 'regional-prod-id',
+        formats: ['banner', 'native']
       }
     };
 
+    // Ad positions configuration
+    // Note: Interstitials disabled by default to comply with Chrome Web Store policies
     this.adPositions = {
       popup: {
-        bottom: { enabled: true, weight: 0.7, formats: ['banner'] },
-        sidebar: { enabled: true, weight: 0.3, formats: ['native'] }
+        bottom: { enabled: false, weight: 0.7, formats: ['banner'] },
+        sidebar: { enabled: false, weight: 0.3, formats: ['native'] }
       },
       history: {
-        bottom: { enabled: true, weight: 0.5, formats: ['banner'] },
-        betweenItems: { enabled: true, weight: 0.5, formats: ['native'] }
+        bottom: { enabled: false, weight: 0.5, formats: ['banner'] },
+        betweenItems: { enabled: false, weight: 0.5, formats: ['native'] }
       },
+      // Interstitials disabled - can be intrusive and may cause review issues
       interstitial: {
-        fullscreen: { enabled: true, weight: 1.0, formats: ['interstitial'] }
+        fullscreen: { enabled: false, weight: 1.0, formats: ['interstitial'] }
       }
     };
 
@@ -81,8 +91,8 @@ class AdManager {
    */
   async initialize() {
     try {
-      // Get subscription manager
-      const subscriptionManager = getSubscriptionManager();
+      // Get subscription manager (async - returns Promise)
+      const subscriptionManager = await getSubscriptionManager();
 
       // Default to showing ads unless we can confirm user is premium
       this.showAds = true;
@@ -238,10 +248,15 @@ class AdManager {
       const userRegion = this.adPreferences.region || 'global';
 
       // Select appropriate ad network based on region
-      let network = this.adNetworks.google; // Default
+      // Default to placeholder network (configure with actual compliant network)
+      let network = this.adNetworks.placeholder;
 
-      if (this.isInMenaRegion(userRegion) && this.adNetworks.mena.enabled) {
-        network = this.adNetworks.mena;
+      // Use regional network if user is in supported region and network is enabled
+      if (
+        this.isInRegionalNetwork(userRegion) &&
+        this.adNetworks.regional.enabled
+      ) {
+        network = this.adNetworks.regional;
       }
 
       // Select format based on position
@@ -275,12 +290,12 @@ class AdManager {
   }
 
   /**
-   * Check if a region is in the MENA group
+   * Check if a region is supported by the regional ad network
    * @param {string} region - User's region
-   * @returns {boolean} Whether the region is in MENA
+   * @returns {boolean} Whether the region is supported
    */
-  isInMenaRegion(region) {
-    return this.adNetworks.mena.regions.includes(region);
+  isInRegionalNetwork(region) {
+    return this.adNetworks.regional.regions.includes(region);
   }
 
   /**

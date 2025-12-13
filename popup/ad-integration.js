@@ -1,6 +1,11 @@
 /**
  * Ad Integration for the Popup UI
  * Handles displaying ads in the popup interface
+ *
+ * CHROME WEB STORE COMPLIANCE:
+ * - Ads are disabled by default until a compliant network is configured
+ * - Interstitials are disabled to avoid intrusive UX
+ * - Premium users never see ads
  */
 
 import { adDisplay } from '../utils/ad-display.js';
@@ -10,10 +15,10 @@ import { getSubscriptionManager } from '../utils/subscription-manager-v2.js';
 /**
  * Initialize ad displays in the popup
  */
-export function initializeAds() {
+export async function initializeAds() {
   try {
     // Check if user is premium before showing ads
-    const subscriptionManager = getSubscriptionManager();
+    const subscriptionManager = await getSubscriptionManager();
 
     if (!subscriptionManager) {
       console.error(
@@ -204,9 +209,9 @@ export function initializeAbTesting(enabled = true) {
 /**
  * Show an interstitial ad if conditions are met
  * @param {string} trigger - What triggered the interstitial (conversion, settings, etc.)
- * @returns {boolean} Whether an interstitial was shown
+ * @returns {Promise<boolean>} Whether an interstitial was shown
  */
-export function showInterstitialIfEligible(trigger) {
+export async function showInterstitialIfEligible(trigger) {
   try {
     // Check if we can show an interstitial
     if (!adDisplay.canShowInterstitial()) {
@@ -215,7 +220,7 @@ export function showInterstitialIfEligible(trigger) {
     }
 
     // Check subscription status
-    const subscriptionManager = getSubscriptionManager();
+    const subscriptionManager = await getSubscriptionManager();
     const subscription = subscriptionManager.getSubscriptionInfo();
 
     if (subscription && subscription.plan && subscription.plan !== 'free') {

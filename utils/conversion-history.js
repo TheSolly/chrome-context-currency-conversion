@@ -21,6 +21,10 @@ export class ConversionHistory {
     this.favorites = [];
     this.stats = this.getDefaultStats();
 
+    // Track initialization state
+    this.initialized = false;
+    this.initializationPromise = null;
+
     // Check if Chrome APIs are available
     this.chromeApisAvailable =
       typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local;
@@ -34,14 +38,35 @@ export class ConversionHistory {
 
   /**
    * Initialize the conversion history system
+   * Uses a promise to prevent concurrent initialization
    */
   async initialize() {
+    // If already initialized, return immediately
+    if (this.initialized) {
+      return true;
+    }
+
+    // If initialization is in progress, wait for it
+    if (this.initializationPromise) {
+      return this.initializationPromise;
+    }
+
+    // Start initialization
+    this.initializationPromise = this._doInitialize();
+    return this.initializationPromise;
+  }
+
+  /**
+   * Internal initialization logic
+   */
+  async _doInitialize() {
     console.log('📚 Initializing Conversion History Manager');
 
     try {
       await this.loadHistory();
       await this.loadFavorites();
       await this.loadStats();
+      this.initialized = true;
       console.log('✅ Conversion History Manager initialized successfully');
       return true;
     } catch (error) {
@@ -49,7 +74,17 @@ export class ConversionHistory {
         '❌ Failed to initialize Conversion History Manager:',
         error
       );
+      this.initializationPromise = null; // Allow retry
       return false;
+    }
+  }
+
+  /**
+   * Ensure initialized before any operation
+   */
+  async ensureInitialized() {
+    if (!this.initialized) {
+      await this.initialize();
     }
   }
 
@@ -76,6 +111,7 @@ export class ConversionHistory {
 
   /**
    * Add a new conversion to history
+   * IMPORTANT: Ensures data is loaded from storage before modifying
    */
   async addConversion({
     fromCurrency,
@@ -88,6 +124,14 @@ export class ConversionHistory {
     confidence = null,
     webpage = null
   }) {
+    console.log('📝 addConversion called:', { fromCurrency, toCurrency, originalAmount });
+    console.log('📝 Current initialized state:', this.initialized);
+    console.log('📝 Current history length before add:', this.history.length);
+
+    // Critical: Ensure we have loaded existing data before adding
+    await this.ensureInitialized();
+    console.log('📝 After ensureInitialized, history length:', this.history.length);
+
     const conversion = {
       id: this.generateConversionId(),
       fromCurrency,
@@ -194,6 +238,8 @@ export class ConversionHistory {
    * Add conversion to favorites
    */
   async addToFavorites(fromCurrency, toCurrency, amount = null, label = null) {
+    await this.ensureInitialized();
+
     const favorite = {
       id: this.generateFavoriteId(),
       fromCurrency,
@@ -234,6 +280,8 @@ export class ConversionHistory {
    * Remove from favorites
    */
   async removeFromFavorites(favoriteId) {
+    await this.ensureInitialized();
+
     const index = this.favorites.findIndex(f => f.id === favoriteId);
     if (index === -1) {
       throw new Error('Favorite not found');
@@ -272,6 +320,8 @@ export class ConversionHistory {
    * Update favorite usage when used
    */
   async updateFavoriteUsage(favoriteId) {
+    await this.ensureInitialized();
+
     const favorite = this.favorites.find(f => f.id === favoriteId);
     if (favorite) {
       favorite.usageCount++;
@@ -367,6 +417,8 @@ export class ConversionHistory {
    * Import conversion history
    */
   async importHistory(data, mergeMode = 'append') {
+    await this.ensureInitialized();
+
     try {
       const importData = typeof data === 'string' ? JSON.parse(data) : data;
 
@@ -425,6 +477,11 @@ export class ConversionHistory {
    * Clear all history data
    */
   async clearHistory(type = 'all') {
+    // For partial clears, we need existing data
+    if (type !== 'all') {
+      await this.ensureInitialized();
+    }
+
     switch (type) {
       case 'history':
         this.history = [];
@@ -499,13 +556,25 @@ export class ConversionHistory {
       this.stats.dailyStats[today] = {
         count: 0,
         totalAmount: 0,
-        currencies: new Set()
+        currencies: [] // Use array instead of Set for JSON serialization
       };
     }
+
+    // Ensure currencies is an array (might be object/Set after loading from storage)
+    if (!Array.isArray(this.stats.dailyStats[today].currencies)) {
+      this.stats.dailyStats[today].currencies = [];
+    }
+
     this.stats.dailyStats[today].count++;
     this.stats.dailyStats[today].totalAmount += conversion.originalAmount;
-    this.stats.dailyStats[today].currencies.add(conversion.fromCurrency);
-    this.stats.dailyStats[today].currencies.add(conversion.toCurrency);
+
+    // Add currencies if not already present (simulate Set behavior)
+    if (!this.stats.dailyStats[today].currencies.includes(conversion.fromCurrency)) {
+      this.stats.dailyStats[today].currencies.push(conversion.fromCurrency);
+    }
+    if (!this.stats.dailyStats[today].currencies.includes(conversion.toCurrency)) {
+      this.stats.dailyStats[today].currencies.push(conversion.toCurrency);
+    }
 
     // Update today's conversion count
     this.stats.todayConversions = this.stats.dailyStats[today].count;
@@ -595,19 +664,30 @@ export class ConversionHistory {
    */
   async saveHistory() {
     try {
+      console.log(`💾 Attempting to save ${this.history.length} history entries...`);
+      console.log('📦 chromeApisAvailable:', this.chromeApisAvailable);
+
       if (this.chromeApisAvailable) {
         await chrome.storage.local.set({
           [this.STORAGE_KEYS.HISTORY]: this.history
         });
+        console.log(`✅ Successfully saved ${this.history.length} history entries to chrome.storage.local`);
+
+        // Verify the save worked
+        const verify = await chrome.storage.local.get([this.STORAGE_KEYS.HISTORY]);
+        console.log(`🔍 Verification: storage now has ${verify[this.STORAGE_KEYS.HISTORY]?.length || 0} entries`);
       } else {
         localStorage.setItem(
           this.STORAGE_KEYS.HISTORY,
           JSON.stringify(this.history)
         );
+        console.log(`✅ Saved ${this.history.length} history entries to localStorage`);
       }
-      console.log(`💾 Saved ${this.history.length} history entries`);
     } catch (error) {
       console.error('❌ Failed to save history:', error);
+      console.error('❌ Error details:', error.message, error.stack);
+      // Re-throw so caller knows the save failed
+      throw error;
     }
   }
 

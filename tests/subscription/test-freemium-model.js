@@ -265,13 +265,10 @@ function runFreemiumModelTests() {
   }
 }
 
-// Export for Node.js environment or run directly
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = {
-    runFreemiumModelTests,
-    mockSubscriptionPlans
-  };
-} else {
-  // Run tests directly in browser environment
+// ES module exports
+export { runFreemiumModelTests, mockSubscriptionPlans };
+
+// Run tests if executed directly in browser
+if (typeof window !== 'undefined') {
   runFreemiumModelTests();
 }

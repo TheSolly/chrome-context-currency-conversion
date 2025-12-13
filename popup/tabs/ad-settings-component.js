@@ -34,8 +34,8 @@ export class AdSettingsComponent {
       return false;
     }
     try {
-      // Get subscription manager instance
-      this.subscriptionManager = getSubscriptionManager();
+      // Get subscription manager instance (async)
+      this.subscriptionManager = await getSubscriptionManager();
 
       // Get current subscription
       const subscription = this.subscriptionManager.getSubscriptionInfo();

@@ -115,12 +115,33 @@ async function initializeExtension() {
     logError(error, 'startupSettingsInit');
   }
 
+  // Initialize conversion history - CRITICAL: Must load existing data before any conversions
+  try {
+    await conversionHistory.initialize();
+    console.log('📚 Conversion History initialized on startup');
+  } catch (error) {
+    logError(error, 'startupConversionHistoryInit');
+  }
+
   // Note: Context menus are initialized in chrome.runtime.onInstalled
   // to avoid duplicate creation on service worker restarts
 }
 
 // Initialize on startup
 initializeExtension();
+
+// Listen for storage changes to sync settings with context menu
+chrome.storage.onChanged.addListener(async (changes, areaName) => {
+  if (areaName === 'sync' && changes.userSettings) {
+    console.log('📦 Settings changed in storage, updating context menu...');
+    const newSettings = changes.userSettings.newValue;
+    if (newSettings) {
+      currentSettings = newSettings;
+      await updateContextMenuCurrencies();
+      console.log('✅ Context menu updated with new settings');
+    }
+  }
+});
 
 // Initialize context menus with enhanced dynamic structure
 async function initializeContextMenus() {
@@ -184,12 +205,19 @@ async function loadUserSettings() {
 }
 
 // Build direct conversion title with estimated amount
+// Also tracks the conversion to history when displayed in context menu
 async function buildDirectConversionTitle(
   amount,
   sourceCurrency,
   targetCurrency,
   formattedAmount
 ) {
+  console.log('🔄 buildDirectConversionTitle called:', {
+    amount,
+    sourceCurrency,
+    targetCurrency
+  });
+
   try {
     // Try to get a quick conversion estimate for the menu title
     const conversionResult = await exchangeRateService.convertCurrency(
@@ -198,6 +226,8 @@ async function buildDirectConversionTitle(
       targetCurrency
     );
 
+    console.log('✅ Conversion result for menu title:', conversionResult);
+
     // Format the source amount with currency symbol
     const sourceFormatted = formatConvertedAmount(amount, sourceCurrency);
     // Format the target amount with currency symbol
@@ -205,6 +235,43 @@ async function buildDirectConversionTitle(
       conversionResult.convertedAmount,
       targetCurrency
     );
+
+    // Track this conversion to history (user saw the result in context menu)
+    console.log('📝 About to save preview conversion to history...');
+    try {
+      await conversionHistory.addConversion({
+        fromCurrency: sourceCurrency,
+        toCurrency: targetCurrency,
+        originalAmount: amount,
+        convertedAmount: conversionResult.convertedAmount,
+        exchangeRate: conversionResult.rate,
+        timestamp: Date.now(),
+        source: 'context-menu-preview',
+        confidence: currentCurrencyInfo?.confidence || 0.8,
+        webpage: null
+      });
+      console.log('📚 Context menu preview conversion saved to history');
+
+      // Also track usage for subscription
+      try {
+        const { getSubscriptionManager } = await import(
+          '/utils/subscription-manager-v2.js'
+        );
+        const subscriptionManager = await getSubscriptionManager();
+        await subscriptionManager.trackUsage('dailyConversions', 1);
+        console.log('📊 Preview conversion usage tracked');
+      } catch (usageError) {
+        console.warn(
+          '⚠️ Failed to track preview conversion usage:',
+          usageError
+        );
+      }
+    } catch (historyError) {
+      console.error(
+        '❌ Failed to save preview conversion to history:',
+        historyError
+      );
+    }
 
     return `${sourceFormatted} → ${targetFormatted}`;
   } catch (error) {
@@ -234,11 +301,6 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       }
 
       await handleCurrencyConversion(info, tab, targetCurrency);
-    } else if (info.menuItemId === 'openSettings') {
-      // Open extension settings
-      await chrome.tabs.create({
-        url: chrome.runtime.getURL('popup/popup.html')
-      });
     } else if (info.menuItemId === 'currencyConverter') {
       // Handle main menu click
       // Check if this is a direct conversion (base/secondary currency)
@@ -560,6 +622,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // Enhanced context menu update with dynamic conversion options
 async function updateContextMenu(hasCurrency, currencyInfo) {
+  console.log('🎯 updateContextMenu called:', { hasCurrency, currencyInfo });
+
   try {
     if (!contextMenusCreated) {
       await initializeContextMenus();
@@ -592,6 +656,14 @@ async function updateContextMenu(hasCurrency, currencyInfo) {
     const isBaseCurrency = sourceCurrency === currentSettings.baseCurrency;
     const isSecondaryCurrency =
       sourceCurrency === currentSettings.secondaryCurrency;
+
+    console.log('🎯 Currency check:', {
+      sourceCurrency,
+      baseCurrency: currentSettings.baseCurrency,
+      secondaryCurrency: currentSettings.secondaryCurrency,
+      isBaseCurrency,
+      isSecondaryCurrency
+    });
 
     if (isBaseCurrency || isSecondaryCurrency) {
       // Show direct conversion with formatted display
@@ -651,74 +723,23 @@ async function createConversionOptions(sourceCurrency, formattedAmount) {
     const targetCurrencies = new Set();
 
     // Check if this is a base or secondary currency
-    const isBaseCurrency = sourceCurrency === currentSettings.baseCurrency;
-    const isSecondaryCurrency =
-      sourceCurrency === currentSettings.secondaryCurrency;
-
-    if (isBaseCurrency || isSecondaryCurrency) {
-      // For base/secondary currencies, show additional quick convert options
-      // Add the complementary primary currency first (already handled by direct conversion)
-      const primaryTarget = isBaseCurrency
-        ? currentSettings.secondaryCurrency
-        : currentSettings.baseCurrency;
-
-      // Add all additional configured currencies
-      currentSettings.additionalCurrencies.forEach(currency => {
-        if (currency !== sourceCurrency) {
-          targetCurrencies.add(currency);
-        }
-      });
-
-      // Add popular currencies to fill out Quick Convert options
-      POPULAR_CURRENCIES.forEach(currency => {
-        if (
-          currency !== sourceCurrency &&
-          currency !== primaryTarget &&
-          targetCurrencies.size < 6
-        ) {
-          targetCurrencies.add(currency);
-        }
-      });
-
-      console.log(
-        `🎯 Base/Secondary currency detected. Added ${targetCurrencies.size} quick convert options`
-      );
-    } else {
-      // For other currencies, use the original logic
-      // Add user's preferred currencies
-      if (currentSettings.secondaryCurrency !== sourceCurrency) {
-        targetCurrencies.add(currentSettings.secondaryCurrency);
-        console.log(
-          `➕ Added secondary currency: ${currentSettings.secondaryCurrency}`
-        );
+    // Only use the user's configured additional currencies (limited to 3 for free users)
+    // This matches what's shown in Settings > Quick Convert
+    currentSettings.additionalCurrencies.forEach(currency => {
+      if (currency !== sourceCurrency) {
+        targetCurrencies.add(currency);
       }
-      if (currentSettings.baseCurrency !== sourceCurrency) {
-        targetCurrencies.add(currentSettings.baseCurrency);
-        console.log(`➕ Added base currency: ${currentSettings.baseCurrency}`);
-      }
+    });
 
-      // Add additional configured currencies
-      currentSettings.additionalCurrencies.forEach(currency => {
-        if (currency !== sourceCurrency) {
-          targetCurrencies.add(currency);
-        }
-      });
+    console.log(
+      `🎯 Quick convert currencies from settings: ${Array.from(targetCurrencies).join(', ')}`
+    );
 
-      // Add popular currencies if we have less than 4 options
-      if (targetCurrencies.size < 4) {
-        POPULAR_CURRENCIES.forEach(currency => {
-          if (currency !== sourceCurrency && targetCurrencies.size < 4) {
-            targetCurrencies.add(currency);
-          }
-        });
-      }
-    }
-
-    // Create menu items for each target currency
+    // Create menu items for each target currency (max 3 for free users)
     let index = 0;
     for (const targetCurrency of targetCurrencies) {
-      if (index >= 5) {
-        break; // Limit to 5 options to avoid menu clutter
+      if (index >= 3) {
+        break; // Limit to 3 options (free user limit)
       }
 
       const menuId = `convert_${targetCurrency}`;
@@ -760,19 +781,7 @@ async function createConversionOptions(sourceCurrency, formattedAmount) {
         }
       }
 
-      try {
-        await chrome.contextMenus.create({
-          id: 'openSettings',
-          parentId: 'currencyConverter',
-          title: '⚙️ Settings',
-          contexts: ['selection']
-        });
-        createdMenuItems.add('openSettings'); // Track the settings menu
-      } catch (error) {
-        if (!error.message.includes('duplicate id')) {
-          console.error('Failed to create settings menu:', error);
-        }
-      }
+      // Settings menu item removed - users can access settings via extension popup icon
     }
   } catch (error) {
     logError(error, 'createConversionOptions', {
@@ -934,8 +943,12 @@ async function handleSettingsChange(newSettings) {
     // Update current settings cache
     currentSettings = newSettings;
 
-    // Update context menus based on new settings if needed
-    if (newSettings.baseCurrency || newSettings.secondaryCurrency) {
+    // Update context menus when currency settings change
+    if (
+      newSettings.baseCurrency ||
+      newSettings.secondaryCurrency ||
+      newSettings.additionalCurrencies
+    ) {
       await updateContextMenuCurrencies();
     }
 

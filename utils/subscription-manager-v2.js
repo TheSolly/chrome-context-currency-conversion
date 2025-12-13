@@ -381,7 +381,7 @@ export class SubscriptionManager {
       // Get conversion history to calculate real usage
       const conversionHistory = await this.getConversionHistoryData();
       const todayCount = this.getTodayConversionsCount(conversionHistory);
-      const uniqueCurrencies = this.getUniqueCurrenciesUsed(conversionHistory);
+      const configuredCurrencies = await this.getConfiguredCurrencyCount();
       const historyEntries = conversionHistory.length;
 
       Object.keys(plan.features).forEach(feature => {
@@ -393,7 +393,8 @@ export class SubscriptionManager {
             current = todayCount;
             break;
           case 'currencyCount':
-            current = uniqueCurrencies.size;
+            // Count configured additional currencies, not history currencies
+            current = configuredCurrencies;
             break;
           case 'conversionHistory':
             current = historyEntries;
@@ -449,7 +450,7 @@ export class SubscriptionManager {
   }
 
   /**
-   * Get unique currencies used
+   * Get unique currencies used (for reference only)
    */
   getUniqueCurrenciesUsed(history) {
     const currencies = new Set();
@@ -458,6 +459,22 @@ export class SubscriptionManager {
       currencies.add(entry.toCurrency);
     });
     return currencies;
+  }
+
+  /**
+   * Get count of configured additional currencies from settings
+   * This is the actual "currency pairs" limit - how many target currencies the user has set up
+   */
+  async getConfiguredCurrencyCount() {
+    try {
+      const result = await chrome.storage.sync.get(['userSettings']);
+      const settings = result.userSettings || {};
+      const additionalCurrencies = settings.additionalCurrencies || [];
+      return additionalCurrencies.length;
+    } catch (error) {
+      console.error('Failed to get configured currency count:', error);
+      return 0;
+    }
   }
 
   /**

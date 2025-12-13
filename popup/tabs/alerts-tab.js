@@ -247,51 +247,69 @@ export class AlertsTab {
     const currentPlan = subscription?.plan || 'FREE';
 
     alertsPanel.innerHTML = `
-      <div class="flex items-center justify-between mb-4">
-        <div class="flex items-center gap-2">
-          <span class="text-lg" aria-hidden="true">🔔</span>
-          <h2 class="text-base font-semibold text-gray-900">Rate Alerts</h2>
+      <!-- Header Card -->
+      <div class="setting-card">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-lg" aria-hidden="true">🔔</span>
+            <h2 class="text-base font-semibold text-gray-900">Rate Alerts</h2>
+          </div>
+          <span style="font-size: 11px; padding: 4px 10px; border-radius: 9999px; font-weight: 500; background-color: #ddd6fe; color: #5b21b6;">Premium</span>
         </div>
-        <div class="text-xs px-2 py-1 bg-orange-100 text-orange-700 rounded">Premium Feature</div>
       </div>
 
-      <div class="text-center py-8 px-4">
-        <div class="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-6 mb-4">
-          <div class="text-4xl mb-3">🚀</div>
-          <h3 class="text-lg font-semibold text-gray-900 mb-2">Upgrade to Premium</h3>
-          <p class="text-gray-600 text-sm mb-4">
-            Get notified when exchange rates hit your target levels with real-time rate alerts.
-          </p>
-          
-          <div class="bg-white rounded-lg p-4 mb-4 text-left">
-            <h4 class="font-semibold text-gray-900 mb-2">Premium Features:</h4>
-            <ul class="text-sm text-gray-600 space-y-1">
-              <li>• <strong>5 Rate Alerts</strong> - Set up to 5 custom rate alerts</li>
-              <li>• <strong>Real-time Notifications</strong> - Get instant notifications</li>
-              <li>• <strong>Advanced Conditions</strong> - Above, below, or percentage change alerts</li>
-              <li>• <strong>Alert History</strong> - Track all triggered alerts</li>
-              <li>• <strong>Daily/Weekly Summaries</strong> - Get rate summary reports</li>
-            </ul>
+      <!-- Upgrade Card -->
+      <div class="setting-card">
+        <div style="text-align: center; margin-bottom: 16px;">
+          <div style="display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 50%; margin-bottom: 12px; background: linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%);">
+            <span style="font-size: 24px;">🔔</span>
           </div>
-
-          <button 
-            id="upgradeFromAlertsBtn"
-            class="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3 px-4 rounded-lg font-medium hover:from-amber-600 hover:to-orange-600 transition-all duration-200 transform hover:scale-105 mb-3"
-          >
-            Upgrade to Premium - $4.99/month
-          </button>
-          
-          <button 
-            id="upgradeToProFromAlertsBtn"
-            class="w-full bg-gradient-to-r from-purple-500 to-indigo-500 text-white py-2 px-4 rounded-lg font-medium hover:from-purple-600 hover:to-indigo-600 transition-all duration-200 text-sm"
-          >
-            Upgrade to Pro - $14.99/month (50 Alerts)
-          </button>
-          
-          <p class="text-xs text-gray-500 mt-3">
-            Current plan: <strong>${currentPlan}</strong> (0 alerts included)
-          </p>
+          <h3 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0;">Unlock Rate Alerts</h3>
+          <p style="font-size: 14px; color: #6b7280; margin-top: 4px;">Get notified when rates hit your targets</p>
         </div>
+
+        <!-- Features Grid -->
+        <div class="space-y-2 mb-4">
+          <div class="flex items-center gap-3 p-2 rounded-lg" style="background-color: #f8fafc;">
+            <span class="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-full text-xs" style="background-color: #dbeafe; color: #2563eb;">✓</span>
+            <span class="text-sm text-gray-700"><strong>5 Rate Alerts</strong> - Custom targets</span>
+          </div>
+          <div class="flex items-center gap-3 p-2 rounded-lg" style="background-color: #f8fafc;">
+            <span class="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-full text-xs" style="background-color: #dbeafe; color: #2563eb;">✓</span>
+            <span class="text-sm text-gray-700"><strong>Real-time</strong> - Instant notifications</span>
+          </div>
+          <div class="flex items-center gap-3 p-2 rounded-lg" style="background-color: #f8fafc;">
+            <span class="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-full text-xs" style="background-color: #dbeafe; color: #2563eb;">✓</span>
+            <span class="text-sm text-gray-700"><strong>Smart Conditions</strong> - Above, below, % change</span>
+          </div>
+          <div class="flex items-center gap-3 p-2 rounded-lg" style="background-color: #f8fafc;">
+            <span class="flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-full text-xs" style="background-color: #dbeafe; color: #2563eb;">✓</span>
+            <span class="text-sm text-gray-700"><strong>Summaries</strong> - Daily & weekly reports</span>
+          </div>
+        </div>
+
+        <!-- Upgrade Buttons -->
+        <div class="space-y-2">
+          <button
+            id="upgradeFromAlertsBtn"
+            class="w-full text-white font-medium transition-all duration-150 hover:opacity-90"
+            style="background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%); box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2); padding: 10px 16px; border-radius: 8px;"
+          >
+            Upgrade to Premium - $4.99/mo
+          </button>
+
+          <button
+            id="upgradeToProFromAlertsBtn"
+            class="w-full font-medium transition-all duration-150 text-sm"
+            style="background-color: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; padding: 8px 16px; border-radius: 8px;"
+          >
+            Pro Plan - $14.99/mo (50 Alerts)
+          </button>
+        </div>
+
+        <p class="text-xs text-center text-gray-400 mt-3">
+          Current: <span class="font-medium">${currentPlan}</span>
+        </p>
       </div>
     `;
 

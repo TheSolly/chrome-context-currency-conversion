@@ -5,12 +5,31 @@ import prettierPlugin from 'eslint-plugin-prettier';
 export default [
   js.configs.recommended,
   prettier,
-  // Node.js config files
+  // Node.js config files (CommonJS)
   {
-    files: ['*.config.js', 'eslint.config.js'],
+    files: ['*.config.cjs', 'postcss.config.cjs', 'tailwind.config.cjs'],
     languageOptions: {
       ecmaVersion: 2021,
-      sourceType: 'script',
+      sourceType: 'commonjs',
+      globals: {
+        module: 'writable',
+        exports: 'writable',
+        require: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+        process: 'readonly'
+      }
+    },
+    rules: {
+      'comma-dangle': 'off'
+    }
+  },
+  // Node.js config files (ES modules)
+  {
+    files: ['*.config.js', 'eslint.config.js', 'vite.config.js'],
+    languageOptions: {
+      ecmaVersion: 2021,
+      sourceType: 'module',
       globals: {
         module: 'writable',
         exports: 'writable',

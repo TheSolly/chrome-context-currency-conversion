@@ -1,7 +1,7 @@
 // Smart Currency Detection System - Phase 6, Task 6.1
 // Enhanced ML-based currency detection with advanced pattern recognition
 
-import { CURRENCIES } from './currency-utils.js';
+import { CURRENCIES, CRYPTOCURRENCIES } from './currency-data.js';
 
 /**
  * Smart Currency Detector Class
@@ -546,8 +546,7 @@ export class SmartCurrencyDetector {
    */
   isValidCurrency(code) {
     return (
-      CURRENCIES.hasOwnProperty(code) ||
-      this.cryptoPatterns.hasOwnProperty(code)
+      CURRENCIES.hasOwnProperty(code) || CRYPTOCURRENCIES.hasOwnProperty(code)
     );
   }
 

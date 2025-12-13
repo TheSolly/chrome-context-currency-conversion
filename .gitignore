@@ -201,3 +201,6 @@ docs/site/
 # Custom build scripts output
 scripts/output/
 tools/temp/
+
+# claude folder
+.claude/

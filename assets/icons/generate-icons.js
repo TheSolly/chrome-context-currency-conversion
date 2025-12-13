@@ -9,9 +9,13 @@
  * Requirements: npm install sharp
  */
 
-const sharp = require('sharp');
-const fs = require('fs');
-const path = require('path');
+import sharp from 'sharp';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const ICON_SIZES = [16, 32, 48, 128];
 const INPUT_SVG = path.join(__dirname, 'icon.svg');
@@ -30,8 +34,11 @@ async function generateIcons() {
     for (const size of ICON_SIZES) {
       const outputPath = path.join(__dirname, `icon-${size}.png`);
 
-      await sharp(INPUT_SVG)
-        .resize(size, size)
+      await sharp(INPUT_SVG, { density: 300 })
+        .resize(size, size, {
+          fit: 'contain',
+          background: { r: 0, g: 0, b: 0, alpha: 0 }
+        })
         .png({
           quality: 100,
           compressionLevel: 9
@@ -42,30 +49,10 @@ async function generateIcons() {
     }
 
     console.log('\n🎉 All icons generated successfully!');
-    console.log('📝 Next steps:');
-    console.log('   1. Update manifest.json to include icon references');
-    console.log('   2. Test extension loading in Chrome');
   } catch (error) {
     console.error('❌ Error generating icons:', error.message);
-    console.log('\n💡 Make sure you have installed sharp:');
-    console.log('   npm install sharp');
     process.exit(1);
   }
 }
 
-// Add package.json check and instructions
-function checkDependencies() {
-  try {
-    require('sharp');
-    return true;
-  } catch {
-    console.log('📦 Installing required dependency...');
-    console.log('Run: npm install sharp');
-    console.log('Then run this script again: node generate-icons.js');
-    return false;
-  }
-}
-
-if (checkDependencies()) {
-  generateIcons();
-}
+generateIcons();

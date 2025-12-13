@@ -17,7 +17,7 @@ export class SettingsManager {
       // Core currency settings
       baseCurrency: 'USD',
       secondaryCurrency: 'EUR',
-      additionalCurrencies: ['GBP', 'JPY', 'CAD'],
+      additionalCurrencies: ['GBP', 'JPY', 'CAD'], // Free plan limit: 3 currencies
 
       // UI preferences
       showConfidence: true,
