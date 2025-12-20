@@ -1,0 +1,76 @@
+Privacy Policy for Currency Converter
+
+Last Updated: December 20, 2025
+
+OVERVIEW
+
+Currency Converter is a browser extension that converts currencies directly from web pages. This policy explains how we handle your information.
+
+WHAT DATA WE STORE
+
+All data is stored LOCALLY on your device only:
+
+• User Preferences - Your selected currencies and display settings
+• Conversion History - Record of past conversions for your reference
+• Favorite Currency Pairs - Pairs you save for quick access
+• Rate Alert Settings - Your configured exchange rate alerts
+
+This data NEVER leaves your device and is NOT sent to any servers.
+
+EXCHANGE RATE API CALLS
+
+To get current exchange rates, the extension connects to these services:
+• ExchangeRate-API (exchangerate-api.com)
+• Fixer.io (fixer.io)
+• CurrencyAPI (currencyapi.com)
+• Alpha Vantage (alphavantage.co)
+• CurrencyLayer (currencylayer.com)
+• Open Exchange Rates (openexchangerates.org)
+
+Only exchange rate data is requested. No personal information is sent.
+
+WHAT WE DO NOT COLLECT
+
+We do NOT collect:
+• Personal information (name, email, address)
+• Browsing history or web activity
+• Financial or transaction data
+• Location data
+• Any data sent to external servers
+
+PERMISSIONS EXPLAINED
+
+• contextMenus - Shows "Convert Currency" in right-click menu
+• storage - Saves your preferences locally on your device
+• activeTab - Reads selected text for currency detection
+• notifications - Sends rate alert notifications
+• alarms - Checks exchange rates periodically for alerts
+
+DATA SECURITY
+
+• All data stored locally using Chrome's secure Storage API
+• Exchange rate requests use HTTPS encryption
+• No personal data transmitted externally
+
+YOUR CONTROL
+
+You can clear your data anytime:
+1. Open the extension popup
+2. Go to History or Settings
+3. Use the "Clear" options
+
+CHILDREN'S PRIVACY
+
+This extension is not intended for children under 13.
+
+CHANGES TO THIS POLICY
+
+Updates will be reflected in the "Last Updated" date above.
+
+CONTACT
+
+Questions? Contact us through the Chrome Web Store support page.
+
+---
+
+Summary: Currency Converter respects your privacy. Your data stays on your device. We only fetch exchange rates and collect no personal information.

@@ -1,6 +1,6 @@
 # Privacy Policy - Chrome Currency Conversion Extension
 
-**Last Updated:** December 2024  
+**Last Updated:** December 20, 2025
 **Version:** 1.0.0
 
 ## Introduction
