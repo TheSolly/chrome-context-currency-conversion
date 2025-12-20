@@ -427,11 +427,25 @@ export class SubscriptionManager {
 
   /**
    * Get conversion history data from storage
+   * Also enforces the subscription limit if exceeded
    */
   async getConversionHistoryData() {
     try {
       const result = await chrome.storage.local.get(['conversionHistory']);
-      return result.conversionHistory || [];
+      let history = result.conversionHistory || [];
+
+      // Enforce subscription limit on history
+      const historyLimit = this.getFeatureLimit('conversionHistory');
+      if (historyLimit && historyLimit > 0 && history.length > historyLimit) {
+        console.log(
+          `📝 Trimming history from ${history.length} to ${historyLimit}`
+        );
+        history = history.slice(0, historyLimit);
+        // Save trimmed history back to storage
+        await chrome.storage.local.set({ conversionHistory: history });
+      }
+
+      return history;
     } catch (error) {
       console.error('Failed to get conversion history:', error);
       return [];

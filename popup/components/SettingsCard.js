@@ -205,19 +205,23 @@ export function createPromoCard({
   onButtonClick
 }) {
   const section = document.createElement('section');
-  section.className = 'premium-upgrade-card rounded-xl relative overflow-hidden';
-  section.style.cssText = 'background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%); padding: 1px;';
+  section.className =
+    'premium-upgrade-card rounded-xl relative overflow-hidden';
+  section.style.cssText =
+    'background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%); padding: 1px;';
 
   const innerBg = document.createElement('div');
   innerBg.className = 'rounded-xl';
-  innerBg.style.cssText = 'background: linear-gradient(135deg, #f5f3ff 0%, #eff6ff 100%); padding: 16px;';
+  innerBg.style.cssText =
+    'background: linear-gradient(135deg, #f5f3ff 0%, #eff6ff 100%); padding: 16px;';
 
   const inner = document.createElement('div');
   inner.style.cssText = 'display: flex; align-items: center; gap: 14px;';
 
   // Icon wrapper with gradient background
   const iconWrapper = document.createElement('div');
-  iconWrapper.style.cssText = 'flex-shrink: 0; width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%); box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);';
+  iconWrapper.style.cssText =
+    'flex-shrink: 0; width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%); box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);';
 
   const iconEl = document.createElement('span');
   iconEl.style.cssText = 'font-size: 22px; line-height: 1;';
@@ -228,7 +232,8 @@ export function createPromoCard({
   content.style.cssText = 'flex: 1; min-width: 0;';
 
   const titleEl = document.createElement('h3');
-  titleEl.style.cssText = 'font-size: 14px; font-weight: 700; color: #5b21b6; margin: 0 0 2px 0;';
+  titleEl.style.cssText =
+    'font-size: 14px; font-weight: 700; color: #5b21b6; margin: 0 0 2px 0;';
   titleEl.textContent = title;
 
   const descEl = document.createElement('p');
@@ -237,7 +242,8 @@ export function createPromoCard({
 
   const button = document.createElement('button');
   button.className = 'transition-all duration-200 hover:shadow-lg';
-  button.style.cssText = 'font-size: 12px; padding: 6px 16px; border-radius: 8px; font-weight: 600; color: white; background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%); border: none; cursor: pointer;';
+  button.style.cssText =
+    'font-size: 12px; padding: 6px 16px; border-radius: 8px; font-weight: 600; color: white; background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%); border: none; cursor: pointer;';
   button.textContent = buttonText;
   button.addEventListener('click', onButtonClick);
 

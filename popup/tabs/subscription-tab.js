@@ -116,6 +116,9 @@ export class SubscriptionTab {
       this.updatePaymentProviders();
       this.checkAndDisplayUsageWarnings();
 
+      // Re-setup event listeners after content update
+      this.setupEventListeners();
+
       console.log('📋 Subscription content loaded successfully');
     } catch (error) {
       console.error('❌ Failed to load subscription content:', error);
@@ -286,19 +289,15 @@ export class SubscriptionTab {
     };
 
     // Update conversion usage
-    const conversionsUsed = document.getElementById('conversionsUsed');
     const conversionsLimit = document.getElementById('conversionsLimit');
     const conversionsProgress = document.getElementById('conversionsProgress');
     const conversionsUsage = document.getElementById('conversionsUsage');
 
-    if (conversionsUsed) {
-      conversionsUsed.textContent = stats.conversions.used;
+    if (conversionsUsage) {
+      conversionsUsage.textContent = stats.conversions.used;
     }
     if (conversionsLimit) {
       conversionsLimit.textContent = stats.conversions.limit;
-    }
-    if (conversionsUsage) {
-      conversionsUsage.textContent = `${stats.conversions.used} / ${stats.conversions.limit}`;
     }
     if (conversionsProgress) {
       const percentage =
@@ -307,30 +306,24 @@ export class SubscriptionTab {
 
       // Change color based on usage
       if (percentage > 90) {
-        conversionsProgress.className = 'h-2 bg-red-500 rounded transition-all';
+        conversionsProgress.style.background = '#ef4444'; // red
       } else if (percentage > 75) {
-        conversionsProgress.className =
-          'h-2 bg-yellow-500 rounded transition-all';
+        conversionsProgress.style.background = '#eab308'; // yellow
       } else {
-        conversionsProgress.className =
-          'h-2 bg-green-500 rounded transition-all';
+        conversionsProgress.style.background = '#2563eb'; // blue (default)
       }
     }
 
     // Update currencies usage
-    const currenciesUsed = document.getElementById('currenciesUsed');
     const currenciesLimit = document.getElementById('currenciesLimit');
     const currenciesUsage = document.getElementById('currenciesUsage');
     const currenciesProgress = document.getElementById('currenciesProgress');
 
-    if (currenciesUsed) {
-      currenciesUsed.textContent = stats.currencies.used;
+    if (currenciesUsage) {
+      currenciesUsage.textContent = stats.currencies.used;
     }
     if (currenciesLimit) {
       currenciesLimit.textContent = stats.currencies.limit;
-    }
-    if (currenciesUsage) {
-      currenciesUsage.textContent = `${stats.currencies.used} / ${stats.currencies.limit}`;
     }
     if (currenciesProgress) {
       const percentage = (stats.currencies.used / stats.currencies.limit) * 100;
@@ -338,19 +331,15 @@ export class SubscriptionTab {
     }
 
     // Update history usage
-    const historyUsed = document.getElementById('historyUsed');
     const historyLimit = document.getElementById('historyLimit');
     const historyUsage = document.getElementById('historyUsage');
     const historyProgress = document.getElementById('historyProgress');
 
-    if (historyUsed) {
-      historyUsed.textContent = stats.history.used;
+    if (historyUsage) {
+      historyUsage.textContent = stats.history.used;
     }
     if (historyLimit) {
       historyLimit.textContent = stats.history.limit;
-    }
-    if (historyUsage) {
-      historyUsage.textContent = `${stats.history.used} / ${stats.history.limit}`;
     }
     if (historyProgress) {
       const percentage = (stats.history.used / stats.history.limit) * 100;
@@ -463,13 +452,16 @@ export class SubscriptionTab {
     const warnings = [];
 
     // Check conversion usage from the displayed values
-    const conversionsUsageText =
-      document.getElementById('conversionsUsage')?.textContent || '0 / 50';
-    const conversionsMatch = conversionsUsageText.match(/(\d+)\s*\/\s*(\d+)/);
+    const conversionsUsed = parseInt(
+      document.getElementById('conversionsUsage')?.textContent || '0',
+      10
+    );
+    const conversionsLimit = parseInt(
+      document.getElementById('conversionsLimit')?.textContent || '50',
+      10
+    );
 
-    if (conversionsMatch) {
-      const conversionsUsed = parseInt(conversionsMatch[1], 10);
-      const conversionsLimit = parseInt(conversionsMatch[2], 10);
+    if (conversionsLimit > 0) {
       const conversionUsage = conversionsUsed / conversionsLimit;
 
       if (conversionUsage > 0.9) {
@@ -486,13 +478,16 @@ export class SubscriptionTab {
     }
 
     // Check currency pair usage
-    const currenciesUsageText =
-      document.getElementById('currenciesUsage')?.textContent || '2 / 2';
-    const currenciesMatch = currenciesUsageText.match(/(\d+)\s*\/\s*(\d+)/);
+    const currenciesUsed = parseInt(
+      document.getElementById('currenciesUsage')?.textContent || '2',
+      10
+    );
+    const currenciesLimit = parseInt(
+      document.getElementById('currenciesLimit')?.textContent || '3',
+      10
+    );
 
-    if (currenciesMatch) {
-      const currenciesUsed = parseInt(currenciesMatch[1], 10);
-      const currenciesLimit = parseInt(currenciesMatch[2], 10);
+    if (currenciesLimit > 0) {
       const currencyUsage = currenciesUsed / currenciesLimit;
 
       if (currencyUsage >= 1.0 && this.userPlan === 'FREE') {
@@ -523,75 +518,36 @@ export class SubscriptionTab {
   }
 
   /**
-   * Handle plan upgrade
+   * Handle plan upgrade - shows Coming Soon modal
    */
-  async handlePlanUpgrade(planId) {
-    try {
-      this.showSuccess(`Preparing upgrade to ${planId}...`);
-
-      // For demo purposes, simulate upgrade flow
-      // In a real implementation, this would integrate with payment providers
-      const planDetails = {
-        PREMIUM: { name: 'Premium', price: '$4.99/month' },
-        PRO: { name: 'Professional', price: '$14.99/month' }
-      };
-
-      const plan = planDetails[planId];
-      if (!plan) {
-        throw new Error('Invalid plan selected');
-      }
-
-      // Show confirmation dialog
-      const confirmed = confirm(
-        `Upgrade to ${plan.name} plan for ${plan.price}?\n\n` +
-          'This is a demo extension. In a real implementation, ' +
-          'this would redirect to a secure payment page.'
+  async handlePlanUpgrade() {
+    // Show Coming Soon modal instead of processing upgrade
+    if (window.showComingSoonModal) {
+      window.showComingSoonModal();
+    } else {
+      // Fallback if modal function not available
+      this.showInfo(
+        'Premium subscriptions are coming soon! Stay tuned for exciting new features.'
       );
-
-      if (confirmed) {
-        // Simulate successful upgrade for demo
-        this.showSuccess(`Demo: Upgraded to ${plan.name} plan! 🎉`);
-
-        // In a real implementation, this would:
-        // 1. Redirect to payment provider
-        // 2. Process payment
-        // 3. Update subscription status
-        console.log(`Demo upgrade to ${planId} completed`);
-      }
-    } catch (error) {
-      console.error('❌ Failed to handle plan upgrade:', error);
-      this.showError('Failed to initiate upgrade process');
     }
   }
 
   /**
-   * Handle donation
+   * Handle donation - opens PayPal.me link
+   * @param {string} amount - Donation amount in USD
    */
   async handleDonation(amount) {
-    try {
-      this.showSuccess(`Preparing donation of $${amount}...`);
+    // PayPal.me link with optional amount
+    const paypalUsername = 'SalahKhaled49673';
+    const paypalUrl = amount
+      ? `https://paypal.me/${paypalUsername}/${amount}USD`
+      : `https://paypal.me/${paypalUsername}`;
 
-      // Show confirmation dialog
-      const confirmed = confirm(
-        `Support development with a $${amount} donation?\n\n` +
-          'This is a demo extension. In a real implementation, ' +
-          'this would redirect to a secure donation page.'
-      );
+    // Open PayPal in a new tab
+    chrome.tabs.create({ url: paypalUrl });
 
-      if (confirmed) {
-        // Simulate successful donation for demo
-        this.showSuccess(`Demo: Thank you for your $${amount} donation! ❤️`);
-
-        // In a real implementation, this would:
-        // 1. Redirect to payment provider (PayPal, Stripe, etc.)
-        // 2. Process payment
-        // 3. Send thank you email
-        console.log(`Demo donation of $${amount} completed`);
-      }
-    } catch (error) {
-      console.error('❌ Failed to handle donation:', error);
-      this.showError('Failed to initiate donation process');
-    }
+    // Show thank you message
+    this.showSuccess('Thank you for your support! Redirecting to PayPal...');
   }
 
   /**
@@ -666,6 +622,13 @@ export class SubscriptionTab {
   }
 
   /**
+   * Show info message
+   */
+  showInfo(message) {
+    this.showStatusMessage(message, 'info');
+  }
+
+  /**
    * Show status message
    */
   showStatusMessage(message, type = 'success', duration = 3000) {
@@ -675,9 +638,20 @@ export class SubscriptionTab {
     }
 
     statusDiv.textContent = message;
-    statusDiv.className = `fixed top-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg shadow-lg z-50 transition-all duration-300 ${
-      type === 'error' ? 'bg-red-500 text-white' : 'bg-green-500 text-white'
-    }`;
+
+    let bgColor;
+    switch (type) {
+      case 'error':
+        bgColor = 'bg-red-500';
+        break;
+      case 'info':
+        bgColor = 'bg-blue-500';
+        break;
+      default:
+        bgColor = 'bg-green-500';
+    }
+
+    statusDiv.className = `fixed top-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded-lg shadow-lg z-50 transition-all duration-300 ${bgColor} text-white`;
 
     statusDiv.classList.remove('hidden');
 
@@ -710,16 +684,12 @@ export class SubscriptionTab {
    * Show upgrade prompt when limits are reached
    */
   showUpgradePrompt(data) {
-    const message = `You've reached your ${data.feature} limit. Upgrade to continue using this feature.`;
-    this.showError(message);
-
-    // Optionally highlight upgrade button
-    const upgradeBtn = document.querySelector('.upgrade-plan-btn');
-    if (upgradeBtn) {
-      upgradeBtn.classList.add('animate-pulse');
-      setTimeout(() => {
-        upgradeBtn.classList.remove('animate-pulse');
-      }, 3000);
+    // Show Coming Soon modal - premium features are coming soon
+    if (window.showComingSoonModal) {
+      window.showComingSoonModal();
+    } else {
+      const message = `You've reached your ${data.feature} limit. Premium upgrades are coming soon!`;
+      this.showInfo(message);
     }
   }
 

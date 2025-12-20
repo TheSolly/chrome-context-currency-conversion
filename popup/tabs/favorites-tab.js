@@ -41,8 +41,11 @@ export class FavoritesTab {
     try {
       console.log('📋 Loading favorites content...');
 
+      // Ensure conversionHistory is initialized before loading data
+      await this.conversionHistory.initialize();
+
       // Load favorites data
-      const favorites = await this.conversionHistory.getFavorites();
+      const favorites = this.conversionHistory.getFavorites();
 
       // Display content
       this.displayFavoriteItems(favorites);
@@ -307,6 +310,9 @@ export class FavoritesTab {
     }
 
     try {
+      // Ensure conversionHistory is initialized
+      await this.conversionHistory.initialize();
+
       await this.conversionHistory.addToFavorites(
         fromCurrency,
         toCurrency,
@@ -351,6 +357,9 @@ export class FavoritesTab {
    */
   async removeFavorite(favoriteId) {
     try {
+      // Ensure conversionHistory is initialized
+      await this.conversionHistory.initialize();
+
       await this.conversionHistory.removeFromFavorites(favoriteId);
       await this.loadContent();
       this.showSuccess('Favorite removed successfully');
@@ -388,18 +397,17 @@ export class FavoritesTab {
         `Converting ${numAmount} ${fromCurrency} to ${toCurrency}...`
       );
 
-      // Import and use the API service
-      const { ApiService } = await import('/utils/api-service.js');
-      const apiService = new ApiService();
+      // Import and use the exchange rate service
+      const { exchangeRateService } = await import('/utils/api-service.js');
 
       // Perform the actual conversion
-      const result = await apiService.convertCurrency(
+      const result = await exchangeRateService.convertCurrency(
         numAmount,
         fromCurrency,
         toCurrency
       );
 
-      if (result && result.success) {
+      if (result && result.convertedAmount) {
         // Show the conversion result
         this.showConversionResult(
           numAmount,
@@ -414,14 +422,33 @@ export class FavoritesTab {
           '/utils/conversion-history.js'
         );
         const history = new ConversionHistory();
+        await history.initialize();
         await history.addConversion({
           fromCurrency,
           toCurrency,
           originalAmount: numAmount,
           convertedAmount: result.convertedAmount,
-          rate: result.rate,
-          source: result.source || 'favorites'
+          exchangeRate: result.rate,
+          timestamp: Date.now(),
+          source: 'favorites',
+          confidence: 1.0,
+          webpage: null
         });
+
+        // Track usage for subscription
+        try {
+          const { getSubscriptionManager } = await import(
+            '/utils/subscription-manager-v2.js'
+          );
+          const subscriptionManager = await getSubscriptionManager();
+          await subscriptionManager.trackUsage('dailyConversions', 1);
+          console.log('📊 Favorites conversion usage tracked');
+        } catch (usageError) {
+          console.warn(
+            '⚠️ Failed to track favorites conversion usage:',
+            usageError
+          );
+        }
 
         // Clear the quick convert input
         const quickConvertInput = document.getElementById('quickConvertAmount');

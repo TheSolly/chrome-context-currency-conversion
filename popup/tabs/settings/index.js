@@ -32,7 +32,6 @@ import {
   setupTestConversionButton
 } from './test-conversion.js';
 
-
 import {
   initializeSecurityFeatures,
   setupSecurityEventListeners
@@ -494,5 +493,4 @@ export class SettingsTab {
     this.currentSettings = { ...this.currentSettings, ...newSettings };
     await this.saveSettings();
   }
-
 }

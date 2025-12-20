@@ -191,12 +191,13 @@ export class AdSettingsComponent {
       this.updateAdRegion(region);
     });
 
-    // Upgrade button
+    // Upgrade button - show Coming Soon modal
     document.getElementById('upgradeFromAds')?.addEventListener('click', () => {
-      // Switch to subscription tab
-      const subscriptionTab = document.getElementById('subscriptionTab');
-      if (subscriptionTab) {
-        subscriptionTab.click();
+      console.log(
+        '📢 Upgrade requested from Ads settings - showing Coming Soon modal'
+      );
+      if (window.showComingSoonModal) {
+        window.showComingSoonModal();
       }
     });
   }

@@ -500,8 +500,8 @@ export class SettingsManager {
           if (value) {
             try {
               result[key] = JSON.parse(value);
-            } catch (e) {
-              console.warn(`Failed to parse stored value for key ${key}`);
+            } catch {
+              // Failed to parse stored value - ignore
             }
           }
         });
@@ -510,8 +510,8 @@ export class SettingsManager {
         if (value) {
           try {
             result[keys] = JSON.parse(value);
-          } catch (e) {
-            console.warn(`Failed to parse stored value for key ${keys}`);
+          } catch {
+            // Failed to parse stored value - ignore
           }
         }
       }

@@ -1232,7 +1232,7 @@
               <!-- Conversions -->
               <div style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-radius: 10px; padding: 10px; text-align: center;">
                 <div style="font-size: 18px; font-weight: 700; color: #2563eb;" id="conversionsUsage">0</div>
-                <div style="font-size: 10px; color: #6b7280; margin-top: 2px;">of 50 converts</div>
+                <div style="font-size: 10px; color: #6b7280; margin-top: 2px;">of <span id="conversionsLimit">50</span> converts</div>
                 <div style="width: 100%; height: 3px; background: #dbeafe; border-radius: 2px; margin-top: 6px;">
                   <div id="conversionsProgress" style="height: 100%; width: 0%; background: #2563eb; border-radius: 2px; transition: width 0.3s;"></div>
                 </div>
@@ -1240,7 +1240,7 @@
               <!-- Currency Pairs -->
               <div style="background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%); border-radius: 10px; padding: 10px; text-align: center;">
                 <div style="font-size: 18px; font-weight: 700; color: #7c3aed;" id="currenciesUsage">2</div>
-                <div style="font-size: 10px; color: #6b7280; margin-top: 2px;">of 3 pairs</div>
+                <div style="font-size: 10px; color: #6b7280; margin-top: 2px;">of <span id="currenciesLimit">3</span> pairs</div>
                 <div style="width: 100%; height: 3px; background: #ede9fe; border-radius: 2px; margin-top: 6px;">
                   <div id="currenciesProgress" style="height: 100%; width: 100%; background: #7c3aed; border-radius: 2px; transition: width 0.3s;"></div>
                 </div>
@@ -1248,7 +1248,7 @@
               <!-- History -->
               <div style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-radius: 10px; padding: 10px; text-align: center;">
                 <div style="font-size: 18px; font-weight: 700; color: #059669;" id="historyUsage">0</div>
-                <div style="font-size: 10px; color: #6b7280; margin-top: 2px;">of 10 history</div>
+                <div style="font-size: 10px; color: #6b7280; margin-top: 2px;">of <span id="historyLimit">10</span> history</div>
                 <div style="width: 100%; height: 3px; background: #d1fae5; border-radius: 2px; margin-top: 6px;">
                   <div id="historyProgress" style="height: 100%; width: 0%; background: #059669; border-radius: 2px; transition: width 0.3s;"></div>
                 </div>
@@ -1496,6 +1496,7 @@
             >
               Rate Us
             </button>
+            <!-- Support and Help buttons - commented out for now
             <span aria-hidden="true">•</span>
             <button
               id="support"
@@ -1512,6 +1513,7 @@
             >
               Help
             </button>
+            -->
             <span aria-hidden="true">•</span>
             <button
               id="donateButton"
@@ -1523,6 +1525,75 @@
           </nav>
         </div>
       </footer>
+
+      <!-- Coming Soon Modal -->
+      <div
+        id="comingSoonModal"
+        class="hidden fixed inset-0 z-50 flex items-center justify-center"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="comingSoonTitle"
+      >
+        <!-- Backdrop -->
+        <div class="coming-soon-backdrop absolute inset-0" id="comingSoonBackdrop"></div>
+
+        <!-- Modal Content -->
+        <div class="coming-soon-content relative bg-white rounded-2xl shadow-2xl overflow-hidden" style="width: 340px;">
+          <!-- Header with gradient -->
+          <div class="coming-soon-header" style="background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%); padding: 28px 24px; text-align: center;">
+            <div class="coming-soon-icon" style="margin-bottom: 12px;">
+              <span style="font-size: 56px; display: block; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));">🚀</span>
+            </div>
+            <h2 id="comingSoonTitle" style="font-size: 24px; font-weight: 800; color: white; margin: 0 0 6px 0; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">Coming Soon!</h2>
+            <p style="font-size: 14px; color: rgba(255,255,255,0.9); margin: 0; font-weight: 500;">Premium Features</p>
+          </div>
+
+          <!-- Body -->
+          <div style="padding: 20px 24px 24px;">
+            <p style="color: #4b5563; text-align: center; margin-bottom: 16px; font-size: 13px; line-height: 1.6;">
+              We're working hard to bring you premium subscription plans with amazing features!
+            </p>
+
+            <!-- Features preview -->
+            <div style="background: linear-gradient(135deg, #f0f9ff 0%, #ede9fe 100%); border-radius: 14px; padding: 16px; margin-bottom: 16px; border: 1px solid #e0e7ff;">
+              <p style="font-size: 11px; font-weight: 700; color: #6366f1; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 12px 0;">What's coming:</p>
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span style="width: 22px; height: 22px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold; flex-shrink: 0;">✓</span>
+                  <span style="font-size: 13px; color: #374151; font-weight: 500;">Unlimited daily conversions</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span style="width: 22px; height: 22px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold; flex-shrink: 0;">✓</span>
+                  <span style="font-size: 13px; color: #374151; font-weight: 500;">Real-time exchange rates</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span style="width: 22px; height: 22px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold; flex-shrink: 0;">✓</span>
+                  <span style="font-size: 13px; color: #374151; font-weight: 500;">Advanced rate alerts</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <span style="width: 22px; height: 22px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold; flex-shrink: 0;">✓</span>
+                  <span style="font-size: 13px; color: #374151; font-weight: 500;">Ad-free experience</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Stay tuned message -->
+            <div style="text-align: center; margin-bottom: 16px;">
+              <p style="font-size: 12px; color: #9ca3af; margin: 0;">
+                <span style="margin-right: 4px;">✨</span>Stay tuned for updates!<span style="margin-left: 4px;">✨</span>
+              </p>
+            </div>
+
+            <!-- Close button -->
+            <button
+              id="closeComingSoonModal"
+              style="width: 100%; padding: 14px 20px; border-radius: 12px; font-size: 15px; font-weight: 700; color: white; background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%); border: none; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);"
+            >
+              Got it!
+            </button>
+          </div>
+        </div>
+      </div>
 
       <!-- Status Message -->
       <div

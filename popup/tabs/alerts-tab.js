@@ -313,28 +313,28 @@ export class AlertsTab {
       </div>
     `;
 
-    // Add click handlers for upgrade buttons
+    // Add click handlers for upgrade buttons - show Coming Soon modal
     const premiumBtn = document.getElementById('upgradeFromAlertsBtn');
     const proBtn = document.getElementById('upgradeToProFromAlertsBtn');
 
     if (premiumBtn) {
       premiumBtn.addEventListener('click', () => {
-        console.log('🚀 Navigating to Premium upgrade from Alerts tab');
-        // Switch to subscription tab
-        const subscriptionTabBtn = document.getElementById('subscriptionTab');
-        if (subscriptionTabBtn) {
-          subscriptionTabBtn.click();
+        console.log(
+          '📢 Premium upgrade requested from Alerts tab - showing Coming Soon modal'
+        );
+        if (window.showComingSoonModal) {
+          window.showComingSoonModal();
         }
       });
     }
 
     if (proBtn) {
       proBtn.addEventListener('click', () => {
-        console.log('🚀 Navigating to Pro upgrade from Alerts tab');
-        // Switch to subscription tab
-        const subscriptionTabBtn = document.getElementById('subscriptionTab');
-        if (subscriptionTabBtn) {
-          subscriptionTabBtn.click();
+        console.log(
+          '📢 Pro upgrade requested from Alerts tab - showing Coming Soon modal'
+        );
+        if (window.showComingSoonModal) {
+          window.showComingSoonModal();
         }
       });
     }
@@ -354,7 +354,10 @@ export class AlertsTab {
       'mt-2 bg-primary-600 text-white px-3 py-1 rounded text-sm hover:bg-primary-700';
     upgradeBtn.textContent = 'Upgrade Now';
     upgradeBtn.addEventListener('click', () => {
-      document.querySelector('[data-tab="subscription"]')?.click();
+      // Show Coming Soon modal instead of navigating
+      if (window.showComingSoonModal) {
+        window.showComingSoonModal();
+      }
     });
 
     const errorDiv = document.createElement('div');

@@ -66,6 +66,10 @@ export class ConversionHistory {
       await this.loadHistory();
       await this.loadFavorites();
       await this.loadStats();
+
+      // Enforce subscription limit on existing history
+      await this.enforceHistoryLimit();
+
       this.initialized = true;
       console.log('✅ Conversion History Manager initialized successfully');
       return true;
@@ -76,6 +80,34 @@ export class ConversionHistory {
       );
       this.initializationPromise = null; // Allow retry
       return false;
+    }
+  }
+
+  /**
+   * Enforce subscription history limit on existing history
+   */
+  async enforceHistoryLimit() {
+    try {
+      const { getSubscriptionManager } = await import(
+        '/utils/subscription-manager-v2.js'
+      );
+      const subscriptionManager = await getSubscriptionManager();
+      const historyLimit =
+        subscriptionManager.getFeatureLimit('conversionHistory');
+
+      if (
+        historyLimit &&
+        historyLimit > 0 &&
+        this.history.length > historyLimit
+      ) {
+        console.log(
+          `📝 Trimming history from ${this.history.length} to ${historyLimit}`
+        );
+        this.history = this.history.slice(0, historyLimit);
+        await this.saveHistory();
+      }
+    } catch (error) {
+      console.warn('⚠️ Could not enforce history limit:', error);
     }
   }
 
@@ -112,6 +144,7 @@ export class ConversionHistory {
   /**
    * Add a new conversion to history
    * IMPORTANT: Ensures data is loaded from storage before modifying
+   * Enforces subscription plan history limit
    */
   async addConversion({
     fromCurrency,
@@ -124,13 +157,14 @@ export class ConversionHistory {
     confidence = null,
     webpage = null
   }) {
-    console.log('📝 addConversion called:', { fromCurrency, toCurrency, originalAmount });
-    console.log('📝 Current initialized state:', this.initialized);
-    console.log('📝 Current history length before add:', this.history.length);
+    console.log('📝 addConversion called:', {
+      fromCurrency,
+      toCurrency,
+      originalAmount
+    });
 
     // Critical: Ensure we have loaded existing data before adding
     await this.ensureInitialized();
-    console.log('📝 After ensureInitialized, history length:', this.history.length);
 
     const conversion = {
       id: this.generateConversionId(),
@@ -149,9 +183,29 @@ export class ConversionHistory {
     // Add to history
     this.history.unshift(conversion);
 
-    // Trim history if it exceeds max size
-    if (this.history.length > this.MAX_HISTORY_ENTRIES) {
-      this.history = this.history.slice(0, this.MAX_HISTORY_ENTRIES);
+    // Get subscription limit for history
+    let historyLimit = this.MAX_HISTORY_ENTRIES;
+    try {
+      const { getSubscriptionManager } = await import(
+        '/utils/subscription-manager-v2.js'
+      );
+      const subscriptionManager = await getSubscriptionManager();
+      const featureLimit =
+        subscriptionManager.getFeatureLimit('conversionHistory');
+      if (featureLimit && featureLimit > 0) {
+        historyLimit = featureLimit;
+      }
+    } catch (error) {
+      console.warn(
+        '⚠️ Could not get subscription limit, using default:',
+        error
+      );
+    }
+
+    // Trim history to subscription limit
+    if (this.history.length > historyLimit) {
+      this.history = this.history.slice(0, historyLimit);
+      console.log(`📝 Trimmed history to subscription limit: ${historyLimit}`);
     }
 
     // Update statistics
@@ -569,10 +623,14 @@ export class ConversionHistory {
     this.stats.dailyStats[today].totalAmount += conversion.originalAmount;
 
     // Add currencies if not already present (simulate Set behavior)
-    if (!this.stats.dailyStats[today].currencies.includes(conversion.fromCurrency)) {
+    if (
+      !this.stats.dailyStats[today].currencies.includes(conversion.fromCurrency)
+    ) {
       this.stats.dailyStats[today].currencies.push(conversion.fromCurrency);
     }
-    if (!this.stats.dailyStats[today].currencies.includes(conversion.toCurrency)) {
+    if (
+      !this.stats.dailyStats[today].currencies.includes(conversion.toCurrency)
+    ) {
       this.stats.dailyStats[today].currencies.push(conversion.toCurrency);
     }
 
@@ -664,24 +722,34 @@ export class ConversionHistory {
    */
   async saveHistory() {
     try {
-      console.log(`💾 Attempting to save ${this.history.length} history entries...`);
+      console.log(
+        `💾 Attempting to save ${this.history.length} history entries...`
+      );
       console.log('📦 chromeApisAvailable:', this.chromeApisAvailable);
 
       if (this.chromeApisAvailable) {
         await chrome.storage.local.set({
           [this.STORAGE_KEYS.HISTORY]: this.history
         });
-        console.log(`✅ Successfully saved ${this.history.length} history entries to chrome.storage.local`);
+        console.log(
+          `✅ Successfully saved ${this.history.length} history entries to chrome.storage.local`
+        );
 
         // Verify the save worked
-        const verify = await chrome.storage.local.get([this.STORAGE_KEYS.HISTORY]);
-        console.log(`🔍 Verification: storage now has ${verify[this.STORAGE_KEYS.HISTORY]?.length || 0} entries`);
+        const verify = await chrome.storage.local.get([
+          this.STORAGE_KEYS.HISTORY
+        ]);
+        console.log(
+          `🔍 Verification: storage now has ${verify[this.STORAGE_KEYS.HISTORY]?.length || 0} entries`
+        );
       } else {
         localStorage.setItem(
           this.STORAGE_KEYS.HISTORY,
           JSON.stringify(this.history)
         );
-        console.log(`✅ Saved ${this.history.length} history entries to localStorage`);
+        console.log(
+          `✅ Saved ${this.history.length} history entries to localStorage`
+        );
       }
     } catch (error) {
       console.error('❌ Failed to save history:', error);

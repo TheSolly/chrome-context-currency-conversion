@@ -50,18 +50,13 @@ function logError(error, context, additionalData = null) {
   if (errorLog.length > 50) {
     errorLog.shift();
   }
-
-  console.error(`[${context}]`, error, additionalData);
 }
 
 // Initialize context menu when extension is installed or enabled
 chrome.runtime.onInstalled.addListener(async () => {
-  console.log('Currency Converter Extension installed');
-
   // Initialize API keys first
   try {
     await apiKeyManager.initializeLocalApiKeys();
-    console.log('🔑 API keys initialized in background');
   } catch (error) {
     logError(error, 'apiKeyInit');
   }
@@ -70,7 +65,6 @@ chrome.runtime.onInstalled.addListener(async () => {
   try {
     await settingsManager.initialize();
     currentSettings = await settingsManager.getSettings();
-    console.log('⚙️ Settings Manager initialized in background');
   } catch (error) {
     logError(error, 'settingsManagerInit');
   }
@@ -78,7 +72,6 @@ chrome.runtime.onInstalled.addListener(async () => {
   // Phase 6, Task 6.2: Initialize Conversion History
   try {
     await conversionHistory.initialize();
-    console.log('📚 Conversion History initialized in background');
   } catch (error) {
     logError(error, 'conversionHistoryInit');
   }
@@ -86,7 +79,6 @@ chrome.runtime.onInstalled.addListener(async () => {
   // Phase 6, Task 6.3: Initialize Rate Alerts Manager
   try {
     await rateAlertsManager.initialize();
-    console.log('🔔 Rate Alerts Manager initialized in background');
   } catch (error) {
     logError(error, 'rateAlertsManagerInit');
   }
@@ -96,12 +88,9 @@ chrome.runtime.onInstalled.addListener(async () => {
 
 // Startup initialization
 async function initializeExtension() {
-  console.log('🚀 Currency Converter Extension starting up');
-
   // Initialize API keys
   try {
     await apiKeyManager.initializeLocalApiKeys();
-    console.log('🔑 API keys initialized on startup');
   } catch (error) {
     logError(error, 'startupApiKeyInit');
   }
@@ -110,7 +99,6 @@ async function initializeExtension() {
   try {
     await settingsManager.initialize();
     currentSettings = await settingsManager.getSettings();
-    console.log('⚙️ Settings loaded on startup');
   } catch (error) {
     logError(error, 'startupSettingsInit');
   }
@@ -118,7 +106,6 @@ async function initializeExtension() {
   // Initialize conversion history - CRITICAL: Must load existing data before any conversions
   try {
     await conversionHistory.initialize();
-    console.log('📚 Conversion History initialized on startup');
   } catch (error) {
     logError(error, 'startupConversionHistoryInit');
   }
@@ -133,12 +120,10 @@ initializeExtension();
 // Listen for storage changes to sync settings with context menu
 chrome.storage.onChanged.addListener(async (changes, areaName) => {
   if (areaName === 'sync' && changes.userSettings) {
-    console.log('📦 Settings changed in storage, updating context menu...');
     const newSettings = changes.userSettings.newValue;
     if (newSettings) {
       currentSettings = newSettings;
       await updateContextMenuCurrencies();
-      console.log('✅ Context menu updated with new settings');
     }
   }
 });
@@ -148,7 +133,6 @@ async function initializeContextMenus() {
   try {
     // Only initialize if not already created
     if (contextMenusCreated) {
-      console.log('Context menus already initialized, skipping...');
       return;
     }
 
@@ -168,7 +152,6 @@ async function initializeContextMenus() {
     });
 
     contextMenusCreated = true;
-    console.log('Context menus initialized successfully');
   } catch (error) {
     logError(error, 'initializeContextMenus');
   }
@@ -180,12 +163,6 @@ async function loadUserSettings() {
     // Force reload settings from storage first
     await settingsManager.loadSettings();
     const settings = settingsManager.getSettings();
-
-    console.log('📥 Background worker loaded settings:', {
-      baseCurrency: settings.baseCurrency,
-      secondaryCurrency: settings.secondaryCurrency,
-      additionalCurrencies: settings.additionalCurrencies
-    });
 
     return {
       baseCurrency: settings.baseCurrency || 'USD',
@@ -212,12 +189,6 @@ async function buildDirectConversionTitle(
   targetCurrency,
   formattedAmount
 ) {
-  console.log('🔄 buildDirectConversionTitle called:', {
-    amount,
-    sourceCurrency,
-    targetCurrency
-  });
-
   try {
     // Try to get a quick conversion estimate for the menu title
     const conversionResult = await exchangeRateService.convertCurrency(
@@ -225,8 +196,6 @@ async function buildDirectConversionTitle(
       sourceCurrency,
       targetCurrency
     );
-
-    console.log('✅ Conversion result for menu title:', conversionResult);
 
     // Format the source amount with currency symbol
     const sourceFormatted = formatConvertedAmount(amount, sourceCurrency);
@@ -237,7 +206,6 @@ async function buildDirectConversionTitle(
     );
 
     // Track this conversion to history (user saw the result in context menu)
-    console.log('📝 About to save preview conversion to history...');
     try {
       await conversionHistory.addConversion({
         fromCurrency: sourceCurrency,
@@ -250,7 +218,6 @@ async function buildDirectConversionTitle(
         confidence: currentCurrencyInfo?.confidence || 0.8,
         webpage: null
       });
-      console.log('📚 Context menu preview conversion saved to history');
 
       // Also track usage for subscription
       try {
@@ -259,23 +226,15 @@ async function buildDirectConversionTitle(
         );
         const subscriptionManager = await getSubscriptionManager();
         await subscriptionManager.trackUsage('dailyConversions', 1);
-        console.log('📊 Preview conversion usage tracked');
-      } catch (usageError) {
-        console.warn(
-          '⚠️ Failed to track preview conversion usage:',
-          usageError
-        );
+      } catch {
+        // Failed to track preview conversion usage - non-critical
       }
-    } catch (historyError) {
-      console.error(
-        '❌ Failed to save preview conversion to history:',
-        historyError
-      );
+    } catch {
+      // Failed to save preview conversion to history - non-critical
     }
 
     return `${sourceFormatted} → ${targetFormatted}`;
-  } catch (error) {
-    console.warn('Failed to get conversion estimate for menu title:', error);
+  } catch {
     // Fallback to basic format without conversion estimate
     return `Convert ${formattedAmount} ${sourceCurrency} → ${targetCurrency}`;
   }
@@ -295,8 +254,8 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
             targetCurrency,
             originalText: info.selectionText
           });
-        } catch (error) {
-          console.warn('Failed to show loading feedback:', error);
+        } catch {
+          // Failed to show loading feedback - non-critical
         }
       }
 
@@ -316,8 +275,8 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
               targetCurrency,
               originalText: info.selectionText
             });
-          } catch (error) {
-            console.warn('Failed to show loading feedback:', error);
+          } catch {
+            // Failed to show loading feedback - non-critical
           }
         }
 
@@ -340,8 +299,8 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
           action: 'showErrorFeedback',
           error: error.message || 'Conversion failed'
         });
-      } catch (msgError) {
-        console.warn('Failed to show error feedback:', msgError);
+      } catch {
+        // Failed to show error feedback - non-critical
       }
     }
   }
@@ -350,7 +309,6 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 // Enhanced currency conversion handler with target currency support
 async function handleCurrencyConversion(info, tab, targetCurrency = null) {
   const selectedText = info.selectionText;
-  console.log('Converting currency for:', selectedText, 'to:', targetCurrency);
 
   try {
     // Reload settings to get latest preferences
@@ -372,16 +330,12 @@ async function handleCurrencyConversion(info, tab, targetCurrency = null) {
       timestamp: new Date().toISOString()
     };
 
-    console.log('Showing loading state with data:', loadingData);
-
     // Send loading message to content script
     if (tab?.id) {
-      console.log('📤 Sending loading message to content script...');
       await chrome.tabs.sendMessage(tab.id, {
         action: 'showConversionResult',
         ...loadingData
       });
-      console.log('✅ Loading message sent successfully');
     }
 
     // Now perform the actual currency conversion
@@ -392,43 +346,21 @@ async function handleCurrencyConversion(info, tab, targetCurrency = null) {
         confidence: currentCurrencyInfo.confidence || 0.8
       };
 
-      console.log(
-        'Performing conversion with:',
-        currencyData,
-        'to:',
-        finalTargetCurrency
-      );
-
       const conversionResult = await performCurrencyConversion(
         currencyData,
         finalTargetCurrency
       );
 
-      console.log('✅ Conversion completed successfully:', conversionResult);
-      console.log(
-        '🔍 DEBUG formattedAmount in result:',
-        conversionResult.formattedAmount
-      );
-      console.log('🔍 DEBUG _debugInfo:', conversionResult._debugInfo);
-
       // Send the actual result to content script
       if (tab?.id) {
-        console.log('📤 Sending conversion result to content script...');
         await chrome.tabs.sendMessage(tab.id, {
           action: 'showConversionResult',
           ...loadingData,
           result: conversionResult
         });
-        console.log('✅ Conversion result sent successfully');
       }
-    } else {
-      console.error(
-        'Missing currency info for conversion:',
-        currentCurrencyInfo
-      );
     }
   } catch (error) {
-    console.error('Currency conversion failed:', error);
     logError(error, 'handleCurrencyConversion', {
       selectedText,
       targetCurrency,
@@ -447,18 +379,15 @@ async function handleCurrencyConversion(info, tab, targetCurrency = null) {
             errorMessage: error.message || 'Conversion failed'
           }
         });
-      } catch (msgError) {
-        console.error(
-          'Failed to send error message to content script:',
-          msgError
-        );
+      } catch {
+        // Failed to send error message - non-critical
       }
     }
   }
 }
 
 // Enhanced message listener with async context menu updates
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   try {
     if (request.action === 'updateContextMenu') {
       // Handle async context menu update
@@ -592,18 +521,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     if (request.action === 'reloadSettings') {
       // Reload settings when user updates preferences
-      console.log('🔄 Received reloadSettings request');
       loadUserSettings()
         .then(async settings => {
-          console.log('✅ Settings loaded in background:', settings);
           currentSettings = settings;
 
           // If we have current currency info, update the context menu to reflect new settings
           if (currentCurrencyInfo) {
-            console.log('🔄 Updating context menu with new settings');
             await updateContextMenu(true, currentCurrencyInfo);
-          } else {
-            console.log('ℹ️ No current currency info to update context menu');
           }
 
           sendResponse({ success: true, settings });
@@ -615,15 +539,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return true; // Will respond asynchronously
     }
   } catch (error) {
-    console.error('Error in message listener:', error);
+    logError(error, 'messageListener');
     sendResponse({ success: false, error: error.message });
   }
 });
 
 // Enhanced context menu update with dynamic conversion options
 async function updateContextMenu(hasCurrency, currencyInfo) {
-  console.log('🎯 updateContextMenu called:', { hasCurrency, currencyInfo });
-
   try {
     if (!contextMenusCreated) {
       await initializeContextMenus();
@@ -656,14 +578,6 @@ async function updateContextMenu(hasCurrency, currencyInfo) {
     const isBaseCurrency = sourceCurrency === currentSettings.baseCurrency;
     const isSecondaryCurrency =
       sourceCurrency === currentSettings.secondaryCurrency;
-
-    console.log('🎯 Currency check:', {
-      sourceCurrency,
-      baseCurrency: currentSettings.baseCurrency,
-      secondaryCurrency: currentSettings.secondaryCurrency,
-      isBaseCurrency,
-      isSecondaryCurrency
-    });
 
     if (isBaseCurrency || isSecondaryCurrency) {
       // Show direct conversion with formatted display
@@ -708,7 +622,6 @@ async function updateContextMenu(hasCurrency, currencyInfo) {
       await createConversionOptions(sourceCurrency, formattedAmount);
     }
   } catch (error) {
-    console.error('Error updating context menu:', error);
     logError(error, 'updateContextMenu', { hasCurrency, currencyInfo });
   }
 }
@@ -716,10 +629,6 @@ async function updateContextMenu(hasCurrency, currencyInfo) {
 // Create dynamic conversion menu items based on user preferences
 async function createConversionOptions(sourceCurrency, formattedAmount) {
   try {
-    console.log(
-      `🎯 Creating conversion options for ${sourceCurrency}, current settings:`,
-      currentSettings
-    );
     const targetCurrencies = new Set();
 
     // Check if this is a base or secondary currency
@@ -730,10 +639,6 @@ async function createConversionOptions(sourceCurrency, formattedAmount) {
         targetCurrencies.add(currency);
       }
     });
-
-    console.log(
-      `🎯 Quick convert currencies from settings: ${Array.from(targetCurrencies).join(', ')}`
-    );
 
     // Create menu items for each target currency (max 3 for free users)
     let index = 0;
@@ -751,15 +656,8 @@ async function createConversionOptions(sourceCurrency, formattedAmount) {
           contexts: ['selection']
         });
         createdMenuItems.add(menuId); // Track the created menu item
-      } catch (error) {
-        if (error.message.includes('duplicate id')) {
-          console.warn(`Menu item ${menuId} already exists, skipping...`);
-        } else {
-          console.error(
-            `Failed to create menu item for ${targetCurrency}:`,
-            error
-          );
-        }
+      } catch {
+        // Menu item already exists or failed to create - non-critical
       }
 
       index++;
@@ -775,10 +673,8 @@ async function createConversionOptions(sourceCurrency, formattedAmount) {
           contexts: ['selection']
         });
         createdMenuItems.add('separator1'); // Track the separator
-      } catch (error) {
-        if (!error.message.includes('duplicate id')) {
-          console.error('Failed to create separator:', error);
-        }
+      } catch {
+        // Separator already exists - non-critical
       }
 
       // Settings menu item removed - users can access settings via extension popup icon
@@ -813,19 +709,10 @@ async function removeConversionMenuItems() {
 // Enhanced conversion logic and utility functions for Task 4.3: Conversion Logic
 async function performCurrencyConversion(currencyData, targetCurrency = null) {
   try {
-    console.log(
-      '🔄 Starting currency conversion:',
-      currencyData,
-      'to:',
-      targetCurrency
-    );
-
     // Get user settings to determine target currency if not provided
     const settings = await loadUserSettings();
     const finalTargetCurrency =
       targetCurrency || settings.secondaryCurrency || 'EUR';
-
-    console.log('Using target currency:', finalTargetCurrency);
 
     // Use the singleton ExchangeRateService instance
     const conversionResult = await exchangeRateService.convertCurrency(
@@ -851,17 +738,6 @@ async function performCurrencyConversion(currencyData, targetCurrency = null) {
         conversionResult.convertedAmount,
         conversionResult.toCurrency
       ),
-
-      // DEBUG: Log the formatted amount being created
-      _debugInfo: {
-        rawAmount: conversionResult.convertedAmount,
-        currency: conversionResult.toCurrency,
-        formatted: formatConvertedAmount(
-          conversionResult.convertedAmount,
-          conversionResult.toCurrency
-        )
-      },
-
       formattedRate: formatExchangeRate(
         conversionResult.rate,
         conversionResult.fromCurrency,
@@ -869,10 +745,6 @@ async function performCurrencyConversion(currencyData, targetCurrency = null) {
       ),
       conversionTime: formatConversionTimestamp(conversionResult.timestamp)
     };
-
-    console.log('✅ Currency conversion completed:', result);
-    console.log('🔍 DEBUG formattedAmount in result:', result.formattedAmount);
-    console.log('🔍 DEBUG _debugInfo:', result._debugInfo);
 
     // Phase 6, Task 6.2: Save successful conversion to history
     try {
@@ -887,9 +759,7 @@ async function performCurrencyConversion(currencyData, targetCurrency = null) {
         confidence: result.confidence,
         webpage: null // Could be enhanced to capture current webpage URL
       });
-      console.log('📚 Conversion saved to history');
-    } catch (historyError) {
-      console.warn('⚠️ Failed to save conversion to history:', historyError);
+    } catch {
       // Don't fail the conversion if history saving fails
     }
 
@@ -901,15 +771,12 @@ async function performCurrencyConversion(currencyData, targetCurrency = null) {
       );
       const subscriptionManager = await getSubscriptionManager();
       await subscriptionManager.trackUsage('dailyConversions', 1);
-      console.log('📊 Conversion usage tracked for subscription');
-    } catch (usageError) {
-      console.warn('⚠️ Failed to track conversion usage:', usageError);
+    } catch {
       // Don't fail the conversion if usage tracking fails
     }
 
     return result;
   } catch (conversionError) {
-    console.error('❌ Currency conversion failed:', conversionError);
     logError(conversionError, 'performCurrencyConversion', currencyData);
 
     // Return a user-friendly error result
@@ -952,13 +819,6 @@ async function handleSettingsChange(newSettings) {
       await updateContextMenuCurrencies();
     }
 
-    // Log settings change
-    console.log('⚙️ Settings updated in background:', {
-      baseCurrency: newSettings.baseCurrency,
-      secondaryCurrency: newSettings.secondaryCurrency,
-      additionalCurrencies: newSettings.additionalCurrencies?.length || 0
-    });
-
     return true;
   } catch (error) {
     logError(error, 'handleSettingsChange', newSettings);
@@ -978,8 +838,6 @@ async function updateContextMenuCurrencies() {
 
     // Recreate context menus with updated settings
     await initializeContextMenus();
-
-    console.log('🔄 Context menus updated with new settings');
   } catch (error) {
     logError(error, 'updateContextMenuCurrencies');
   }
@@ -988,8 +846,6 @@ async function updateContextMenuCurrencies() {
 // Phase 6, Task 6.3: Rate Alerts notification handling
 chrome.notifications.onClicked.addListener(async notificationId => {
   try {
-    console.log('📱 Notification clicked:', notificationId);
-
     // Clear the notification
     await chrome.notifications.clear(notificationId);
 
@@ -1009,21 +865,14 @@ chrome.notifications.onClicked.addListener(async notificationId => {
   }
 });
 
-chrome.notifications.onClosed.addListener(async (notificationId, byUser) => {
-  console.log('📱 Notification closed:', notificationId, 'by user:', byUser);
+chrome.notifications.onClosed.addListener(async () => {
+  // Notification closed - no action needed
 });
 
 // Handle notification button clicks (if we add action buttons in future)
 chrome.notifications.onButtonClicked.addListener(
   async (notificationId, buttonIndex) => {
     try {
-      console.log(
-        '📱 Notification button clicked:',
-        notificationId,
-        'button:',
-        buttonIndex
-      );
-
       // Handle specific button actions based on notification type
       if (notificationId.startsWith('alert_')) {
         switch (buttonIndex) {
@@ -1052,7 +901,7 @@ chrome.notifications.onButtonClicked.addListener(
 );
 
 // Phase 6, Task 6.3: Additional message handlers for rate alerts
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   // Handle rate alerts related messages from popup
   if (message.type === 'RATE_ALERTS_ACTION') {
     handleRateAlertsMessage(message, sendResponse);

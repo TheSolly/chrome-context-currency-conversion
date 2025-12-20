@@ -913,6 +913,17 @@ export class ExchangeRateService {
   }
 
   /**
+   * Get exchange rate between two currencies
+   * This is a convenience wrapper around getRateWithRetry for external callers
+   * @param {string} fromCurrency - Source currency code
+   * @param {string} toCurrency - Target currency code
+   * @returns {Promise<Object>} Rate data with metadata
+   */
+  async getExchangeRate(fromCurrency, toCurrency) {
+    return this.getRateWithRetry(fromCurrency, toCurrency);
+  }
+
+  /**
    * Check if we should implement rate limiting
    * @param {string} fromCurrency - Source currency code
    * @param {string} toCurrency - Target currency code

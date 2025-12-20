@@ -12,8 +12,6 @@ import { securityManager } from '../utils/security-manager.js';
 import { AccessibilityManager } from '../utils/accessibility-manager.js';
 import { smartCurrencyDetector } from '../utils/smart-currency-detector.js';
 
-console.log('Currency Converter content script loaded');
-
 // Initialize modules
 let accessibilityManager = null;
 
@@ -21,25 +19,19 @@ let accessibilityManager = null;
 function initializeModules() {
   try {
     // Security manager is a singleton, already initialized
-    if (securityManager) {
-      console.log('Security manager available');
-    }
+    // eslint-disable-next-line no-unused-vars
+    const _securityManagerAvailable = !!securityManager;
 
     // Initialize accessibility manager
     accessibilityManager = new AccessibilityManager();
     initializeContentAccessibility();
-    console.log('Accessibility manager initialized');
-
 
     // Smart currency detector is a singleton
     if (smartCurrencyDetector && typeof window !== 'undefined') {
       window.smartCurrencyDetector = smartCurrencyDetector;
-      console.log('Smart currency detector available');
     }
-
-    console.log('All content script modules initialized');
-  } catch (error) {
-    console.warn('Error initializing content script modules:', error);
+  } catch {
+    // Error initializing content script modules - non-critical
   }
 }
 
@@ -183,11 +175,9 @@ const performanceMetrics = {
 // Debug mode for development (can be enabled via console)
 window.currencyConverterDebug = false;
 
-// Enhanced logging function
-function debugLog(message, data = null) {
-  if (window.currencyConverterDebug) {
-    console.log(`[Currency Converter Debug] ${message}`, data || '');
-  }
+// Enhanced logging function (no-op in production)
+function debugLog(_message, _data = null) {
+  // Debug logging disabled in production
 }
 
 // Performance tracking
@@ -230,8 +220,6 @@ window.getCurrencyConverterStats = () => {
 
 // Enhanced error handling and reporting
 function handleError(error, context) {
-  console.error(`Currency Converter Error in ${context}:`, error);
-
   // Send error to background for potential logging/analytics
   sendMessageSafely({
     action: 'reportError',
@@ -275,13 +263,9 @@ function initialize() {
   try {
     if (chrome.runtime && chrome.runtime.id) {
       debugLog('Chrome runtime available');
-    } else {
-      console.warn(
-        'Chrome runtime not fully available, some features may not work'
-      );
     }
-  } catch (error) {
-    console.warn('Error checking Chrome runtime:', error);
+  } catch {
+    // Chrome runtime not fully available - some features may not work
   }
 }
 
@@ -418,13 +402,12 @@ function handleNoValidSelection() {
 function sendMessageSafely(message) {
   try {
     if (chrome.runtime && chrome.runtime.sendMessage) {
-      chrome.runtime.sendMessage(message).catch(error => {
+      chrome.runtime.sendMessage(message).catch(() => {
         // Handle cases where background script might not be ready
-        console.warn('Failed to send message to background script:', error);
       });
     }
-  } catch (error) {
-    console.warn('Chrome runtime not available:', error);
+  } catch {
+    // Chrome runtime not available
   }
 }
 
@@ -459,13 +442,11 @@ function detectCurrencyWithValidation(text) {
   try {
     // Phase 6, Task 6.1: Use smart currency detector if available
     if (smartCurrencyDetector) {
-      console.log('Using smart currency detector for:', text);
       const smartResults = smartCurrencyDetector.detectCurrencies(text);
 
       if (smartResults && smartResults.length > 0) {
         // Return the highest confidence result with additional metadata
         const bestResult = smartResults[0];
-        console.log('Smart detector found currency:', bestResult);
 
         // Convert to expected format for backward compatibility
         const result = {
@@ -485,7 +466,6 @@ function detectCurrencyWithValidation(text) {
     }
 
     // Fallback to traditional detection
-    console.log('Using traditional currency detection for:', text);
 
     // Preprocess text to handle common edge cases
     const cleanedText = preprocessText(text);
@@ -509,8 +489,8 @@ function detectCurrencyWithValidation(text) {
     }
 
     return null;
-  } catch (error) {
-    console.warn('Error in currency detection:', error);
+  } catch {
+    // Error in currency detection
     return null;
   }
 }
@@ -807,12 +787,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ success: true });
     }
   } catch (error) {
-    console.error('Error handling visual feedback message:', error);
     sendResponse({ success: false, error: error.message });
   }
 });
-
-console.log('✅ Currency converter content script with visual feedback loaded');
 
 // Helper function to remove existing tooltips
 function removeExistingTooltip() {
@@ -1280,8 +1257,7 @@ function convertSelectedCurrency(selectedText) {
         );
       }
     }
-  } catch (error) {
-    console.error('Error converting selected currency:', error);
+  } catch {
     if (accessibilityManager) {
       accessibilityManager.announceToScreenReader(
         'Error occurred during currency conversion'

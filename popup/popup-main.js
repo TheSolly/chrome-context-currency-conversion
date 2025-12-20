@@ -34,16 +34,8 @@ const pendingSettingsOperations = new Set();
  */
 async function waitForPendingOperations() {
   if (pendingSettingsOperations.size > 0) {
-    console.log(
-      `⏳ Waiting for ${pendingSettingsOperations.size} pending operations...`
-    );
     const operations = Array.from(pendingSettingsOperations);
-    try {
-      await Promise.allSettled(operations);
-      console.log('✅ All pending operations completed');
-    } catch (error) {
-      console.error('❌ Some operations failed:', error);
-    }
+    await Promise.allSettled(operations);
   }
 }
 
@@ -71,8 +63,6 @@ document.addEventListener('visibilitychange', async () => {
  * Main initialization function
  */
 async function initializePopup() {
-  console.log('🎨 Enhanced Currency Converter popup loaded');
-
   try {
     // Show loading state
     showLoadingState();
@@ -88,10 +78,7 @@ async function initializePopup() {
 
     // Hide loading state
     hideLoadingState();
-
-    console.log('✅ Popup initialization completed successfully');
   } catch (error) {
-    console.error('❌ Failed to initialize popup:', error);
     showInitializationError(error);
   }
 }
@@ -100,17 +87,13 @@ async function initializePopup() {
  * Initialize core services
  */
 async function initializeCoreServices() {
-  console.log('🔧 Initializing core services...');
   const errors = [];
 
   // Initialize settings manager
   try {
-    console.log('⚙️ Initializing settings manager...');
     await settingsManager.initialize();
     currentSettings = await settingsManager.getSettings();
-    console.log('✅ Settings manager initialized');
   } catch (error) {
-    console.error('❌ Settings manager failed:', error);
     errors.push({ service: 'settings', error });
     // Use default settings as fallback
     currentSettings = { ...DEFAULT_SETTINGS };
@@ -118,27 +101,20 @@ async function initializeCoreServices() {
 
   // Initialize default configuration
   try {
-    console.log('🔧 Initializing default configuration...');
     await initializeDefaultConfig();
-    console.log('✅ Default configuration initialized');
   } catch (error) {
-    console.error('❌ Default configuration failed:', error);
     errors.push({ service: 'defaultConfig', error });
   }
 
   // Initialize accessibility features
   try {
-    console.log('♿ Initializing accessibility manager...');
     await accessibilityManager.initializeForPopup();
-    console.log('✅ Accessibility manager initialized');
   } catch (error) {
-    console.error('❌ Accessibility manager failed:', error);
     errors.push({ service: 'accessibility', error });
   }
 
   // Initialize subscription manager
   try {
-    console.log('💰 Initializing subscription manager...');
     subscriptionManager = await getSubscriptionManager();
 
     // The subscription manager initializes itself in the constructor
@@ -147,9 +123,7 @@ async function initializeCoreServices() {
 
     const subscriptionInfo = subscriptionManager.getSubscriptionInfo();
     userPlan = subscriptionInfo?.plan || 'FREE';
-    console.log(`✅ Subscription manager initialized with plan: ${userPlan}`);
   } catch (error) {
-    console.error('❌ Subscription manager failed:', error);
     errors.push({ service: 'subscription', error });
     // Use free plan as fallback
     userPlan = 'FREE';
@@ -158,23 +132,17 @@ async function initializeCoreServices() {
   // Initialize ad system (for free users only)
   try {
     if (userPlan === 'FREE') {
-      console.log('🎯 Initializing ad system...');
       try {
         // Initialize ad systems separately to prevent cascading failures
         await initializeAds();
-        console.log('✅ Ad system initialized');
 
         // Try to show interstitial, but catch any errors
         try {
           await showInterstitialIfEligible('popup_open');
-        } catch (interstitialError) {
-          console.warn(
-            'Non-critical error showing interstitial:',
-            interstitialError.message || interstitialError
-          );
+        } catch {
+          // Non-critical error showing interstitial
         }
       } catch (adError) {
-        console.error('Failed to initialize ads:', adError.message || adError);
         errors.push({
           service: 'ads',
           error: {
@@ -183,14 +151,8 @@ async function initializeCoreServices() {
           }
         });
       }
-    } else {
-      console.log('💎 Premium user - ads disabled');
     }
   } catch (error) {
-    console.error(
-      '❌ Ad system initialization failed:',
-      error.message || 'Unknown error'
-    );
     errors.push({
       service: 'ads',
       error: {
@@ -202,47 +164,26 @@ async function initializeCoreServices() {
 
   // Phase 9, Task 9.1: Initialize security features
   try {
-    console.log('🔒 Initializing security manager...');
     await securityManager.initialize();
-    console.log('✅ Security manager initialized');
   } catch (error) {
-    console.error('❌ Security manager failed:', error);
     errors.push({ service: 'security', error });
   }
 
   // Initialize secure API key manager
   try {
-    console.log('🔐 Initializing secure API key manager...');
     await secureApiKeyManager.initialize();
-    console.log('✅ Secure API key manager initialized');
   } catch (error) {
-    console.error('❌ Secure API key manager failed:', error);
     errors.push({ service: 'secureApiKeys', error });
   }
 
   // Phase 9, Task 9.2: Initialize privacy manager
   try {
-    console.log('🔒 Initializing privacy manager...');
     await privacyManager.initialize();
-    console.log('✅ Privacy manager initialized');
   } catch (error) {
-    console.error('❌ Privacy manager failed:', error);
     errors.push({ service: 'privacy', error });
   }
 
   if (errors.length > 0) {
-    // Format errors for better logging
-    const formattedErrors = errors.map(e => ({
-      service: e.service,
-      message: e.error?.message || 'Unknown error',
-      stack: e.error?.stack || 'No stack trace'
-    }));
-
-    console.warn(
-      `⚠️ ${errors.length} service(s) failed to initialize:`,
-      formattedErrors
-    );
-
     // Only throw if critical services failed
     const criticalErrors = errors.filter(e => e.service === 'settings');
     if (criticalErrors.length > 0) {
@@ -251,28 +192,17 @@ async function initializeCoreServices() {
       );
     }
   }
-
-  console.log('✅ Core services initialization completed');
 }
 
 /**
  * Initialize tab manager and make it globally available
  */
 async function initializeTabManager() {
-  console.log('📋 Initializing tab manager...');
+  tabManager = new TabManager();
+  await tabManager.initialize();
 
-  try {
-    tabManager = new TabManager();
-    await tabManager.initialize();
-
-    // Make tab manager globally available for cross-tab communication
-    window.tabManager = tabManager;
-
-    console.log('✅ Tab manager initialized');
-  } catch (error) {
-    console.error('❌ Failed to initialize tab manager:', error);
-    throw error;
-  }
+  // Make tab manager globally available for cross-tab communication
+  window.tabManager = tabManager;
 }
 
 /**
@@ -324,11 +254,82 @@ function showInitializationError(error) {
  * Global event handlers for footer links
  */
 function handleUpgrade() {
-  // Switch to subscription tab
-  if (tabManager) {
-    tabManager.switchTab('subscriptionPanel');
-  }
+  // Show Coming Soon modal
+  showComingSoonModal();
 }
+
+/**
+ * Show the Coming Soon modal
+ */
+function showComingSoonModal() {
+  const modal = document.getElementById('comingSoonModal');
+  const content = modal?.querySelector('.coming-soon-content');
+
+  if (!modal || !content) {
+    return;
+  }
+
+  // Show modal
+  modal.classList.remove('hidden');
+
+  // Force reflow to restart animation
+  content.offsetHeight;
+  content.style.animation = 'none';
+  content.offsetHeight;
+  content.style.animation = '';
+
+  // Reset animation class
+  content.classList.remove('closing');
+
+  // Setup close handlers
+  setupComingSoonModalCloseHandlers();
+}
+
+/**
+ * Hide the Coming Soon modal with animation
+ */
+function hideComingSoonModal() {
+  const modal = document.getElementById('comingSoonModal');
+  const content = modal?.querySelector('.coming-soon-content');
+
+  if (!modal || !content) return;
+
+  // Add closing animation
+  content.classList.add('closing');
+
+  // Hide after animation completes
+  setTimeout(() => {
+    modal.classList.add('hidden');
+    content.classList.remove('closing');
+  }, 200);
+}
+
+/**
+ * Setup close handlers for Coming Soon modal
+ */
+function setupComingSoonModalCloseHandlers() {
+  const closeBtn = document.getElementById('closeComingSoonModal');
+  const backdrop = document.getElementById('comingSoonBackdrop');
+
+  // Close button click
+  closeBtn?.addEventListener('click', hideComingSoonModal, { once: true });
+
+  // Backdrop click
+  backdrop?.addEventListener('click', hideComingSoonModal, { once: true });
+
+  // Escape key
+  const escHandler = e => {
+    if (e.key === 'Escape') {
+      hideComingSoonModal();
+      document.removeEventListener('keydown', escHandler);
+    }
+  };
+  document.addEventListener('keydown', escHandler);
+}
+
+// Export for use in other modules
+window.showComingSoonModal = showComingSoonModal;
+window.hideComingSoonModal = hideComingSoonModal;
 
 function handleRateUs() {
   chrome.tabs.create({
@@ -426,8 +427,8 @@ async function trackFeatureUsage(featureName, amount = 1) {
       if (tabManager) {
         tabManager.handleGlobalEvent('featureUsed', { featureName, amount });
       }
-    } catch (error) {
-      console.error('❌ Failed to track feature usage:', error);
+    } catch {
+      // Failed to track feature usage - non-critical
     }
   }
 }
@@ -458,16 +459,12 @@ window.popupUtils = {
 
 document.addEventListener('DOMContentLoaded', () => {
   initializePopup();
-  // Donation button logic
+  // Footer donation button - opens PayPal.me link
   const donateBtn = document.getElementById('donateButton');
   if (donateBtn) {
     donateBtn.addEventListener('click', () => {
-      // Open donation link (e.g., Buy Me a Coffee, PayPal, Stripe)
-      window.open(
-        'https://www.buymeacoffee.com/sollydev',
-        '_blank',
-        'noopener'
-      );
+      // Open PayPal donation link
+      chrome.tabs.create({ url: 'https://paypal.me/SalahKhaled49673' });
     });
   }
 });

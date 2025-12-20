@@ -228,6 +228,13 @@ export class HistoryTab {
     const icons = {
       'context-menu':
         '<span class="source-icon" title="Context Menu">🖱️</span>',
+      'context-menu-preview':
+        '<span class="source-icon" title="Context Menu Preview">👁️</span>',
+      'history-repeat':
+        '<span class="source-icon" title="Repeated Conversion">🔄</span>',
+      'settings-test':
+        '<span class="source-icon" title="Test Conversion">🧪</span>',
+      favorites: '<span class="source-icon" title="Favorites">⭐</span>',
       manual: '<span class="source-icon" title="Manual Entry">✏️</span>',
       api: '<span class="source-icon" title="API Call">🔗</span>',
       popup: '<span class="source-icon" title="Popup">🎚️</span>'
@@ -258,7 +265,6 @@ export class HistoryTab {
   updateHistoryStats(stats) {
     const totalElement = document.getElementById('totalConversions');
     const weekElement = document.getElementById('weekConversions');
-    const countElement = document.getElementById('conversionCount');
 
     // Calculate this week's conversions
     const thisWeekStart = new Date();
@@ -274,7 +280,6 @@ export class HistoryTab {
 
     if (totalElement) totalElement.textContent = stats.totalConversions || 0;
     if (weekElement) weekElement.textContent = thisWeekCount || 0;
-    if (countElement) countElement.textContent = stats.todayConversions || 0;
   }
 
   /**
