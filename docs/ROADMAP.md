@@ -1,7 +1,7 @@
 # Currency Converter - Future Roadmap
 
-**Last Updated:** December 20, 2025
-**Current Version:** 1.0.0
+**Last Updated:** June 22, 2026
+**Current Version:** 1.1.0
 
 ---
 
@@ -13,20 +13,23 @@ This document tracks planned features, improvements, and enhancements for future
 
 ## Planned Features
 
-### v1.1.0 - Performance & Caching
+### v1.1.0 - Performance & Caching ✅ (Released)
 
 | Feature | Priority | Status | Description |
 |---------|----------|--------|-------------|
-| Exchange Rate Caching | High | Planned | Cache exchange rates locally to reduce API calls |
-| Smart Cache Invalidation | High | Planned | Auto-refresh cache based on configurable intervals |
-| Offline Mode | Medium | Planned | Use cached rates when offline |
-| API Request Optimization | Medium | Planned | Batch requests and deduplicate calls |
+| Exchange Rate Caching | High | ✅ Done | Cache exchange rates locally to reduce API calls |
+| Smart Cache Invalidation | High | ✅ Done | Auto-refresh cache based on configurable intervals |
+| Offline Mode | Medium | ✅ Done | Use cached rates when offline |
+| API Request Optimization | Medium | ✅ Done | Batch requests and deduplicate calls |
 
 **Implementation Notes:**
-- Use Chrome Storage API for persistent caching
-- Default cache duration: 1 hour (configurable)
-- Show "cached" indicator when using offline rates
-- Implement background refresh before cache expiry
+- ✅ Durable cache via Chrome Storage API (`utils/rate-cache.js`), keyed by base currency
+- ✅ Full per-base rate table cached, so one API call serves every target (batch optimization)
+- ✅ Configurable cache duration (default 1 hour) via Settings → Performance & Caching
+- ✅ Concurrent identical requests are deduplicated (in-flight coalescing)
+- ✅ Background refresh before expiry via `chrome.alarms` (`rate_cache_refresh`)
+- ✅ "🟢 Live / ⚡ Cached / 📴 Offline" freshness indicator shown in the conversion tooltip and popup test
+- ✅ Offline mode + auto-refresh toggles and a "Clear rate cache" action in Settings
 
 ---
 
@@ -158,6 +161,15 @@ Track feature requests from users here:
 ---
 
 ## Version History
+
+### v1.1.0 (June 2026)
+- Performance & Caching release
+- Durable, service-worker-safe exchange-rate cache (one full per-base rate table per API call)
+- Configurable cache duration (default 1 hour) with smart background refresh before expiry
+- Offline mode using cached rates, with a Live/Cached/Offline freshness indicator
+- Request deduplication to coalesce concurrent identical conversions
+- Consolidated three legacy cache layers into a single source of truth
+- Added Vitest unit tests for the caching layer
 
 ### v1.0.0 (December 2025)
 - Initial release

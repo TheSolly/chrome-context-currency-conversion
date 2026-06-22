@@ -32,8 +32,11 @@ export class SettingsManager {
       enableTooltips: true,
       animationSpeed: 'normal', // fast, normal, slow
 
-      // Performance settings
-      cacheTimeout: 300000, // 5 minutes
+      // Performance settings (v1.1.0 caching)
+      cacheTimeout: 3600000, // 1 hour — exchange-rate cache TTL (configurable)
+      offlineMaxAgeMs: 604800000, // 7 days — max age a stale rate may serve offline
+      enableOfflineMode: true, // Use cached rates when a fresh fetch fails
+      enableCacheAutoRefresh: true, // Refresh cached rate tables in the background before expiry
       maxHistoryEntries: 100,
       enableAnalytics: true,
 

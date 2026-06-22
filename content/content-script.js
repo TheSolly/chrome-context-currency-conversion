@@ -799,6 +799,29 @@ function removeExistingTooltip() {
   }
 }
 
+// v1.1.0: Build a small freshness badge from the conversion result flags.
+function buildRateSourceBadge(result) {
+  let label;
+  let bg;
+  let color;
+
+  if (result?.offline) {
+    label = '📴 Offline rate';
+    bg = '#fef3c7';
+    color = '#92400e';
+  } else if (result?.cached) {
+    label = '⚡ Cached';
+    bg = '#dbeafe';
+    color = '#1e40af';
+  } else {
+    label = '🟢 Live';
+    bg = '#dcfce7';
+    color = '#166534';
+  }
+
+  return `<span style="display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600; background: ${bg}; color: ${color};">${label}</span>`;
+}
+
 // Phase 5, Task 5.1: Display conversion tooltip with visual feedback
 function displayConversionTooltip(
   originalText,
@@ -901,6 +924,10 @@ function createBasicTooltip(
     // Enhanced success state with proper currency formatting
     const fromCurrency = currencyInfo?.currency || 'USD';
 
+    // v1.1.0: Freshness badge — tell the user whether the rate is live, served
+    // from the local cache, or a stale offline fallback.
+    const sourceBadge = buildRateSourceBadge(result);
+
     tooltip.innerHTML = `
       <div style="color: #10b981; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
         <span style="font-size: 18px;">✅</span>
@@ -917,6 +944,7 @@ function createBasicTooltip(
       <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">
         <div><strong>Rate:</strong> ${result.exchangeRate}</div>
         <div><strong>Updated:</strong> ${result.timestamp || new Date().toLocaleString()}</div>
+        <div style="margin-top: 4px;">${sourceBadge}</div>
       </div>
       <div style="text-align: center; margin-top: 12px;">
         <button id="copyConversionResult" style="background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500;">

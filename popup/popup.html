@@ -35,7 +35,7 @@
       <!-- Navigation Tabs -->
       <nav
         class="tab-navigation"
-        style="background: white; border-bottom: 1px solid #e5e7eb;"
+        style="background: white; border-bottom: 1px solid #e5e7eb"
         role="tablist"
         aria-label="Extension sections"
       >
@@ -399,6 +399,113 @@
                   conversions.
                 </div>
               </div>
+            </div>
+          </section>
+
+          <!-- Performance & Caching (v1.1.0) -->
+          <section
+            class="setting-card"
+            role="region"
+            aria-labelledby="caching-heading"
+            id="caching"
+          >
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-lg" aria-hidden="true">⚡</span>
+              <h2
+                id="caching-heading"
+                class="text-base font-semibold text-gray-900"
+              >
+                Performance &amp; Caching
+              </h2>
+            </div>
+
+            <div
+              class="space-y-2"
+              role="group"
+              aria-labelledby="caching-heading"
+            >
+              <!-- Offline Mode -->
+              <div
+                class="flex items-center justify-between p-2 rounded-lg"
+                style="background-color: #f8fafc"
+              >
+                <label
+                  for="enableOfflineMode"
+                  class="text-sm text-gray-700 flex-1"
+                >
+                  Offline mode (use cached rates when offline)
+                </label>
+                <button
+                  id="enableOfflineMode"
+                  class="toggle-switch flex-shrink-0"
+                  role="switch"
+                  aria-checked="true"
+                  aria-describedby="enableOfflineMode-desc"
+                >
+                  <span class="toggle-thumb"></span>
+                </button>
+                <div id="enableOfflineMode-desc" class="sr-only">
+                  When enabled, the most recent cached rate is used if a live
+                  rate cannot be fetched.
+                </div>
+              </div>
+
+              <!-- Background Auto-Refresh -->
+              <div
+                class="flex items-center justify-between p-2 rounded-lg"
+                style="background-color: #f8fafc"
+              >
+                <label
+                  for="enableCacheAutoRefresh"
+                  class="text-sm text-gray-700 flex-1"
+                >
+                  Auto-refresh rates in the background
+                </label>
+                <button
+                  id="enableCacheAutoRefresh"
+                  class="toggle-switch flex-shrink-0"
+                  role="switch"
+                  aria-checked="true"
+                  aria-describedby="enableCacheAutoRefresh-desc"
+                >
+                  <span class="toggle-thumb"></span>
+                </button>
+                <div id="enableCacheAutoRefresh-desc" class="sr-only">
+                  When enabled, cached rates are refreshed before they expire so
+                  conversions stay fast.
+                </div>
+              </div>
+
+              <!-- Cache Duration -->
+              <div class="space-y-1">
+                <label for="cacheTimeout" class="block text-sm text-gray-700">
+                  Cache duration
+                </label>
+                <select
+                  id="cacheTimeout"
+                  class="currency-select"
+                  aria-describedby="cacheTimeout-desc"
+                >
+                  <option value="900000">15 minutes</option>
+                  <option value="1800000">30 minutes</option>
+                  <option value="3600000" selected>1 hour</option>
+                  <option value="21600000">6 hours</option>
+                  <option value="86400000">24 hours</option>
+                </select>
+                <div id="cacheTimeout-desc" class="sr-only">
+                  How long a fetched exchange rate is reused before a fresh rate
+                  is requested.
+                </div>
+              </div>
+
+              <!-- Clear Cache -->
+              <button
+                id="clearRateCache"
+                class="w-full mt-1 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                type="button"
+              >
+                🗑️ Clear rate cache
+              </button>
             </div>
           </section>
 
@@ -1196,61 +1303,238 @@
           <!-- Current Plan Hero -->
           <div
             class="rounded-xl relative overflow-hidden"
-            style="background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%); padding: 1px;"
+            style="
+              background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%);
+              padding: 1px;
+            "
           >
-            <div class="rounded-xl p-4" style="background: linear-gradient(135deg, #f5f3ff 0%, #eff6ff 100%);">
-              <div style="display: flex; align-items: center; gap: 14px;">
-                <div style="flex-shrink: 0; width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%); box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);">
-                  <span style="font-size: 26px; line-height: 1;">💎</span>
+            <div
+              class="rounded-xl p-4"
+              style="
+                background: linear-gradient(135deg, #f5f3ff 0%, #eff6ff 100%);
+              "
+            >
+              <div style="display: flex; align-items: center; gap: 14px">
+                <div
+                  style="
+                    flex-shrink: 0;
+                    width: 52px;
+                    height: 52px;
+                    border-radius: 14px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: linear-gradient(
+                      135deg,
+                      #7c3aed 0%,
+                      #2563eb 100%
+                    );
+                    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
+                  "
+                >
+                  <span style="font-size: 26px; line-height: 1">💎</span>
                 </div>
-                <div style="flex: 1; min-width: 0;">
-                  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px;">
-                    <h2 style="font-size: 16px; font-weight: 700; color: #1e1b4b; margin: 0;">
+                <div style="flex: 1; min-width: 0">
+                  <div
+                    style="
+                      display: flex;
+                      align-items: center;
+                      gap: 8px;
+                      margin-bottom: 2px;
+                    "
+                  >
+                    <h2
+                      style="
+                        font-size: 16px;
+                        font-weight: 700;
+                        color: #1e1b4b;
+                        margin: 0;
+                      "
+                    >
                       <span id="currentPlanName">Free Plan</span>
                     </h2>
-                    <span style="font-size: 10px; padding: 2px 8px; border-radius: 10px; background: #e0e7ff; color: #4338ca; font-weight: 600;">CURRENT</span>
+                    <span
+                      style="
+                        font-size: 10px;
+                        padding: 2px 8px;
+                        border-radius: 10px;
+                        background: #e0e7ff;
+                        color: #4338ca;
+                        font-weight: 600;
+                      "
+                      >CURRENT</span
+                    >
                   </div>
-                  <p style="font-size: 12px; color: #6b7280; margin: 0;" id="currentPlanDescription">
+                  <p
+                    style="font-size: 12px; color: #6b7280; margin: 0"
+                    id="currentPlanDescription"
+                  >
                     Basic features with limited usage
                   </p>
                 </div>
-                <div style="text-align: right;">
-                  <div style="font-size: 22px; font-weight: 800; color: #7c3aed;" id="currentPlanPrice">$0</div>
-                  <div style="font-size: 11px; color: #6b7280;" id="currentPlanInterval">forever</div>
+                <div style="text-align: right">
+                  <div
+                    style="font-size: 22px; font-weight: 800; color: #7c3aed"
+                    id="currentPlanPrice"
+                  >
+                    $0
+                  </div>
+                  <div
+                    style="font-size: 11px; color: #6b7280"
+                    id="currentPlanInterval"
+                  >
+                    forever
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Usage Overview -->
-          <div class="setting-card" style="padding: 14px;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-              <h3 style="font-size: 13px; font-weight: 600; color: #1e1b4b; margin: 0;">Usage This Period</h3>
-              <span style="font-size: 11px; color: #6b7280;">Resets daily</span>
+          <div class="setting-card" style="padding: 14px">
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 12px;
+              "
+            >
+              <h3
+                style="
+                  font-size: 13px;
+                  font-weight: 600;
+                  color: #1e1b4b;
+                  margin: 0;
+                "
+              >
+                Usage This Period
+              </h3>
+              <span style="font-size: 11px; color: #6b7280">Resets daily</span>
             </div>
-            <div id="usageStats" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+            <div
+              id="usageStats"
+              style="
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 10px;
+              "
+            >
               <!-- Conversions -->
-              <div style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-radius: 10px; padding: 10px; text-align: center;">
-                <div style="font-size: 18px; font-weight: 700; color: #2563eb;" id="conversionsUsage">0</div>
-                <div style="font-size: 10px; color: #6b7280; margin-top: 2px;">of <span id="conversionsLimit">50</span> converts</div>
-                <div style="width: 100%; height: 3px; background: #dbeafe; border-radius: 2px; margin-top: 6px;">
-                  <div id="conversionsProgress" style="height: 100%; width: 0%; background: #2563eb; border-radius: 2px; transition: width 0.3s;"></div>
+              <div
+                style="
+                  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+                  border-radius: 10px;
+                  padding: 10px;
+                  text-align: center;
+                "
+              >
+                <div
+                  style="font-size: 18px; font-weight: 700; color: #2563eb"
+                  id="conversionsUsage"
+                >
+                  0
+                </div>
+                <div style="font-size: 10px; color: #6b7280; margin-top: 2px">
+                  of <span id="conversionsLimit">50</span> converts
+                </div>
+                <div
+                  style="
+                    width: 100%;
+                    height: 3px;
+                    background: #dbeafe;
+                    border-radius: 2px;
+                    margin-top: 6px;
+                  "
+                >
+                  <div
+                    id="conversionsProgress"
+                    style="
+                      height: 100%;
+                      width: 0%;
+                      background: #2563eb;
+                      border-radius: 2px;
+                      transition: width 0.3s;
+                    "
+                  ></div>
                 </div>
               </div>
               <!-- Currency Pairs -->
-              <div style="background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%); border-radius: 10px; padding: 10px; text-align: center;">
-                <div style="font-size: 18px; font-weight: 700; color: #7c3aed;" id="currenciesUsage">2</div>
-                <div style="font-size: 10px; color: #6b7280; margin-top: 2px;">of <span id="currenciesLimit">3</span> pairs</div>
-                <div style="width: 100%; height: 3px; background: #ede9fe; border-radius: 2px; margin-top: 6px;">
-                  <div id="currenciesProgress" style="height: 100%; width: 100%; background: #7c3aed; border-radius: 2px; transition: width 0.3s;"></div>
+              <div
+                style="
+                  background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+                  border-radius: 10px;
+                  padding: 10px;
+                  text-align: center;
+                "
+              >
+                <div
+                  style="font-size: 18px; font-weight: 700; color: #7c3aed"
+                  id="currenciesUsage"
+                >
+                  2
+                </div>
+                <div style="font-size: 10px; color: #6b7280; margin-top: 2px">
+                  of <span id="currenciesLimit">3</span> pairs
+                </div>
+                <div
+                  style="
+                    width: 100%;
+                    height: 3px;
+                    background: #ede9fe;
+                    border-radius: 2px;
+                    margin-top: 6px;
+                  "
+                >
+                  <div
+                    id="currenciesProgress"
+                    style="
+                      height: 100%;
+                      width: 100%;
+                      background: #7c3aed;
+                      border-radius: 2px;
+                      transition: width 0.3s;
+                    "
+                  ></div>
                 </div>
               </div>
               <!-- History -->
-              <div style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-radius: 10px; padding: 10px; text-align: center;">
-                <div style="font-size: 18px; font-weight: 700; color: #059669;" id="historyUsage">0</div>
-                <div style="font-size: 10px; color: #6b7280; margin-top: 2px;">of <span id="historyLimit">10</span> history</div>
-                <div style="width: 100%; height: 3px; background: #d1fae5; border-radius: 2px; margin-top: 6px;">
-                  <div id="historyProgress" style="height: 100%; width: 0%; background: #059669; border-radius: 2px; transition: width 0.3s;"></div>
+              <div
+                style="
+                  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+                  border-radius: 10px;
+                  padding: 10px;
+                  text-align: center;
+                "
+              >
+                <div
+                  style="font-size: 18px; font-weight: 700; color: #059669"
+                  id="historyUsage"
+                >
+                  0
+                </div>
+                <div style="font-size: 10px; color: #6b7280; margin-top: 2px">
+                  of <span id="historyLimit">10</span> history
+                </div>
+                <div
+                  style="
+                    width: 100%;
+                    height: 3px;
+                    background: #d1fae5;
+                    border-radius: 2px;
+                    margin-top: 6px;
+                  "
+                >
+                  <div
+                    id="historyProgress"
+                    style="
+                      height: 100%;
+                      width: 0%;
+                      background: #059669;
+                      border-radius: 2px;
+                      transition: width 0.3s;
+                    "
+                  ></div>
                 </div>
               </div>
             </div>
@@ -1263,56 +1547,202 @@
 
           <!-- Upgrade Plans -->
           <div id="upgradeSection">
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-              <span style="font-size: 16px;">🚀</span>
-              <h3 style="font-size: 14px; font-weight: 700; color: #1e1b4b; margin: 0;">Upgrade Your Plan</h3>
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 12px;
+              "
+            >
+              <span style="font-size: 16px">🚀</span>
+              <h3
+                style="
+                  font-size: 14px;
+                  font-weight: 700;
+                  color: #1e1b4b;
+                  margin: 0;
+                "
+              >
+                Upgrade Your Plan
+              </h3>
             </div>
 
             <!-- Premium Plan Card -->
             <div
               class="plan-card"
-              style="background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%); border-radius: 14px; padding: 1px; margin-bottom: 12px;"
+              style="
+                background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+                border-radius: 14px;
+                padding: 1px;
+                margin-bottom: 12px;
+              "
             >
-              <div style="background: white; border-radius: 13px; padding: 16px;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
+              <div
+                style="background: white; border-radius: 13px; padding: 16px"
+              >
+                <div
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    margin-bottom: 14px;
+                  "
+                >
                   <div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                      <span style="font-size: 20px;">⭐</span>
-                      <h4 style="font-size: 15px; font-weight: 700; color: #1e1b4b; margin: 0;">Premium</h4>
-                      <span style="font-size: 9px; padding: 2px 6px; border-radius: 8px; background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%); color: white; font-weight: 600;">POPULAR</span>
+                    <div style="display: flex; align-items: center; gap: 8px">
+                      <span style="font-size: 20px">⭐</span>
+                      <h4
+                        style="
+                          font-size: 15px;
+                          font-weight: 700;
+                          color: #1e1b4b;
+                          margin: 0;
+                        "
+                      >
+                        Premium
+                      </h4>
+                      <span
+                        style="
+                          font-size: 9px;
+                          padding: 2px 6px;
+                          border-radius: 8px;
+                          background: linear-gradient(
+                            135deg,
+                            #2563eb 0%,
+                            #7c3aed 100%
+                          );
+                          color: white;
+                          font-weight: 600;
+                        "
+                        >POPULAR</span
+                      >
                     </div>
-                    <p style="font-size: 11px; color: #6b7280; margin: 4px 0 0 28px;">Perfect for regular users</p>
+                    <p
+                      style="
+                        font-size: 11px;
+                        color: #6b7280;
+                        margin: 4px 0 0 28px;
+                      "
+                    >
+                      Perfect for regular users
+                    </p>
                   </div>
-                  <div style="text-align: right;">
-                    <div style="font-size: 24px; font-weight: 800; background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">$4.99</div>
-                    <div style="font-size: 11px; color: #6b7280;">/month</div>
+                  <div style="text-align: right">
+                    <div
+                      style="
+                        font-size: 24px;
+                        font-weight: 800;
+                        background: linear-gradient(
+                          135deg,
+                          #2563eb 0%,
+                          #7c3aed 100%
+                        );
+                        -webkit-background-clip: text;
+                        -webkit-text-fill-color: transparent;
+                        background-clip: text;
+                      "
+                    >
+                      $4.99
+                    </div>
+                    <div style="font-size: 11px; color: #6b7280">/month</div>
                   </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; margin-bottom: 14px;">
-                  <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #374151;">
-                    <span style="color: #10b981;">✓</span> 500 daily conversions
+                <div
+                  style="
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 6px 12px;
+                    margin-bottom: 14px;
+                  "
+                >
+                  <div
+                    style="
+                      display: flex;
+                      align-items: center;
+                      gap: 6px;
+                      font-size: 12px;
+                      color: #374151;
+                    "
+                  >
+                    <span style="color: #10b981">✓</span> 500 daily conversions
                   </div>
-                  <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #374151;">
-                    <span style="color: #10b981;">✓</span> 20 currency pairs
+                  <div
+                    style="
+                      display: flex;
+                      align-items: center;
+                      gap: 6px;
+                      font-size: 12px;
+                      color: #374151;
+                    "
+                  >
+                    <span style="color: #10b981">✓</span> 20 currency pairs
                   </div>
-                  <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #374151;">
-                    <span style="color: #10b981;">✓</span> Hourly rate updates
+                  <div
+                    style="
+                      display: flex;
+                      align-items: center;
+                      gap: 6px;
+                      font-size: 12px;
+                      color: #374151;
+                    "
+                  >
+                    <span style="color: #10b981">✓</span> Hourly rate updates
                   </div>
-                  <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #374151;">
-                    <span style="color: #10b981;">✓</span> 5 rate alerts
+                  <div
+                    style="
+                      display: flex;
+                      align-items: center;
+                      gap: 6px;
+                      font-size: 12px;
+                      color: #374151;
+                    "
+                  >
+                    <span style="color: #10b981">✓</span> 5 rate alerts
                   </div>
-                  <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #374151;">
-                    <span style="color: #10b981;">✓</span> 100 history entries
+                  <div
+                    style="
+                      display: flex;
+                      align-items: center;
+                      gap: 6px;
+                      font-size: 12px;
+                      color: #374151;
+                    "
+                  >
+                    <span style="color: #10b981">✓</span> 100 history entries
                   </div>
-                  <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #374151;">
-                    <span style="color: #10b981;">✓</span> Ad-free experience
+                  <div
+                    style="
+                      display: flex;
+                      align-items: center;
+                      gap: 6px;
+                      font-size: 12px;
+                      color: #374151;
+                    "
+                  >
+                    <span style="color: #10b981">✓</span> Ad-free experience
                   </div>
                 </div>
 
                 <button
                   id="upgradeToPremium"
-                  style="width: 100%; padding: 10px 16px; border: none; border-radius: 10px; font-size: 13px; font-weight: 600; color: white; background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%); cursor: pointer; transition: all 0.2s;"
+                  style="
+                    width: 100%;
+                    padding: 10px 16px;
+                    border: none;
+                    border-radius: 10px;
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: white;
+                    background: linear-gradient(
+                      135deg,
+                      #2563eb 0%,
+                      #7c3aed 100%
+                    );
+                    cursor: pointer;
+                    transition: all 0.2s;
+                  "
                 >
                   Upgrade to Premium
                 </button>
@@ -1322,46 +1752,145 @@
             <!-- Pro Plan Card -->
             <div
               class="plan-card"
-              style="background: #f5f3ff; border: 1px solid #e9d5ff; border-radius: 14px; padding: 16px;"
+              style="
+                background: #f5f3ff;
+                border: 1px solid #e9d5ff;
+                border-radius: 14px;
+                padding: 16px;
+              "
             >
-              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: flex-start;
+                  margin-bottom: 14px;
+                "
+              >
                 <div>
-                  <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 20px;">💎</span>
-                    <h4 style="font-size: 15px; font-weight: 700; color: #5b21b6; margin: 0;">Professional</h4>
+                  <div style="display: flex; align-items: center; gap: 8px">
+                    <span style="font-size: 20px">💎</span>
+                    <h4
+                      style="
+                        font-size: 15px;
+                        font-weight: 700;
+                        color: #5b21b6;
+                        margin: 0;
+                      "
+                    >
+                      Professional
+                    </h4>
                   </div>
-                  <p style="font-size: 11px; color: #7c3aed; margin: 4px 0 0 28px;">For power users & businesses</p>
+                  <p
+                    style="
+                      font-size: 11px;
+                      color: #7c3aed;
+                      margin: 4px 0 0 28px;
+                    "
+                  >
+                    For power users & businesses
+                  </p>
                 </div>
-                <div style="text-align: right;">
-                  <div style="font-size: 24px; font-weight: 800; color: #7c3aed;">$14.99</div>
-                  <div style="font-size: 11px; color: #6b7280;">/month</div>
+                <div style="text-align: right">
+                  <div
+                    style="font-size: 24px; font-weight: 800; color: #7c3aed"
+                  >
+                    $14.99
+                  </div>
+                  <div style="font-size: 11px; color: #6b7280">/month</div>
                 </div>
               </div>
 
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; margin-bottom: 14px;">
-                <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #374151;">
-                  <span style="color: #7c3aed;">✓</span> Unlimited conversions
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: 1fr 1fr;
+                  gap: 6px 12px;
+                  margin-bottom: 14px;
+                "
+              >
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    font-size: 12px;
+                    color: #374151;
+                  "
+                >
+                  <span style="color: #7c3aed">✓</span> Unlimited conversions
                 </div>
-                <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #374151;">
-                  <span style="color: #7c3aed;">✓</span> Unlimited pairs
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    font-size: 12px;
+                    color: #374151;
+                  "
+                >
+                  <span style="color: #7c3aed">✓</span> Unlimited pairs
                 </div>
-                <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #374151;">
-                  <span style="color: #7c3aed;">✓</span> Real-time rates
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    font-size: 12px;
+                    color: #374151;
+                  "
+                >
+                  <span style="color: #7c3aed">✓</span> Real-time rates
                 </div>
-                <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #374151;">
-                  <span style="color: #7c3aed;">✓</span> 50 rate alerts
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    font-size: 12px;
+                    color: #374151;
+                  "
+                >
+                  <span style="color: #7c3aed">✓</span> 50 rate alerts
                 </div>
-                <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #374151;">
-                  <span style="color: #7c3aed;">✓</span> Unlimited history
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    font-size: 12px;
+                    color: #374151;
+                  "
+                >
+                  <span style="color: #7c3aed">✓</span> Unlimited history
                 </div>
-                <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #374151;">
-                  <span style="color: #7c3aed;">✓</span> Priority support
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    font-size: 12px;
+                    color: #374151;
+                  "
+                >
+                  <span style="color: #7c3aed">✓</span> Priority support
                 </div>
               </div>
 
               <button
                 id="upgradeToPro"
-                style="width: 100%; padding: 10px 16px; border: 2px solid #7c3aed; border-radius: 10px; font-size: 13px; font-weight: 600; color: #7c3aed; background: white; cursor: pointer; transition: all 0.2s;"
+                style="
+                  width: 100%;
+                  padding: 10px 16px;
+                  border: 2px solid #7c3aed;
+                  border-radius: 10px;
+                  font-size: 13px;
+                  font-weight: 600;
+                  color: #7c3aed;
+                  background: white;
+                  cursor: pointer;
+                  transition: all 0.2s;
+                "
               >
                 Upgrade to Pro
               </button>
@@ -1369,76 +1898,275 @@
           </div>
 
           <!-- Payment Provider Selection -->
-          <div id="paymentSection" class="hidden" style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px; margin-top: 12px;">
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-              <span style="font-size: 16px;">💳</span>
-              <h3 style="font-size: 13px; font-weight: 600; color: #1e1b4b; margin: 0;">Payment Method</h3>
+          <div
+            id="paymentSection"
+            class="hidden"
+            style="
+              background: white;
+              border: 1px solid #e5e7eb;
+              border-radius: 12px;
+              padding: 14px;
+              margin-top: 12px;
+            "
+          >
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 12px;
+              "
+            >
+              <span style="font-size: 16px">💳</span>
+              <h3
+                style="
+                  font-size: 13px;
+                  font-weight: 600;
+                  color: #1e1b4b;
+                  margin: 0;
+                "
+              >
+                Payment Method
+              </h3>
             </div>
-            <div id="paymentProviders" style="display: flex; flex-direction: column; gap: 8px;">
+            <div
+              id="paymentProviders"
+              style="display: flex; flex-direction: column; gap: 8px"
+            >
               <!-- Payment providers will be populated by JavaScript -->
             </div>
-            <div style="margin-top: 12px; padding: 10px; border-radius: 8px; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);">
-              <p style="font-size: 11px; color: #1e40af; margin: 0; display: flex; align-items: center; gap: 6px;">
+            <div
+              style="
+                margin-top: 12px;
+                padding: 10px;
+                border-radius: 8px;
+                background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+              "
+            >
+              <p
+                style="
+                  font-size: 11px;
+                  color: #1e40af;
+                  margin: 0;
+                  display: flex;
+                  align-items: center;
+                  gap: 6px;
+                "
+              >
                 <span>🔒</span> Secure payment processing. Cancel anytime.
               </p>
             </div>
           </div>
 
           <!-- Current Subscription Management -->
-          <div id="subscriptionManagement" class="hidden" style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px; margin-top: 12px;">
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-              <span style="font-size: 16px;">⚙️</span>
-              <h3 style="font-size: 13px; font-weight: 600; color: #1e1b4b; margin: 0;">Manage Subscription</h3>
+          <div
+            id="subscriptionManagement"
+            class="hidden"
+            style="
+              background: white;
+              border: 1px solid #e5e7eb;
+              border-radius: 12px;
+              padding: 14px;
+              margin-top: 12px;
+            "
+          >
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 12px;
+              "
+            >
+              <span style="font-size: 16px">⚙️</span>
+              <h3
+                style="
+                  font-size: 13px;
+                  font-weight: 600;
+                  color: #1e1b4b;
+                  margin: 0;
+                "
+              >
+                Manage Subscription
+              </h3>
             </div>
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: #f9fafb; border-radius: 8px;">
-                <span style="font-size: 12px; color: #6b7280;">Status</span>
-                <span style="font-size: 12px; font-weight: 600; color: #059669; display: flex; align-items: center; gap: 4px;" id="subscriptionStatus">
-                  <span style="width: 6px; height: 6px; background: #059669; border-radius: 50%;"></span> Active
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  padding: 8px 10px;
+                  background: #f9fafb;
+                  border-radius: 8px;
+                "
+              >
+                <span style="font-size: 12px; color: #6b7280">Status</span>
+                <span
+                  style="
+                    font-size: 12px;
+                    font-weight: 600;
+                    color: #059669;
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                  "
+                  id="subscriptionStatus"
+                >
+                  <span
+                    style="
+                      width: 6px;
+                      height: 6px;
+                      background: #059669;
+                      border-radius: 50%;
+                    "
+                  ></span>
+                  Active
                 </span>
               </div>
-              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: #f9fafb; border-radius: 8px;">
-                <span style="font-size: 12px; color: #6b7280;">Next Billing</span>
-                <span style="font-size: 12px; font-weight: 600; color: #374151;" id="nextBilling">-</span>
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  padding: 8px 10px;
+                  background: #f9fafb;
+                  border-radius: 8px;
+                "
+              >
+                <span style="font-size: 12px; color: #6b7280"
+                  >Next Billing</span
+                >
+                <span
+                  style="font-size: 12px; font-weight: 600; color: #374151"
+                  id="nextBilling"
+                  >-</span
+                >
               </div>
-              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: #f9fafb; border-radius: 8px;">
-                <span style="font-size: 12px; color: #6b7280;">Payment Method</span>
-                <span style="font-size: 12px; font-weight: 600; color: #374151;" id="paymentMethod">-</span>
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  padding: 8px 10px;
+                  background: #f9fafb;
+                  border-radius: 8px;
+                "
+              >
+                <span style="font-size: 12px; color: #6b7280"
+                  >Payment Method</span
+                >
+                <span
+                  style="font-size: 12px; font-weight: 600; color: #374151"
+                  id="paymentMethod"
+                  >-</span
+                >
               </div>
             </div>
             <button
               id="cancelSubscription"
-              style="width: 100%; margin-top: 12px; padding: 10px 16px; border: 1px solid #fecaca; border-radius: 10px; font-size: 12px; font-weight: 500; color: #dc2626; background: #fef2f2; cursor: pointer; transition: all 0.2s;"
+              style="
+                width: 100%;
+                margin-top: 12px;
+                padding: 10px 16px;
+                border: 1px solid #fecaca;
+                border-radius: 10px;
+                font-size: 12px;
+                font-weight: 500;
+                color: #dc2626;
+                background: #fef2f2;
+                cursor: pointer;
+                transition: all 0.2s;
+              "
             >
               Cancel Subscription
             </button>
           </div>
 
           <!-- Support Development -->
-          <div style="background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%); border: 1px solid #fbcfe8; border-radius: 12px; padding: 14px; margin-top: 12px;">
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-              <span style="font-size: 16px;">❤️</span>
-              <h3 style="font-size: 13px; font-weight: 600; color: #9d174d; margin: 0;">Support Development</h3>
+          <div
+            style="
+              background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%);
+              border: 1px solid #fbcfe8;
+              border-radius: 12px;
+              padding: 14px;
+              margin-top: 12px;
+            "
+          >
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 8px;
+              "
+            >
+              <span style="font-size: 16px">❤️</span>
+              <h3
+                style="
+                  font-size: 13px;
+                  font-weight: 600;
+                  color: #9d174d;
+                  margin: 0;
+                "
+              >
+                Support Development
+              </h3>
             </div>
-            <p style="font-size: 11px; color: #6b7280; margin: 0 0 12px 0;">
+            <p style="font-size: 11px; color: #6b7280; margin: 0 0 12px 0">
               Love the extension? Support us with a one-time donation.
             </p>
-            <div style="display: flex; gap: 8px;">
+            <div style="display: flex; gap: 8px">
               <button
                 id="donate5"
-                style="flex: 1; padding: 8px 12px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; color: #be185d; background: white; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05);"
+                style="
+                  flex: 1;
+                  padding: 8px 12px;
+                  border: none;
+                  border-radius: 8px;
+                  font-size: 13px;
+                  font-weight: 600;
+                  color: #be185d;
+                  background: white;
+                  cursor: pointer;
+                  transition: all 0.2s;
+                  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+                "
               >
                 $5
               </button>
               <button
                 id="donate10"
-                style="flex: 1; padding: 8px 12px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; color: white; background: linear-gradient(135deg, #ec4899 0%, #be185d 100%); cursor: pointer; transition: all 0.2s;"
+                style="
+                  flex: 1;
+                  padding: 8px 12px;
+                  border: none;
+                  border-radius: 8px;
+                  font-size: 13px;
+                  font-weight: 600;
+                  color: white;
+                  background: linear-gradient(135deg, #ec4899 0%, #be185d 100%);
+                  cursor: pointer;
+                  transition: all 0.2s;
+                "
               >
                 $10
               </button>
               <button
                 id="donate25"
-                style="flex: 1; padding: 8px 12px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; color: #be185d; background: white; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05);"
+                style="
+                  flex: 1;
+                  padding: 8px 12px;
+                  border: none;
+                  border-radius: 8px;
+                  font-size: 13px;
+                  font-weight: 600;
+                  color: #be185d;
+                  background: white;
+                  cursor: pointer;
+                  transition: all 0.2s;
+                  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+                "
               >
                 $25
               </button>
@@ -1535,59 +2263,228 @@
         aria-labelledby="comingSoonTitle"
       >
         <!-- Backdrop -->
-        <div class="coming-soon-backdrop absolute inset-0" id="comingSoonBackdrop"></div>
+        <div
+          class="coming-soon-backdrop absolute inset-0"
+          id="comingSoonBackdrop"
+        ></div>
 
         <!-- Modal Content -->
-        <div class="coming-soon-content relative bg-white rounded-2xl shadow-2xl overflow-hidden" style="width: 340px;">
+        <div
+          class="coming-soon-content relative bg-white rounded-2xl shadow-2xl overflow-hidden"
+          style="width: 340px"
+        >
           <!-- Header with gradient -->
-          <div class="coming-soon-header" style="background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%); padding: 28px 24px; text-align: center;">
-            <div class="coming-soon-icon" style="margin-bottom: 12px;">
-              <span style="font-size: 56px; display: block; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));">🚀</span>
+          <div
+            class="coming-soon-header"
+            style="
+              background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+              padding: 28px 24px;
+              text-align: center;
+            "
+          >
+            <div class="coming-soon-icon" style="margin-bottom: 12px">
+              <span
+                style="
+                  font-size: 56px;
+                  display: block;
+                  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
+                "
+                >🚀</span
+              >
             </div>
-            <h2 id="comingSoonTitle" style="font-size: 24px; font-weight: 800; color: white; margin: 0 0 6px 0; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">Coming Soon!</h2>
-            <p style="font-size: 14px; color: rgba(255,255,255,0.9); margin: 0; font-weight: 500;">Premium Features</p>
+            <h2
+              id="comingSoonTitle"
+              style="
+                font-size: 24px;
+                font-weight: 800;
+                color: white;
+                margin: 0 0 6px 0;
+                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+              "
+            >
+              Coming Soon!
+            </h2>
+            <p
+              style="
+                font-size: 14px;
+                color: rgba(255, 255, 255, 0.9);
+                margin: 0;
+                font-weight: 500;
+              "
+            >
+              Premium Features
+            </p>
           </div>
 
           <!-- Body -->
-          <div style="padding: 20px 24px 24px;">
-            <p style="color: #4b5563; text-align: center; margin-bottom: 16px; font-size: 13px; line-height: 1.6;">
-              We're working hard to bring you premium subscription plans with amazing features!
+          <div style="padding: 20px 24px 24px">
+            <p
+              style="
+                color: #4b5563;
+                text-align: center;
+                margin-bottom: 16px;
+                font-size: 13px;
+                line-height: 1.6;
+              "
+            >
+              We're working hard to bring you premium subscription plans with
+              amazing features!
             </p>
 
             <!-- Features preview -->
-            <div style="background: linear-gradient(135deg, #f0f9ff 0%, #ede9fe 100%); border-radius: 14px; padding: 16px; margin-bottom: 16px; border: 1px solid #e0e7ff;">
-              <p style="font-size: 11px; font-weight: 700; color: #6366f1; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 12px 0;">What's coming:</p>
-              <div style="display: flex; flex-direction: column; gap: 10px;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                  <span style="width: 22px; height: 22px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold; flex-shrink: 0;">✓</span>
-                  <span style="font-size: 13px; color: #374151; font-weight: 500;">Unlimited daily conversions</span>
+            <div
+              style="
+                background: linear-gradient(135deg, #f0f9ff 0%, #ede9fe 100%);
+                border-radius: 14px;
+                padding: 16px;
+                margin-bottom: 16px;
+                border: 1px solid #e0e7ff;
+              "
+            >
+              <p
+                style="
+                  font-size: 11px;
+                  font-weight: 700;
+                  color: #6366f1;
+                  text-transform: uppercase;
+                  letter-spacing: 0.5px;
+                  margin: 0 0 12px 0;
+                "
+              >
+                What's coming:
+              </p>
+              <div style="display: flex; flex-direction: column; gap: 10px">
+                <div style="display: flex; align-items: center; gap: 10px">
+                  <span
+                    style="
+                      width: 22px;
+                      height: 22px;
+                      background: linear-gradient(
+                        135deg,
+                        #10b981 0%,
+                        #059669 100%
+                      );
+                      border-radius: 50%;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      color: white;
+                      font-size: 12px;
+                      font-weight: bold;
+                      flex-shrink: 0;
+                    "
+                    >✓</span
+                  >
+                  <span
+                    style="font-size: 13px; color: #374151; font-weight: 500"
+                    >Unlimited daily conversions</span
+                  >
                 </div>
-                <div style="display: flex; align-items: center; gap: 10px;">
-                  <span style="width: 22px; height: 22px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold; flex-shrink: 0;">✓</span>
-                  <span style="font-size: 13px; color: #374151; font-weight: 500;">Real-time exchange rates</span>
+                <div style="display: flex; align-items: center; gap: 10px">
+                  <span
+                    style="
+                      width: 22px;
+                      height: 22px;
+                      background: linear-gradient(
+                        135deg,
+                        #10b981 0%,
+                        #059669 100%
+                      );
+                      border-radius: 50%;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      color: white;
+                      font-size: 12px;
+                      font-weight: bold;
+                      flex-shrink: 0;
+                    "
+                    >✓</span
+                  >
+                  <span
+                    style="font-size: 13px; color: #374151; font-weight: 500"
+                    >Real-time exchange rates</span
+                  >
                 </div>
-                <div style="display: flex; align-items: center; gap: 10px;">
-                  <span style="width: 22px; height: 22px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold; flex-shrink: 0;">✓</span>
-                  <span style="font-size: 13px; color: #374151; font-weight: 500;">Advanced rate alerts</span>
+                <div style="display: flex; align-items: center; gap: 10px">
+                  <span
+                    style="
+                      width: 22px;
+                      height: 22px;
+                      background: linear-gradient(
+                        135deg,
+                        #10b981 0%,
+                        #059669 100%
+                      );
+                      border-radius: 50%;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      color: white;
+                      font-size: 12px;
+                      font-weight: bold;
+                      flex-shrink: 0;
+                    "
+                    >✓</span
+                  >
+                  <span
+                    style="font-size: 13px; color: #374151; font-weight: 500"
+                    >Advanced rate alerts</span
+                  >
                 </div>
-                <div style="display: flex; align-items: center; gap: 10px;">
-                  <span style="width: 22px; height: 22px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold; flex-shrink: 0;">✓</span>
-                  <span style="font-size: 13px; color: #374151; font-weight: 500;">Ad-free experience</span>
+                <div style="display: flex; align-items: center; gap: 10px">
+                  <span
+                    style="
+                      width: 22px;
+                      height: 22px;
+                      background: linear-gradient(
+                        135deg,
+                        #10b981 0%,
+                        #059669 100%
+                      );
+                      border-radius: 50%;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      color: white;
+                      font-size: 12px;
+                      font-weight: bold;
+                      flex-shrink: 0;
+                    "
+                    >✓</span
+                  >
+                  <span
+                    style="font-size: 13px; color: #374151; font-weight: 500"
+                    >Ad-free experience</span
+                  >
                 </div>
               </div>
             </div>
 
             <!-- Stay tuned message -->
-            <div style="text-align: center; margin-bottom: 16px;">
-              <p style="font-size: 12px; color: #9ca3af; margin: 0;">
-                <span style="margin-right: 4px;">✨</span>Stay tuned for updates!<span style="margin-left: 4px;">✨</span>
+            <div style="text-align: center; margin-bottom: 16px">
+              <p style="font-size: 12px; color: #9ca3af; margin: 0">
+                <span style="margin-right: 4px">✨</span>Stay tuned for
+                updates!<span style="margin-left: 4px">✨</span>
               </p>
             </div>
 
             <!-- Close button -->
             <button
               id="closeComingSoonModal"
-              style="width: 100%; padding: 14px 20px; border-radius: 12px; font-size: 15px; font-weight: 700; color: white; background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%); border: none; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);"
+              style="
+                width: 100%;
+                padding: 14px 20px;
+                border-radius: 12px;
+                font-size: 15px;
+                font-weight: 700;
+                color: white;
+                background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+                border: none;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+              "
             >
               Got it!
             </button>

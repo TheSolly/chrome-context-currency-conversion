@@ -103,17 +103,18 @@ export async function performTestConversion({
     // Import API service dynamically
     const { exchangeRateService } = await import('/utils/api-service.js');
 
-    // Get exchange rate
-    const rateData = await exchangeRateService.getExchangeRate(
+    // Convert (returns cached/offline flags so we can show a freshness badge)
+    const conversion = await exchangeRateService.convertCurrency(
+      amount,
       fromCurrency,
       toCurrency
     );
 
-    if (!rateData || !rateData.rate) {
+    if (!conversion || !conversion.rate) {
       throw new Error('Failed to get exchange rate');
     }
 
-    const convertedAmount = amount * rateData.rate;
+    const convertedAmount = conversion.convertedAmount;
 
     // Display result
     displayTestResult({
@@ -121,7 +122,9 @@ export async function performTestConversion({
       fromCurrency,
       toCurrency,
       convertedAmount,
-      rate: rateData.rate
+      rate: conversion.rate,
+      cached: conversion.cached,
+      offline: conversion.offline
     });
 
     // Track the test conversion
@@ -131,7 +134,7 @@ export async function performTestConversion({
       toCurrency,
       amount,
       convertedAmount,
-      rate: rateData.rate
+      rate: conversion.rate
     });
 
     return {
@@ -140,7 +143,9 @@ export async function performTestConversion({
       toCurrency,
       amount,
       convertedAmount,
-      rate: rateData.rate
+      rate: conversion.rate,
+      cached: conversion.cached,
+      offline: conversion.offline
     };
   } catch (error) {
     console.error('Test conversion failed:', error);
@@ -157,15 +162,31 @@ function displayTestResult({
   fromCurrency,
   toCurrency,
   convertedAmount,
-  rate
+  rate,
+  cached = false,
+  offline = false
 }) {
   const resultDiv = document.getElementById('testConversionResult');
   if (!resultDiv) return;
 
+  // v1.1.0: Freshness badge so testers can see when a rate came from cache.
+  let badgeLabel = '🟢 Live';
+  let badgeClasses = 'bg-green-100 text-green-700';
+  if (offline) {
+    badgeLabel = '📴 Offline rate';
+    badgeClasses = 'bg-amber-100 text-amber-700';
+  } else if (cached) {
+    badgeLabel = '⚡ Cached';
+    badgeClasses = 'bg-blue-100 text-blue-700';
+  }
+
   resultDiv.innerHTML = `
     <div class="p-3 bg-green-50 border border-green-200 rounded-lg">
-      <div class="text-sm font-medium text-green-800">
-        ${amount} ${fromCurrency} = ${convertedAmount.toFixed(2)} ${toCurrency}
+      <div class="flex items-center justify-between">
+        <div class="text-sm font-medium text-green-800">
+          ${amount} ${fromCurrency} = ${convertedAmount.toFixed(2)} ${toCurrency}
+        </div>
+        <span class="text-xs font-semibold px-2 py-0.5 rounded-full ${badgeClasses}">${badgeLabel}</span>
       </div>
       <div class="text-xs text-green-600 mt-1">
         Rate: 1 ${fromCurrency} = ${rate.toFixed(4)} ${toCurrency}

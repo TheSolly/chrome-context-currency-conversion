@@ -5,6 +5,8 @@
 import { settingsManager } from '/utils/settings-manager.js';
 // Import API services
 import { apiKeyManager, exchangeRateService } from '/utils/api-service.js';
+// v1.1.0: Durable rate cache (background refresh + legacy cleanup)
+import { rateCache } from '/utils/rate-cache.js';
 import {
   formatConvertedAmount,
   formatExchangeRate,
@@ -21,6 +23,9 @@ let currentSettings = null;
 let contextMenusCreated = false;
 const errorLog = [];
 const createdMenuItems = new Set(); // Track created menu items to avoid duplicates
+
+// v1.1.0: Background refresh alarm for the exchange-rate cache
+const CACHE_REFRESH_ALARM = 'rate_cache_refresh';
 
 // Popular currency pairs for quick conversion
 const POPULAR_CURRENCIES = [
@@ -83,6 +88,14 @@ chrome.runtime.onInstalled.addListener(async () => {
     logError(error, 'rateAlertsManagerInit');
   }
 
+  // v1.1.0: Remove pre-1.1.0 cache artifacts and schedule background refresh
+  try {
+    await rateCache.migrateLegacy();
+    await setupCacheRefreshAlarm(currentSettings);
+  } catch (error) {
+    logError(error, 'rateCacheInit');
+  }
+
   await initializeContextMenus();
 });
 
@@ -110,6 +123,14 @@ async function initializeExtension() {
     logError(error, 'startupConversionHistoryInit');
   }
 
+  // v1.1.0: Ensure the cache refresh alarm exists (alarms persist across SW
+  // restarts, but re-create defensively in case it was cleared).
+  try {
+    await setupCacheRefreshAlarm(currentSettings);
+  } catch (error) {
+    logError(error, 'startupCacheRefreshAlarm');
+  }
+
   // Note: Context menus are initialized in chrome.runtime.onInstalled
   // to avoid duplicate creation on service worker restarts
 }
@@ -124,9 +145,92 @@ chrome.storage.onChanged.addListener(async (changes, areaName) => {
     if (newSettings) {
       currentSettings = newSettings;
       await updateContextMenuCurrencies();
+      // Reschedule the cache refresh alarm if caching prefs changed
+      await setupCacheRefreshAlarm(newSettings);
     }
   }
 });
+
+// v1.1.0: Smart cache invalidation — schedule a background refresh so cached
+// rate tables are renewed shortly before they expire (configurable interval).
+async function setupCacheRefreshAlarm(settings) {
+  try {
+    if (!chrome.alarms) {
+      return;
+    }
+
+    await chrome.alarms.clear(CACHE_REFRESH_ALARM);
+
+    if (settings && settings.enableCacheAutoRefresh === false) {
+      console.log('⏰ Cache auto-refresh disabled');
+      return;
+    }
+
+    const ttlMs = Number.isFinite(settings?.cacheTimeout)
+      ? settings.cacheTimeout
+      : 3600000;
+    // Fire at ~80% of the TTL so warm tables are refreshed before going stale.
+    const periodInMinutes = Math.max(1, Math.round((ttlMs * 0.8) / 60000));
+
+    await chrome.alarms.create(CACHE_REFRESH_ALARM, { periodInMinutes });
+    console.log(
+      `⏰ Cache refresh alarm scheduled every ${periodInMinutes} min`
+    );
+  } catch (error) {
+    logError(error, 'setupCacheRefreshAlarm');
+  }
+}
+
+// Refresh cached rate tables that are close to expiry. Only bases already in
+// the cache are refreshed (never proactively warm new ones) to stay well within
+// the free API tier's monthly request budget.
+async function refreshCachedRateTables() {
+  try {
+    const settings = currentSettings || (await loadUserSettings());
+    if (settings && settings.enableCacheAutoRefresh === false) {
+      return;
+    }
+
+    const bases = await rateCache.getCachedBases();
+    if (!bases.length) {
+      return;
+    }
+
+    const now = Date.now();
+
+    for (const base of bases) {
+      try {
+        const table = await rateCache.getRateTable(base);
+        if (!table) {
+          continue;
+        }
+
+        const ttl = table.expiresAt - table.fetchedAt || 3600000;
+        // Refresh once within 20% of the TTL (capped at 10 min) of expiry.
+        const refreshWindow = Math.min(ttl * 0.2, 10 * 60 * 1000);
+
+        if (now >= table.expiresAt - refreshWindow) {
+          await exchangeRateService.fetchRateTable(base);
+          console.log(`♻️ Refreshed cached rate table for ${base}`);
+        }
+      } catch (error) {
+        logError(error, 'refreshCachedRateTables:base', { base });
+      }
+    }
+  } catch (error) {
+    logError(error, 'refreshCachedRateTables');
+  }
+}
+
+// Listen for the cache refresh alarm (rate-alerts registers its own listener;
+// multiple onAlarm listeners coexist and each filters by alarm name).
+if (chrome.alarms) {
+  chrome.alarms.onAlarm.addListener(alarm => {
+    if (alarm.name === CACHE_REFRESH_ALARM) {
+      refreshCachedRateTables();
+    }
+  });
+}
 
 // Initialize context menus with enhanced dynamic structure
 async function initializeContextMenus() {

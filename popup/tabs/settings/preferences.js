@@ -9,7 +9,10 @@
 export const TOGGLE_IDS = [
   'showConfidence',
   'autoConvert',
-  'showNotifications'
+  'showNotifications',
+  // v1.1.0 caching preferences
+  'enableOfflineMode',
+  'enableCacheAutoRefresh'
 ];
 
 /**

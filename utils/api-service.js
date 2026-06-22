@@ -1,17 +1,19 @@
 /**
  * Currency API Service
  * Handles currency conversion with multiple API providers and fallback mechanisms
- * Phase 5, Task 5.2: Enhanced with conversion caching for performance optimization
+ * v1.1.0: Consolidated caching via the durable RateCache (chrome.storage.local).
+ *   One full per-base rate table is fetched and cached, so a single API call
+ *   serves every target currency. Concurrent fetches for the same base are
+ *   deduplicated, and stale rates power offline mode.
  * Phase 9, Task 9.1: Enhanced with security features
  */
 
 // Import local API keys at the top level
 import { LOCAL_API_KEYS } from './api-keys.local.js';
-// Phase 5, Task 5.2: Import conversion cache
-import { conversionCache } from './conversion-cache.js';
-// Phase 9, Task 9.1: Import security managers
+// v1.1.0: Durable, service-worker-safe exchange-rate cache
+import { rateCache } from './rate-cache.js';
+// Phase 9, Task 9.1: Import security manager
 import { securityManager } from './security-manager.js';
-import { secureApiKeyManager } from './secure-api-key-manager.js';
 
 /**
  * Secure fetch wrapper for Chrome extension environment with security validation
@@ -309,13 +311,11 @@ export class ApiKeyManager {
 
 /**
  * Currency Exchange Rate Service
- * Manages API calls with fallback mechanisms and caching
+ * Manages API calls with fallback mechanisms. Caching now lives in RateCache.
  */
 export class CurrencyApiService {
   constructor() {
     this.apiKeyManager = new ApiKeyManager();
-    this.cache = new Map();
-    this.cacheExpiry = 10 * 60 * 1000; // 10 minutes
     this.requestQueue = [];
     this.isProcessing = false;
   }
@@ -340,51 +340,47 @@ export class CurrencyApiService {
   }
 
   /**
-   * Get exchange rate between two currencies
-   * @param {string} fromCurrency - Source currency code
-   * @param {string} toCurrency - Target currency code
-   * @returns {Promise<Object>} Exchange rate data
+   * Fetch a rate table for a base currency, trying providers in priority order.
+   * ExchangeRate-API returns the FULL conversion table for the base (one call
+   * serves every target). Other providers only support single pairs, so they
+   * return a partial table for the hinted target.
+   * @param {string} base - Base currency code
+   * @param {string|null} hintTarget - Target currency (needed by single-pair providers)
+   * @returns {Promise<{rates: Object, source: string, timestamp: string, full: boolean}>}
    */
-  async getExchangeRate(fromCurrency, toCurrency) {
-    console.log('💱 getExchangeRate called:', { fromCurrency, toCurrency });
-
-    // Ensure API keys are initialized before proceeding
+  async fetchRateTable(base, hintTarget = null) {
     await this.ensureApiKeysInitialized();
 
-    const cacheKey = `${fromCurrency}-${toCurrency}`;
-
-    // Check cache first
-    const cachedRate = this.getCachedRate(cacheKey);
-    if (cachedRate) {
-      console.log(`📦 Using cached rate for ${fromCurrency} → ${toCurrency}`);
-      return cachedRate;
-    }
-
-    // Try each API provider in priority order
     const providers = Object.keys(API_PROVIDERS).sort(
       (a, b) => API_PROVIDERS[a].priority - API_PROVIDERS[b].priority
     );
-
-    console.log('🎯 Available providers in priority order:', providers);
 
     const errors = [];
 
     for (const provider of providers) {
       try {
-        console.log(
-          `🔄 Trying ${API_PROVIDERS[provider].name} for ${fromCurrency} → ${toCurrency}`
-        );
-        const rate = await this.fetchFromProvider(
-          provider,
-          fromCurrency,
-          toCurrency
-        );
-
-        if (rate) {
-          console.log(`✅ Success with ${API_PROVIDERS[provider].name}:`, rate);
-          // Cache successful result
-          this.cacheRate(cacheKey, rate);
-          return rate;
+        if (provider === 'EXCHANGERATE_API') {
+          const full = await this.fetchTableFromExchangeRateApi(base);
+          if (full && full.rates) {
+            console.log(
+              `✅ Fetched full rate table for ${base} (${Object.keys(full.rates).length} currencies)`
+            );
+            return { ...full, full: true };
+          }
+        } else {
+          // Single-pair providers can't build a full table without a target.
+          if (!hintTarget) {
+            continue;
+          }
+          const pair = await this.fetchFromProvider(provider, base, hintTarget);
+          if (pair && typeof pair.rate === 'number') {
+            return {
+              rates: { [hintTarget.toUpperCase()]: pair.rate },
+              source: pair.source,
+              timestamp: pair.timestamp,
+              full: false
+            };
+          }
         }
       } catch (error) {
         console.warn(
@@ -396,7 +392,6 @@ export class CurrencyApiService {
       }
     }
 
-    console.error('❌ All API providers failed. Errors:', errors);
     throw new Error(
       'All API providers failed. Please check your internet connection and API keys. Errors: ' +
         errors.join('; ')
@@ -404,7 +399,7 @@ export class CurrencyApiService {
   }
 
   /**
-   * Fetch exchange rate from specific provider
+   * Fetch exchange rate from specific provider (single pair)
    * @param {string} provider - API provider name
    * @param {string} fromCurrency - Source currency code
    * @param {string} toCurrency - Target currency code
@@ -426,56 +421,54 @@ export class CurrencyApiService {
   }
 
   /**
-   * Fetch from ExchangeRate-API (with API key)
+   * Fetch the full conversion table from ExchangeRate-API for a base currency.
+   * @param {string} base - Base currency code
+   * @returns {Promise<{rates: Object, source: string, timestamp: string}>}
    */
-  async fetchFromExchangeRateApi(fromCurrency, toCurrency) {
-    console.log('🔄 fetchFromExchangeRateApi called:', {
-      fromCurrency,
-      toCurrency
-    });
-
+  async fetchTableFromExchangeRateApi(base) {
     const apiKey = await this.apiKeyManager.getApiKey('EXCHANGERATE_API');
-    console.log('🔑 Retrieved API key:', apiKey ? 'Present' : 'Missing');
-
     if (!apiKey) {
       throw new Error('ExchangeRate-API key not configured');
     }
 
-    const url = `${API_PROVIDERS.EXCHANGERATE_API.baseUrl}/${apiKey}/latest/${fromCurrency}`;
-    console.log('🌐 Making request to:', url.replace(apiKey, '***'));
+    const url = `${API_PROVIDERS.EXCHANGERATE_API.baseUrl}/${apiKey}/latest/${base}`;
+    console.log('🌐 Making table request to:', url.replace(apiKey, '***'));
 
-    try {
-      const response = await safeFetch(url);
-      console.log('📡 Response status:', response.status);
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      console.log('📊 API response data:', data);
-
-      if (data.result === 'error') {
-        throw new Error(`API Error: ${data['error-type']}`);
-      }
-
-      if (!data.conversion_rates || !data.conversion_rates[toCurrency]) {
-        throw new Error(
-          `Rate not available for ${fromCurrency} → ${toCurrency}`
-        );
-      }
-
-      return {
-        rate: data.conversion_rates[toCurrency],
-        source: 'ExchangeRate-API',
-        timestamp: new Date().toISOString(),
-        fromCurrency,
-        toCurrency
-      };
-    } catch (fetchError) {
-      console.error('❌ Fetch error in ExchangeRate-API:', fetchError);
-      throw fetchError;
+    const response = await safeFetch(url);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
+
+    const data = await response.json();
+    if (data.result === 'error') {
+      throw new Error(`API Error: ${data['error-type']}`);
+    }
+    if (!data.conversion_rates) {
+      throw new Error(`No conversion rates returned for ${base}`);
+    }
+
+    return {
+      rates: data.conversion_rates,
+      source: 'ExchangeRate-API',
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  /**
+   * Fetch a single pair from ExchangeRate-API (used by the per-pair fallback chain)
+   */
+  async fetchFromExchangeRateApi(fromCurrency, toCurrency) {
+    const table = await this.fetchTableFromExchangeRateApi(fromCurrency);
+    if (typeof table.rates[toCurrency] !== 'number') {
+      throw new Error(`Rate not available for ${fromCurrency} → ${toCurrency}`);
+    }
+    return {
+      rate: table.rates[toCurrency],
+      source: table.source,
+      timestamp: table.timestamp,
+      fromCurrency,
+      toCurrency
+    };
   }
 
   /**
@@ -546,7 +539,8 @@ export class CurrencyApiService {
 
   /**
    * Fetch from Alpha Vantage (requires API key)
-   */ async fetchFromAlphaVantage(fromCurrency, toCurrency) {
+   */
+  async fetchFromAlphaVantage(fromCurrency, toCurrency) {
     const apiKey = await this.apiKeyManager.getApiKey('ALPHA_VANTAGE');
     if (!apiKey) {
       throw new Error('Alpha Vantage API key not configured');
@@ -580,47 +574,10 @@ export class CurrencyApiService {
   }
 
   /**
-   * Cache exchange rate data
-   */
-  cacheRate(cacheKey, rateData) {
-    this.cache.set(cacheKey, {
-      ...rateData,
-      cachedAt: Date.now()
-    });
-  }
-
-  /**
-   * Get cached exchange rate if still valid
-   */ getCachedRate(cacheKey) {
-    const cached = this.cache.get(cacheKey);
-    if (!cached) {
-      return null;
-    }
-
-    const isExpired = Date.now() - cached.cachedAt > this.cacheExpiry;
-    if (isExpired) {
-      this.cache.delete(cacheKey);
-      return null;
-    }
-
-    return cached;
-  }
-
-  /**
-   * Clear all cached rates
-   */
-  clearCache() {
-    this.cache.clear();
-    console.log('🗑️ Exchange rate cache cleared');
-  }
-
-  /**
    * Get service statistics
    */
   getServiceStats() {
     return {
-      cacheSize: this.cache.size,
-      cacheExpiry: this.cacheExpiry,
       availableProviders: Object.keys(API_PROVIDERS).length,
       queueLength: this.requestQueue.length
     };
@@ -673,143 +630,141 @@ try {
 
 /**
  * Enhanced Currency Exchange Rate Service
- * Task 4.2: Exchange Rate Service with caching, offline fallback, error handling, and retry logic
+ * Task 4.2 / v1.1.0: Conversion with durable caching, request deduplication,
+ * offline fallback, error handling, and retry logic.
  */
 export class ExchangeRateService {
   constructor() {
     this.apiService = new CurrencyApiService();
-    this.cachePrefix = 'exchange_rate_cache_';
-    this.cacheExpiry = 15 * 60 * 1000; // 15 minutes
-    this.offlineCacheExpiry = 24 * 60 * 60 * 1000; // 24 hours for offline fallback
     this.maxRetries = 3;
     this.retryDelay = 1000; // 1 second
     this.rateLimitDelay = 60000; // 1 minute for rate limit backoff
     this.requestHistory = new Map(); // Track request frequency
+    this.inFlight = new Map(); // base -> Promise (request deduplication)
   }
 
   /**
-   * Convert currency amount with full error handling, fallback, and enhanced caching
-   * Phase 5, Task 5.2: Enhanced with conversion cache for performance optimization
+   * Convert a currency amount with full error handling, caching, and offline fallback.
    * @param {number} amount - Amount to convert
    * @param {string} fromCurrency - Source currency code
    * @param {string} toCurrency - Target currency code
    * @returns {Promise<Object>} Conversion result with metadata
    */
   async convertCurrency(amount, fromCurrency, toCurrency) {
-    try {
-      // Validate inputs
-      if (!amount || isNaN(amount) || amount <= 0) {
-        throw new Error('Invalid amount provided');
-      }
+    // Validate inputs (thrown before any network/offline attempt)
+    if (!amount || isNaN(amount) || amount <= 0) {
+      throw new Error('Invalid amount provided');
+    }
+    if (!fromCurrency || !toCurrency) {
+      throw new Error('Currency codes are required');
+    }
 
-      if (!fromCurrency || !toCurrency) {
-        throw new Error('Currency codes are required');
-      }
+    fromCurrency = fromCurrency.toUpperCase();
+    toCurrency = toCurrency.toUpperCase();
 
-      // Normalize currency codes
-      fromCurrency = fromCurrency.toUpperCase();
-      toCurrency = toCurrency.toUpperCase();
-
-      // Same currency check
-      if (fromCurrency === toCurrency) {
-        return {
-          originalAmount: amount,
-          convertedAmount: amount,
-          rate: 1,
-          fromCurrency,
-          toCurrency,
-          source: 'same-currency',
-          timestamp: new Date().toISOString(),
-          cached: false,
-          offline: false
-        };
-      }
-
-      // Phase 5, Task 5.2: Check enhanced conversion cache first for exact conversion
-      const conversionKey = `${fromCurrency}:${toCurrency}:${amount}`;
-      const cachedConversion = conversionCache.get(conversionKey);
-
-      if (cachedConversion) {
-        console.log(
-          `🚀 Using enhanced cache for conversion ${amount} ${fromCurrency} → ${toCurrency} (hit rate: ${conversionCache.getStats().hitRate}%)`
-        );
-
-        return {
-          originalAmount: amount,
-          convertedAmount: cachedConversion.result,
-          rate: cachedConversion.result / amount,
-          fromCurrency,
-          toCurrency,
-          source: `${cachedConversion.source} (cached)`,
-          timestamp: cachedConversion.timestamp,
-          cached: true,
-          offline: false,
-          precision: this.getDecimalPlaces(cachedConversion.result),
-          cachePerformance: conversionCache.getStats()
-        };
-      }
-
-      // Check rate limiting
-      await this.checkRateLimit(fromCurrency, toCurrency);
-
-      // Try to get rate with retries
-      const rateData = await this.getRateWithRetry(fromCurrency, toCurrency);
-
-      // Calculate conversion
-      const convertedAmount = this.calculateConversion(amount, rateData.rate);
-
-      // Phase 5, Task 5.2: Cache the specific conversion for future use
-      conversionCache.set(conversionKey, {
-        result: convertedAmount,
-        source: rateData.source,
-        timestamp: rateData.timestamp,
-        fromCurrency,
-        toCurrency,
-        amount
-      });
-
-      const result = {
+    // Same currency short-circuit
+    if (fromCurrency === toCurrency) {
+      return {
         originalAmount: amount,
-        convertedAmount,
-        rate: rateData.rate,
+        convertedAmount: amount,
+        rate: 1,
         fromCurrency,
         toCurrency,
-        source: rateData.source,
-        timestamp: rateData.timestamp,
-        cached: rateData.cached || false,
-        offline: rateData.offline || false,
-        precision: this.getDecimalPlaces(convertedAmount)
+        source: 'same-currency',
+        timestamp: new Date().toISOString(),
+        cached: false,
+        offline: false,
+        precision: this.getDecimalPlaces(amount)
       };
+    }
 
-      // Add cache performance metrics if available
-      if (rateData.cachePerformance) {
-        result.cachePerformance = rateData.cachePerformance;
-      }
+    // Resolve the rate (cache → network → offline fallback, with flags)
+    const rateData = await this.getExchangeRate(fromCurrency, toCurrency);
+    const convertedAmount = this.calculateConversion(amount, rateData.rate);
 
-      return result;
+    return {
+      originalAmount: amount,
+      convertedAmount,
+      rate: rateData.rate,
+      fromCurrency,
+      toCurrency,
+      source: rateData.source,
+      timestamp: rateData.timestamp,
+      cached: rateData.cached || false,
+      offline: rateData.offline || false,
+      precision: this.getDecimalPlaces(convertedAmount)
+    };
+  }
+
+  /**
+   * Get an exchange rate, preferring the durable cache and falling back to
+   * stale cached rates when offline mode is enabled.
+   * @param {string} fromCurrency - Source currency code
+   * @param {string} toCurrency - Target currency code
+   * @returns {Promise<{rate:number, source:string, timestamp:string, cached:boolean, offline:boolean}>}
+   */
+  async getExchangeRate(fromCurrency, toCurrency) {
+    fromCurrency = fromCurrency.toUpperCase();
+    toCurrency = toCurrency.toUpperCase();
+
+    if (fromCurrency === toCurrency) {
+      return {
+        rate: 1,
+        source: 'same-currency',
+        timestamp: new Date().toISOString(),
+        cached: false,
+        offline: false
+      };
+    }
+
+    // 1. Fresh cache hit
+    const cached = await rateCache.getRate(fromCurrency, toCurrency);
+    if (cached) {
+      console.log(`🚀 Cache hit for ${fromCurrency} → ${toCurrency}`);
+      return {
+        rate: cached.rate,
+        source: cached.source,
+        timestamp: new Date(cached.fetchedAt).toISOString(),
+        cached: true,
+        offline: false
+      };
+    }
+
+    // 2. Fetch fresh (deduplicated + retry/backoff), then derive the rate
+    try {
+      await this.checkRateLimit(fromCurrency, toCurrency);
+      const fresh = await this.refreshRateTable(fromCurrency, toCurrency);
+      return {
+        rate: fresh.rate,
+        source: fresh.source,
+        timestamp: fresh.timestamp,
+        cached: false,
+        offline: false
+      };
     } catch (error) {
-      console.error('💱 Currency conversion failed:', error);
+      console.warn(
+        `⚠️ Live rate fetch failed for ${fromCurrency} → ${toCurrency}:`,
+        error.message
+      );
 
-      // Don't try offline fallback for validation errors
-      if (
-        error.message.includes('Invalid amount') ||
-        error.message.includes('Currency codes')
-      ) {
-        throw error;
-      }
-
-      // Try offline fallback
-      try {
-        const offlineResult = await this.getOfflineFallback(
-          amount,
-          fromCurrency,
-          toCurrency
-        );
-        if (offlineResult) {
-          return offlineResult;
+      // 3. Offline fallback: serve a stale cached rate if allowed
+      const { offlineEnabled } = rateCache.getConfig();
+      if (offlineEnabled) {
+        const stale = await rateCache.getRate(fromCurrency, toCurrency, {
+          allowStale: true
+        });
+        if (stale) {
+          console.log(
+            `📴 Offline fallback for ${fromCurrency} → ${toCurrency}`
+          );
+          return {
+            rate: stale.rate,
+            source: `${stale.source} (offline)`,
+            timestamp: new Date(stale.fetchedAt).toISOString(),
+            cached: true,
+            offline: true
+          };
         }
-      } catch (offlineError) {
-        console.warn('📴 Offline fallback also failed:', offlineError);
       }
 
       throw new Error(`Currency conversion failed: ${error.message}`);
@@ -817,90 +772,108 @@ export class ExchangeRateService {
   }
 
   /**
-   * Get exchange rate with retry mechanism and enhanced caching
-   * Phase 5, Task 5.2: Integrated with conversion cache for performance optimization
-   * @param {string} fromCurrency - Source currency code
+   * Fetch (or refresh) the rate table for a base currency and resolve a target.
+   * Concurrent calls for the same base share one in-flight request.
+   * @param {string} fromCurrency - Base currency code
    * @param {string} toCurrency - Target currency code
-   * @returns {Promise<Object>} Rate data with metadata
+   * @returns {Promise<{rate:number, source:string, timestamp:string}>}
    */
-  async getRateWithRetry(fromCurrency, toCurrency) {
+  async refreshRateTable(fromCurrency, toCurrency) {
+    const table = await this._dedupFetch(fromCurrency, toCurrency);
+
+    const direct = table && table.rates ? table.rates[toCurrency] : null;
+    if (typeof direct === 'number') {
+      return { rate: direct, source: table.source, timestamp: table.timestamp };
+    }
+
+    // The shared fetch returned a partial table (single-pair fallback provider)
+    // that didn't include our target — fetch this exact pair.
+    const own = await this._fetchWithRetry(fromCurrency, toCurrency);
+    const rate = own && own.rates ? own.rates[toCurrency] : null;
+    if (typeof rate !== 'number') {
+      throw new Error(`Rate not available for ${fromCurrency} → ${toCurrency}`);
+    }
+    return { rate, source: own.source, timestamp: own.timestamp };
+  }
+
+  /**
+   * Warm/refresh the cached table for a base currency (used by background refresh).
+   * @param {string} base - Base currency code
+   * @returns {Promise<Object>} The stored table data
+   */
+  async fetchRateTable(base) {
+    return this._dedupFetch(String(base).toUpperCase(), null);
+  }
+
+  /**
+   * Deduplicate concurrent fetches for the same base currency.
+   * @returns {Promise<{rates: Object, source: string, timestamp: string}>}
+   */
+  _dedupFetch(fromCurrency, toCurrency) {
+    const key = String(fromCurrency).toUpperCase();
+    if (this.inFlight.has(key)) {
+      console.log(`🔗 Coalescing in-flight request for ${key}`);
+      return this.inFlight.get(key);
+    }
+
+    const promise = this._fetchWithRetry(fromCurrency, toCurrency).finally(
+      () => {
+        this.inFlight.delete(key);
+      }
+    );
+    this.inFlight.set(key, promise);
+    return promise;
+  }
+
+  /**
+   * Fetch a rate table with retry + exponential backoff and write it to the cache.
+   * Partial (single-pair) results are merged into any existing cached table.
+   * @returns {Promise<{rates: Object, source: string, timestamp: string}>}
+   */
+  async _fetchWithRetry(fromCurrency, toCurrency) {
     let lastError;
 
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
         console.log(
-          `🔄 Attempt ${attempt}/${this.maxRetries} for ${fromCurrency} → ${toCurrency}`
+          `🔄 Attempt ${attempt}/${this.maxRetries} fetching table for ${fromCurrency}`
         );
 
-        // Phase 5, Task 5.2: Check enhanced conversion cache first
-        const conversionKey = `${fromCurrency}:${toCurrency}:1`; // Rate for 1 unit
-        const cachedConversion = conversionCache.get(conversionKey);
-
-        if (cachedConversion) {
-          console.log(
-            `🚀 Using enhanced cache for ${fromCurrency} → ${toCurrency} (hit rate: ${conversionCache.getStats().hitRate}%)`
-          );
-
-          // Convert cached conversion back to rate data format
-          return {
-            rate: cachedConversion.result,
-            source: `${cachedConversion.source} (cached)`,
-            timestamp: cachedConversion.timestamp,
-            fromCurrency,
-            toCurrency,
-            cached: true,
-            cachePerformance: conversionCache.getStats()
-          };
-        }
-
-        // Check legacy cache as fallback
-        const legacyCachedRate = await this.getCachedRate(
-          fromCurrency,
-          toCurrency
-        );
-        if (legacyCachedRate) {
-          console.log(
-            `📦 Using legacy cache for ${fromCurrency} → ${toCurrency}`
-          );
-          return { ...legacyCachedRate, cached: true };
-        }
-
-        // Fetch from API
-        const rateData = await this.apiService.getExchangeRate(
+        const fetched = await this.apiService.fetchRateTable(
           fromCurrency,
           toCurrency
         );
 
-        // Phase 5, Task 5.2: Store in enhanced cache
-        conversionCache.set(conversionKey, {
-          result: rateData.rate,
-          source: rateData.source,
-          timestamp: rateData.timestamp,
+        let ratesToStore = fetched.rates;
+        if (!fetched.full) {
+          // Preserve previously cached targets when storing a partial table.
+          const existing = await rateCache.getRateTable(fromCurrency);
+          if (existing && existing.rates) {
+            ratesToStore = { ...existing.rates, ...fetched.rates };
+          }
+        }
+
+        await rateCache.setRateTable(
           fromCurrency,
-          toCurrency,
-          amount: 1 // This represents the rate for 1 unit
-        });
-
-        // Also cache in legacy system for backwards compatibility
-        await this.cacheRate(fromCurrency, toCurrency, rateData);
-
-        // Record successful request
+          ratesToStore,
+          fetched.source
+        );
         this.recordRequest(fromCurrency, toCurrency, true);
 
-        return rateData;
+        return {
+          rates: ratesToStore,
+          source: fetched.source,
+          timestamp: fetched.timestamp
+        };
       } catch (error) {
         lastError = error;
         console.warn(`⚠️ Attempt ${attempt} failed:`, error.message);
-
-        // Record failed request
         this.recordRequest(fromCurrency, toCurrency, false);
 
-        // Don't retry on certain errors
         if (this.shouldNotRetry(error)) {
           break;
         }
 
-        // Wait before retry (exponential backoff)
         if (attempt < this.maxRetries) {
           const delay = this.retryDelay * Math.pow(2, attempt - 1);
           console.log(`⏳ Waiting ${delay}ms before retry...`);
@@ -910,17 +883,6 @@ export class ExchangeRateService {
     }
 
     throw lastError;
-  }
-
-  /**
-   * Get exchange rate between two currencies
-   * This is a convenience wrapper around getRateWithRetry for external callers
-   * @param {string} fromCurrency - Source currency code
-   * @param {string} toCurrency - Target currency code
-   * @returns {Promise<Object>} Rate data with metadata
-   */
-  async getExchangeRate(fromCurrency, toCurrency) {
-    return this.getRateWithRetry(fromCurrency, toCurrency);
   }
 
   /**
@@ -946,116 +908,6 @@ export class ExchangeRateService {
     // Update history
     recentRequests.push(now);
     this.requestHistory.set(key, recentRequests);
-  }
-
-  /**
-   * Cache exchange rate with expiry
-   * @param {string} fromCurrency - Source currency code
-   * @param {string} toCurrency - Target currency code
-   * @param {Object} rateData - Rate data to cache
-   */
-  async cacheRate(fromCurrency, toCurrency, rateData) {
-    try {
-      const cacheKey = `${this.cachePrefix}${fromCurrency}-${toCurrency}`;
-      const cacheData = {
-        ...rateData,
-        cachedAt: Date.now(),
-        expiresAt: Date.now() + this.cacheExpiry
-      };
-
-      // Store in Chrome local storage
-      await chrome.storage.local.set({ [cacheKey]: cacheData });
-
-      // Also store as offline fallback with longer expiry
-      const offlineKey = `${this.cachePrefix}offline_${fromCurrency}-${toCurrency}`;
-      const offlineData = {
-        ...rateData,
-        cachedAt: Date.now(),
-        expiresAt: Date.now() + this.offlineCacheExpiry
-      };
-      await chrome.storage.local.set({ [offlineKey]: offlineData });
-
-      console.log(`💾 Cached rate for ${fromCurrency} → ${toCurrency}`);
-    } catch (error) {
-      console.warn('⚠️ Failed to cache rate:', error);
-    }
-  }
-
-  /**
-   * Get cached exchange rate if still valid
-   * @param {string} fromCurrency - Source currency code
-   * @param {string} toCurrency - Target currency code
-   * @returns {Promise<Object|null>} Cached rate data or null
-   */
-  async getCachedRate(fromCurrency, toCurrency) {
-    try {
-      const cacheKey = `${this.cachePrefix}${fromCurrency}-${toCurrency}`;
-      const result = await chrome.storage.local.get(cacheKey);
-      const cached = result[cacheKey];
-
-      if (!cached) {
-        return null;
-      }
-
-      // Check if cache is still valid
-      if (Date.now() > cached.expiresAt) {
-        // Remove expired cache
-        await chrome.storage.local.remove(cacheKey);
-        return null;
-      }
-
-      return cached;
-    } catch (error) {
-      console.warn('⚠️ Failed to get cached rate:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Get offline fallback rate (longer cache)
-   * @param {number} amount - Amount to convert
-   * @param {string} fromCurrency - Source currency code
-   * @param {string} toCurrency - Target currency code
-   * @returns {Promise<Object|null>} Offline conversion result or null
-   */
-  async getOfflineFallback(amount, fromCurrency, toCurrency) {
-    try {
-      const offlineKey = `${this.cachePrefix}offline_${fromCurrency}-${toCurrency}`;
-      const result = await chrome.storage.local.get(offlineKey);
-      const cached = result[offlineKey];
-
-      if (!cached) {
-        return null;
-      }
-
-      // Check if offline cache is still valid (24 hours)
-      if (Date.now() > cached.expiresAt) {
-        await chrome.storage.local.remove(offlineKey);
-        return null;
-      }
-
-      console.log(
-        `📴 Using offline fallback for ${fromCurrency} → ${toCurrency}`
-      );
-
-      const convertedAmount = this.calculateConversion(amount, cached.rate);
-
-      return {
-        originalAmount: amount,
-        convertedAmount,
-        rate: cached.rate,
-        fromCurrency,
-        toCurrency,
-        source: `${cached.source} (offline)`,
-        timestamp: cached.timestamp,
-        cached: true,
-        offline: true,
-        precision: this.getDecimalPlaces(convertedAmount)
-      };
-    } catch (error) {
-      console.warn('⚠️ Failed to get offline fallback:', error);
-      return null;
-    }
   }
 
   /**
@@ -1144,77 +996,32 @@ export class ExchangeRateService {
   }
 
   /**
-   * Clear all cached rates
-   * @param {boolean} includeOffline - Whether to also clear offline cache
+   * Clear all cached rate tables.
+   * @returns {Promise<void>}
    */
-  async clearCache(includeOffline = false) {
-    try {
-      const storage = await chrome.storage.local.get(null);
-      const keysToRemove = [];
-
-      for (const key of Object.keys(storage)) {
-        if (key.startsWith(this.cachePrefix)) {
-          if (includeOffline || !key.includes('offline_')) {
-            keysToRemove.push(key);
-          }
-        }
-      }
-
-      if (keysToRemove.length > 0) {
-        await chrome.storage.local.remove(keysToRemove);
-        console.log(`🗑️ Cleared ${keysToRemove.length} cached rates`);
-      }
-    } catch (error) {
-      console.warn('⚠️ Failed to clear cache:', error);
-    }
+  async clearCache() {
+    await rateCache.clear();
   }
 
   /**
-   * Get service statistics and health info with enhanced cache metrics
-   * Phase 5, Task 5.2: Enhanced with conversion cache statistics
+   * Get service statistics and health info with cache metrics.
    * @returns {Promise<Object>} Service statistics
    */
   async getServiceStats() {
     try {
-      const storage = await chrome.storage.local.get(null);
-      let cacheCount = 0;
-      let offlineCacheCount = 0;
-      let totalCacheSize = 0;
-
-      for (const [key, value] of Object.entries(storage)) {
-        if (key.startsWith(this.cachePrefix)) {
-          totalCacheSize += JSON.stringify(value).length;
-          if (key.includes('offline_')) {
-            offlineCacheCount++;
-          } else {
-            cacheCount++;
-          }
-        }
-      }
-
-      // Phase 5, Task 5.2: Get enhanced cache statistics
-      const enhancedCacheStats = conversionCache.getStats();
-      const cachePerformance = conversionCache.getPerformanceMetrics();
-
+      const cachedBases = await rateCache.getCachedBases();
       return {
-        // Legacy cache stats
-        cacheCount,
-        offlineCacheCount,
-        totalCacheSize,
-        cacheExpiry: this.cacheExpiry,
-        offlineCacheExpiry: this.offlineCacheExpiry,
+        cache: {
+          stats: rateCache.getStats(),
+          cachedBases,
+          cachedBaseCount: cachedBases.length,
+          config: rateCache.getConfig()
+        },
         requestHistorySize: this.requestHistory.size,
+        inFlight: this.inFlight.size,
         maxRetries: this.maxRetries,
         retryDelay: this.retryDelay,
-        apiService: this.apiService.getServiceStats(),
-
-        // Enhanced cache stats
-        enhancedCache: {
-          stats: enhancedCacheStats,
-          performance: cachePerformance,
-          memoryUsage: conversionCache.getMemoryUsage(),
-          popularConversions: conversionCache.getPopularConversions(5)
-        }
+        apiService: this.apiService.getServiceStats()
       };
     } catch (error) {
       console.warn('⚠️ Failed to get service stats:', error);

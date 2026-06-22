@@ -154,6 +154,22 @@ export class SettingsTab {
         );
       });
 
+    // Cache duration selector (v1.1.0)
+    document
+      .getElementById('cacheTimeout')
+      ?.addEventListener('change', async event => {
+        await this.updateSettingWithTracking(
+          'cacheTimeout',
+          parseInt(event.target.value, 10)
+        );
+        this.currentSettings = await settingsManager.getSettings();
+      });
+
+    // Clear rate cache button (v1.1.0)
+    document
+      .getElementById('clearRateCache')
+      ?.addEventListener('click', () => this.clearRateCache());
+
     // Action buttons
     document
       .getElementById('saveSettings')
@@ -249,6 +265,20 @@ export class SettingsTab {
 
     if (value && !this.currencyPreferences.getFavorites().includes(value)) {
       await this.addToFavorites(value);
+    }
+  }
+
+  /**
+   * Clear the durable exchange-rate cache (v1.1.0)
+   */
+  async clearRateCache() {
+    try {
+      const { exchangeRateService } = await import('/utils/api-service.js');
+      await exchangeRateService.clearCache();
+      this.showStatus('Rate cache cleared', 'success');
+    } catch (error) {
+      console.error('Failed to clear rate cache:', error);
+      this.showStatus('Failed to clear rate cache', 'error');
     }
   }
 
