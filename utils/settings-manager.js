@@ -36,7 +36,7 @@ export class SettingsManager {
       cacheTimeout: 3600000, // 1 hour — exchange-rate cache TTL (configurable)
       offlineMaxAgeMs: 604800000, // 7 days — max age a stale rate may serve offline
       enableOfflineMode: true, // Use cached rates when a fresh fetch fails
-      enableCacheAutoRefresh: true, // Refresh cached rate tables in the background before expiry
+      enableCacheAutoRefresh: false, // v1.1.1: background refresh retired (caused API over-consumption); kept off
       maxHistoryEntries: 100,
       enableAnalytics: true,
 

@@ -955,7 +955,14 @@ export class ExchangeRateService {
       'Invalid currency',
       'Rate not available',
       'Authentication failed',
-      'Unauthorized'
+      'Unauthorized',
+      // v1.1.1: never retry quota/rate-limit errors — each retry still counts
+      // against the API quota and only accelerates exhaustion.
+      'too many requests',
+      '429',
+      'quota',
+      'rate limit',
+      'inactive-account'
     ];
 
     return noRetryMessages.some(msg =>
