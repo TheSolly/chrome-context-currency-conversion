@@ -220,63 +220,70 @@ async function loadUserSettings() {
   }
 }
 
-// Build direct conversion title with estimated amount
-// Also tracks the conversion to history when displayed in context menu
+// Build the direct-conversion title for the context menu.
+// v1.1.1: CACHE-ONLY. Rendering a menu label must never trigger an API call —
+// previews fire on every text selection, so fetching here was a major source of
+// API over-consumption. We only show a converted amount when a fresh rate is
+// already cached; the real conversion (which may fetch) happens when the user
+// actually clicks "Convert".
 async function buildDirectConversionTitle(
   amount,
   sourceCurrency,
   targetCurrency,
   formattedAmount
 ) {
+  let cached = null;
   try {
-    // Try to get a quick conversion estimate for the menu title
-    const conversionResult = await exchangeRateService.convertCurrency(
-      amount,
-      sourceCurrency,
-      targetCurrency
-    );
-
-    // Format the source amount with currency symbol
-    const sourceFormatted = formatConvertedAmount(amount, sourceCurrency);
-    // Format the target amount with currency symbol
-    const targetFormatted = formatConvertedAmount(
-      conversionResult.convertedAmount,
-      targetCurrency
-    );
-
-    // Track this conversion to history (user saw the result in context menu)
-    try {
-      await conversionHistory.addConversion({
-        fromCurrency: sourceCurrency,
-        toCurrency: targetCurrency,
-        originalAmount: amount,
-        convertedAmount: conversionResult.convertedAmount,
-        exchangeRate: conversionResult.rate,
-        timestamp: Date.now(),
-        source: 'context-menu-preview',
-        confidence: currentCurrencyInfo?.confidence || 0.8,
-        webpage: null
-      });
-
-      // Also track usage for subscription
-      try {
-        const { getSubscriptionManager } = await import(
-          '/utils/subscription-manager-v2.js'
-        );
-        const subscriptionManager = await getSubscriptionManager();
-        await subscriptionManager.trackUsage('dailyConversions', 1);
-      } catch {
-        // Failed to track preview conversion usage - non-critical
-      }
-    } catch {
-      // Failed to save preview conversion to history - non-critical
-    }
-
-    return `${sourceFormatted} → ${targetFormatted}`;
+    // Read-only: returns a fresh cached rate or null, never hits the network.
+    cached = await rateCache.getRate(sourceCurrency, targetCurrency);
   } catch {
-    // Fallback to basic format without conversion estimate
+    cached = null;
+  }
+
+  if (!cached || typeof cached.rate !== 'number') {
+    // No cached rate — show a plain label without converting or fetching.
     return `Convert ${formattedAmount} ${sourceCurrency} → ${targetCurrency}`;
   }
+
+  const convertedAmount = exchangeRateService.calculateConversion(
+    amount,
+    cached.rate
+  );
+  const sourceFormatted = formatConvertedAmount(amount, sourceCurrency);
+  const targetFormatted = formatConvertedAmount(
+    convertedAmount,
+    targetCurrency
+  );
+
+  // Track this preview to history (user saw the result in the context menu).
+  // Only logged on a cache hit, so it no longer fires on every selection.
+  try {
+    await conversionHistory.addConversion({
+      fromCurrency: sourceCurrency,
+      toCurrency: targetCurrency,
+      originalAmount: amount,
+      convertedAmount,
+      exchangeRate: cached.rate,
+      timestamp: Date.now(),
+      source: 'context-menu-preview',
+      confidence: currentCurrencyInfo?.confidence || 0.8,
+      webpage: null
+    });
+
+    try {
+      const { getSubscriptionManager } = await import(
+        '/utils/subscription-manager-v2.js'
+      );
+      const subscriptionManager = await getSubscriptionManager();
+      await subscriptionManager.trackUsage('dailyConversions', 1);
+    } catch {
+      // Failed to track preview conversion usage - non-critical
+    }
+  } catch {
+    // Failed to save preview conversion to history - non-critical
+  }
+
+  return `${sourceFormatted} → ${targetFormatted}`;
 }
 
 // Enhanced context menu click handler with dynamic conversion options
