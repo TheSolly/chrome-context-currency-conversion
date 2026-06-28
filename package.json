@@ -1,6 +1,6 @@
 {
   "name": "currency-converter-extension",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Chrome extension for real-time currency conversion through context menu",
   "type": "module",
   "license": "MIT",

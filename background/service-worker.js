@@ -220,70 +220,71 @@ async function loadUserSettings() {
   }
 }
 
-// Build the direct-conversion title for the context menu.
-// v1.1.1: CACHE-ONLY. Rendering a menu label must never trigger an API call —
-// previews fire on every text selection, so fetching here was a major source of
-// API over-consumption. We only show a converted amount when a fresh rate is
-// already cached; the real conversion (which may fetch) happens when the user
-// actually clicks "Convert".
+// Build the direct-conversion title for the context menu (shows the converted
+// amount inline for the user's configured base↔secondary pair).
+//
+// v1.1.2: This uses convertCurrency, which is cache-first / fetch-on-miss. It is
+// only invoked for the base↔secondary pair (see updateContextMenu), so it is
+// bounded to the user's 2 configured currencies and the 1h cache prevents
+// repeated fetches — it is NOT the source of the v1.1.1 API over-consumption
+// (that was the retired background-refresh alarm). v1.1.1's cache-only variant
+// broke this feature by never populating the cache, so the menu always showed
+// the plain label; restored here.
 async function buildDirectConversionTitle(
   amount,
   sourceCurrency,
   targetCurrency,
   formattedAmount
 ) {
-  let cached = null;
   try {
-    // Read-only: returns a fresh cached rate or null, never hits the network.
-    cached = await rateCache.getRate(sourceCurrency, targetCurrency);
-  } catch {
-    cached = null;
-  }
+    // Cache-first conversion estimate for the menu title (fetches only on a miss).
+    const conversionResult = await exchangeRateService.convertCurrency(
+      amount,
+      sourceCurrency,
+      targetCurrency
+    );
 
-  if (!cached || typeof cached.rate !== 'number') {
-    // No cached rate — show a plain label without converting or fetching.
+    // Format the source amount with currency symbol
+    const sourceFormatted = formatConvertedAmount(amount, sourceCurrency);
+    // Format the target amount with currency symbol
+    const targetFormatted = formatConvertedAmount(
+      conversionResult.convertedAmount,
+      targetCurrency
+    );
+
+    // Track this conversion to history (user saw the result in context menu)
+    try {
+      await conversionHistory.addConversion({
+        fromCurrency: sourceCurrency,
+        toCurrency: targetCurrency,
+        originalAmount: amount,
+        convertedAmount: conversionResult.convertedAmount,
+        exchangeRate: conversionResult.rate,
+        timestamp: Date.now(),
+        source: 'context-menu-preview',
+        confidence: currentCurrencyInfo?.confidence || 0.8,
+        webpage: null
+      });
+
+      // Also track usage for subscription
+      try {
+        const { getSubscriptionManager } = await import(
+          '/utils/subscription-manager-v2.js'
+        );
+        const subscriptionManager = await getSubscriptionManager();
+        await subscriptionManager.trackUsage('dailyConversions', 1);
+      } catch {
+        // Failed to track preview conversion usage - non-critical
+      }
+    } catch {
+      // Failed to save preview conversion to history - non-critical
+    }
+
+    return `${sourceFormatted} → ${targetFormatted}`;
+  } catch {
+    // Fallback to basic format without conversion estimate
     return `Convert ${formattedAmount} ${sourceCurrency} → ${targetCurrency}`;
   }
-
-  const convertedAmount = exchangeRateService.calculateConversion(
-    amount,
-    cached.rate
-  );
-  const sourceFormatted = formatConvertedAmount(amount, sourceCurrency);
-  const targetFormatted = formatConvertedAmount(
-    convertedAmount,
-    targetCurrency
-  );
-
-  // Track this preview to history (user saw the result in the context menu).
-  // Only logged on a cache hit, so it no longer fires on every selection.
-  try {
-    await conversionHistory.addConversion({
-      fromCurrency: sourceCurrency,
-      toCurrency: targetCurrency,
-      originalAmount: amount,
-      convertedAmount,
-      exchangeRate: cached.rate,
-      timestamp: Date.now(),
-      source: 'context-menu-preview',
-      confidence: currentCurrencyInfo?.confidence || 0.8,
-      webpage: null
-    });
-
-    try {
-      const { getSubscriptionManager } = await import(
-        '/utils/subscription-manager-v2.js'
-      );
-      const subscriptionManager = await getSubscriptionManager();
-      await subscriptionManager.trackUsage('dailyConversions', 1);
-    } catch {
-      // Failed to track preview conversion usage - non-critical
-    }
-  } catch {
-    // Failed to save preview conversion to history - non-critical
-  }
-
-  return `${sourceFormatted} → ${targetFormatted}`;
 }
 
 // Enhanced context menu click handler with dynamic conversion options

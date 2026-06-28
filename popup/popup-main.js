@@ -76,6 +76,9 @@ async function initializePopup() {
     // Setup global event listeners
     setupGlobalEventListeners();
 
+    // Show the real extension version in the UI
+    displayExtensionVersion();
+
     // Hide loading state
     hideLoadingState();
   } catch (error) {
@@ -216,6 +219,27 @@ function setupGlobalEventListeners() {
   document.getElementById('rateUs')?.addEventListener('click', handleRateUs);
   document.getElementById('support')?.addEventListener('click', handleSupport);
   document.getElementById('help')?.addEventListener('click', handleHelp);
+}
+
+/**
+ * Display the extension version (read from the manifest so it never goes stale).
+ */
+function displayExtensionVersion() {
+  try {
+    const version = chrome.runtime.getManifest().version;
+
+    const footerVersion = document.getElementById('version');
+    if (footerVersion) {
+      footerVersion.textContent = `v${version}`;
+    }
+
+    const settingsVersion = document.getElementById('settingsVersion');
+    if (settingsVersion) {
+      settingsVersion.textContent = version;
+    }
+  } catch (error) {
+    console.warn('Failed to display extension version:', error);
+  }
 }
 
 /**
